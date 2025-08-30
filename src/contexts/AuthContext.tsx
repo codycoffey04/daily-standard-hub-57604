@@ -1,11 +1,12 @@
 import React, { createContext, useContext, useEffect, useState } from 'react'
 import { supabase } from '@/integrations/supabase/client'
 import { getProfile, type Profile } from '@/lib/auth'
-import type { User } from '@supabase/supabase-js'
+import type { User, Session } from '@supabase/supabase-js'
 
 interface AuthContextType {
   user: User | null
   profile: Profile | null
+  session: Session | null
   loading: boolean
   signOut: () => Promise<void>
   refreshProfile: () => Promise<void>
@@ -24,35 +25,32 @@ export const useAuth = () => {
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null)
   const [profile, setProfile] = useState<Profile | null>(null)
+  const [session, setSession] = useState<Session | null>(null)
   const [loading, setLoading] = useState(true)
 
   const refreshProfile = async () => {
-    const newProfile = await getProfile()
-    setProfile(newProfile)
+    try {
+      const newProfile = await getProfile()
+      setProfile(newProfile)
+    } catch (error) {
+      console.error('Error refreshing profile:', error)
+      setProfile(null)
+    }
   }
 
   useEffect(() => {
-    // Get initial session
-    const getInitialSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession()
-      setUser(session?.user || null)
-      
-      if (session?.user) {
-        await refreshProfile()
-      }
-      
-      setLoading(false)
-    }
-
-    getInitialSession()
-
-    // Listen for auth changes
+    // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
+      (event, session) => {
+        // Only synchronous state updates here
+        setSession(session)
         setUser(session?.user || null)
         
         if (session?.user) {
-          await refreshProfile()
+          // Defer the profile fetch to avoid deadlock
+          setTimeout(() => {
+            refreshProfile()
+          }, 0)
         } else {
           setProfile(null)
         }
@@ -61,18 +59,43 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     )
 
+    // THEN check for existing session
+    const getInitialSession = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession()
+        setSession(session)
+        setUser(session?.user || null)
+        
+        if (session?.user) {
+          await refreshProfile()
+        }
+        
+        setLoading(false)
+      } catch (error) {
+        console.error('Error getting initial session:', error)
+        setLoading(false)
+      }
+    }
+
+    getInitialSession()
+
     return () => {
       subscription.unsubscribe()
     }
   }, [])
 
   const handleSignOut = async () => {
-    await supabase.auth.signOut()
+    try {
+      await supabase.auth.signOut()
+    } catch (error) {
+      console.error('Error signing out:', error)
+    }
   }
 
   const value: AuthContextType = {
     user,
     profile,
+    session,
     loading,
     signOut: handleSignOut,
     refreshProfile
