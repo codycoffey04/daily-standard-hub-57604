@@ -136,6 +136,7 @@ export const DailyEntryForm: React.FC<DailyEntryFormProps> = ({
       const entryData = {
         producer_id: producerId,
         entry_date: entryDate,
+        entry_month: entryDate.substring(0, 7), // YYYY-MM format
         outbound_dials: outboundDials,
         talk_minutes: talkMinutes,
         items_total: itemsTotal
