@@ -1,5 +1,5 @@
-import { supabase } from './supabaseClient'
-import type { Database } from './supabaseClient'
+import { supabase } from '@/integrations/supabase/client'
+import type { Database } from '@/integrations/supabase/types'
 
 export type Profile = Database['public']['Tables']['profiles']['Row']
 export type UserRole = 'owner' | 'manager' | 'producer'
