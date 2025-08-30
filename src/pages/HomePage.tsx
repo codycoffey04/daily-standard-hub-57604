@@ -1,0 +1,225 @@
+import React, { useState, useEffect } from 'react'
+import { useAuth } from '@/contexts/AuthContext'
+import { supabase } from '@/lib/supabaseClient'
+import { getDefaultEntryDate, today, yesterday, isPast6PM } from '@/lib/timezone'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { DailyEntryForm } from '@/components/DailyEntryForm'
+import { YesterdayStatusBanner } from '@/components/YesterdayStatusBanner'
+import { PacingCard } from '@/components/PacingCard'
+import { LogOut, Calendar } from 'lucide-react'
+
+const HomePage: React.FC = () => {
+  const { profile, signOut } = useAuth()
+  const [loading, setLoading] = useState(true)
+  const [producerData, setProducerData] = useState<any>(null)
+  const [todayEntry, setTodayEntry] = useState<any>(null)
+  const [yesterdayStatus, setYesterdayStatus] = useState<any>(null)
+  const [mtdMetrics, setMtdMetrics] = useState<any>(null)
+
+  useEffect(() => {
+    if (profile?.producer_id) {
+      loadProducerData()
+    }
+  }, [profile])
+
+  const loadProducerData = async () => {
+    if (!profile?.producer_id) return
+    
+    setLoading(true)
+    try {
+      // Load producer info
+      const { data: producer } = await supabase
+        .from('producers')
+        .select('*')
+        .eq('id', profile.producer_id)
+        .single()
+
+      // Load today's entry if exists
+      const { data: entry } = await supabase
+        .from('daily_entries')
+        .select(`
+          *,
+          daily_entry_sources (
+            id,
+            source_id,
+            qhh,
+            quotes,
+            items,
+            sources (id, name)
+          )
+        `)
+        .eq('producer_id', profile.producer_id)
+        .eq('entry_date', getDefaultEntryDate())
+        .single()
+
+      // Load yesterday status
+      const { data: status } = await supabase
+        .from('yesterday_status')
+        .select('*')
+        .eq('producer_id', profile.producer_id)
+        .single()
+
+      // Load MTD metrics
+      const { data: metrics } = await supabase
+        .rpc('mtd_producer_metrics')
+
+      setProducerData(producer)
+      setTodayEntry(entry)
+      setYesterdayStatus(status)
+      setMtdMetrics(Array.isArray(metrics) ? metrics.find((m: any) => m.producer_id === profile.producer_id) : null)
+      
+    } catch (error) {
+      console.error('Error loading producer data:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleEntrySubmitted = () => {
+    loadProducerData() // Refresh data after submission
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-background to-secondary/20">
+      {/* Header */}
+      <header className="bg-card border-b shadow-soft">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center h-16">
+            <div className="flex items-center space-x-4">
+              <Calendar className="h-6 w-6 text-primary" />
+              <div>
+                <h1 className="text-xl font-semibold text-foreground">
+                  The Daily Standard
+                </h1>
+                <p className="text-sm text-muted-foreground">
+                  Welcome back, {profile?.display_name}
+                </p>
+              </div>
+            </div>
+            <Button variant="outline" onClick={signOut} className="flex items-center space-x-2">
+              <LogOut className="h-4 w-4" />
+              <span>Sign Out</span>
+            </Button>
+          </div>
+        </div>
+      </header>
+
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Yesterday Status Banner */}
+        {yesterdayStatus && (
+          <YesterdayStatusBanner status={yesterdayStatus} className="mb-6" />
+        )}
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Left Column - Entry Form */}
+          <div className="lg:col-span-2">
+            <DailyEntryForm 
+              producerId={profile?.producer_id || ''}
+              existingEntry={todayEntry}
+              onSubmitted={handleEntrySubmitted}
+            />
+          </div>
+
+          {/* Right Sidebar - Stats */}
+          <div className="space-y-6">
+            {/* Today Progress */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">Daily Minimums</CardTitle>
+                <CardDescription>Progress toward today's standards</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm font-medium">Outbound Dials</span>
+                    <span className="text-sm">
+                      {todayEntry?.outbound_dials || 0} / 100
+                    </span>
+                  </div>
+                  <div className="w-full bg-muted rounded-full h-2">
+                    <div 
+                      className="bg-primary rounded-full h-2 transition-all"
+                      style={{ 
+                        width: `${Math.min(100, ((todayEntry?.outbound_dials || 0) / 100) * 100)}%` 
+                      }}
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm font-medium">Talk Minutes</span>
+                    <span className="text-sm">
+                      {todayEntry?.talk_minutes || 0} / 180
+                    </span>
+                  </div>
+                  <div className="w-full bg-muted rounded-full h-2">
+                    <div 
+                      className="bg-primary rounded-full h-2 transition-all"
+                      style={{ 
+                        width: `${Math.min(100, ((todayEntry?.talk_minutes || 0) / 180) * 100)}%` 
+                      }}
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm font-medium">QHH</span>
+                    <span className="text-sm">
+                      {todayEntry?.qhh_total || 0} / 4
+                    </span>
+                  </div>
+                  <div className="w-full bg-muted rounded-full h-2">
+                    <div 
+                      className="bg-success rounded-full h-2 transition-all"
+                      style={{ 
+                        width: `${Math.min(100, ((todayEntry?.qhh_total || 0) / 4) * 100)}%` 
+                      }}
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm font-medium">Items Sold</span>
+                    <span className="text-sm">
+                      {todayEntry?.items_total || 0} / 2
+                    </span>
+                  </div>
+                  <div className="w-full bg-muted rounded-full h-2">
+                    <div 
+                      className="bg-success rounded-full h-2 transition-all"
+                      style={{ 
+                        width: `${Math.min(100, ((todayEntry?.items_total || 0) / 2) * 100)}%` 
+                      }}
+                    />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* MTD Metrics */}
+            {mtdMetrics && (
+              <PacingCard 
+                metrics={mtdMetrics}
+                className=""
+              />
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+export default HomePage

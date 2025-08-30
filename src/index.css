@@ -2,39 +2,70 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
-All colors MUST be HSL.
-*/
+/* The Daily Standard Design System - Neutral/light theme with subtle blue accents */
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
+    /* Light neutral base */
+    --background: 0 0% 99%;
+    --foreground: 216 12% 20%;
 
+    /* Cards with subtle contrast */
     --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
+    --card-foreground: 216 12% 20%;
 
+    /* Popovers */
     --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
+    --popover-foreground: 216 12% 20%;
 
-    --primary: 222.2 47.4% 11.2%;
-    --primary-foreground: 210 40% 98%;
+    /* Primary - subtle blue accent */
+    --primary: 214 84% 56%;
+    --primary-foreground: 0 0% 100%;
+    --primary-hover: 214 84% 50%;
 
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
+    /* Secondary - very light blue */
+    --secondary: 214 32% 96%;
+    --secondary-foreground: 216 12% 20%;
 
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
+    /* Muted grays */
+    --muted: 216 12% 97%;
+    --muted-foreground: 216 8% 55%;
 
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
+    /* Accent - slightly stronger blue */
+    --accent: 214 50% 92%;
+    --accent-foreground: 214 84% 40%;
 
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
+    /* Status colors */
+    --success: 142 76% 36%;
+    --success-foreground: 0 0% 100%;
+    --warning: 48 96% 53%;
+    --warning-foreground: 0 0% 0%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
 
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 222.2 84% 4.9%;
+    /* Framework status colors */
+    --status-top: 142 76% 36%;
+    --status-bottom: 48 96% 53%;
+    --status-outside: 0 84% 60%;
+
+    /* VC Badge colors */
+    --vc-green: 142 76% 36%;
+    --vc-amber: 48 96% 53%;
+    --vc-red: 0 84% 60%;
+
+    /* Borders and inputs */
+    --border: 216 12% 90%;
+    --input: 216 12% 95%;
+    --ring: 214 84% 56%;
+
+    /* Subtle gradients */
+    --gradient-subtle: linear-gradient(135deg, hsl(var(--background)), hsl(214 32% 98%));
+    --gradient-primary: linear-gradient(135deg, hsl(var(--primary)), hsl(214 84% 65%));
+
+    /* Shadows */
+    --shadow-soft: 0 1px 3px 0 hsl(216 12% 20% / 0.1), 0 1px 2px 0 hsl(216 12% 20% / 0.06);
+    --shadow-medium: 0 4px 6px -1px hsl(216 12% 20% / 0.1), 0 2px 4px -1px hsl(216 12% 20% / 0.06);
+    --shadow-large: 0 10px 15px -3px hsl(216 12% 20% / 0.1), 0 4px 6px -2px hsl(216 12% 20% / 0.05);
 
     --radius: 0.5rem;
 
@@ -100,6 +131,45 @@ All colors MUST be HSL.
   }
 
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground font-sans antialiased;
+  }
+}
+
+@layer components {
+  /* Status badges */
+  .status-top {
+    @apply bg-green-500 text-white px-2 py-1 rounded text-xs font-medium;
+  }
+  
+  .status-bottom {
+    @apply bg-yellow-500 text-black px-2 py-1 rounded text-xs font-medium;
+  }
+  
+  .status-outside {
+    @apply bg-red-500 text-white px-2 py-1 rounded text-xs font-medium;
+  }
+
+  /* VC badges */
+  .vc-green {
+    @apply bg-green-500 text-white px-2 py-1 rounded text-xs font-medium;
+  }
+  
+  .vc-amber {
+    @apply bg-yellow-500 text-black px-2 py-1 rounded text-xs font-medium;
+  }
+  
+  .vc-red {
+    @apply bg-red-500 text-white px-2 py-1 rounded text-xs font-medium;
+  }
+
+  /* Cards with subtle gradients */
+  .card-gradient {
+    background: var(--gradient-subtle);
+    box-shadow: var(--shadow-soft);
+  }
+
+  /* Form elements */
+  .form-section {
+    @apply space-y-4 p-4 bg-card rounded-lg border;
   }
 }
