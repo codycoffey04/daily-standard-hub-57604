@@ -14,13 +14,373 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      daily_entries: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          entry_date: string
+          entry_month: string
+          id: string
+          items_total: number
+          locked_after: string
+          outbound_dials: number
+          producer_id: string
+          qhh_total: number
+          talk_minutes: number
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          entry_date: string
+          entry_month: string
+          id?: string
+          items_total?: number
+          locked_after?: string
+          outbound_dials?: number
+          producer_id: string
+          qhh_total?: number
+          talk_minutes?: number
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          entry_date?: string
+          entry_month?: string
+          id?: string
+          items_total?: number
+          locked_after?: string
+          outbound_dials?: number
+          producer_id?: string
+          qhh_total?: number
+          talk_minutes?: number
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "daily_entries_producer_id_fkey"
+            columns: ["producer_id"]
+            isOneToOne: false
+            referencedRelation: "producers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      daily_entry_sources: {
+        Row: {
+          daily_entry_id: string
+          id: string
+          items: number
+          qhh: number
+          quotes: number
+          source_id: string
+        }
+        Insert: {
+          daily_entry_id: string
+          id?: string
+          items?: number
+          qhh?: number
+          quotes?: number
+          source_id: string
+        }
+        Update: {
+          daily_entry_id?: string
+          id?: string
+          items?: number
+          qhh?: number
+          quotes?: number
+          source_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "daily_entry_sources_daily_entry_id_fkey"
+            columns: ["daily_entry_id"]
+            isOneToOne: false
+            referencedRelation: "daily_entries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "daily_entry_sources_daily_entry_id_fkey"
+            columns: ["daily_entry_id"]
+            isOneToOne: false
+            referencedRelation: "entry_status"
+            referencedColumns: ["entry_id"]
+          },
+          {
+            foreignKeyName: "daily_entry_sources_daily_entry_id_fkey"
+            columns: ["daily_entry_id"]
+            isOneToOne: false
+            referencedRelation: "yesterday_status"
+            referencedColumns: ["entry_id"]
+          },
+          {
+            foreignKeyName: "daily_entry_sources_source_id_fkey"
+            columns: ["source_id"]
+            isOneToOne: false
+            referencedRelation: "sources"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      producers: {
+        Row: {
+          active: boolean
+          created_at: string
+          display_name: string
+          email: string
+          id: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          display_name: string
+          email: string
+          id?: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          display_name?: string
+          email?: string
+          id?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          created_at: string
+          display_name: string
+          email: string
+          id: string
+          producer_id: string | null
+          role: string
+        }
+        Insert: {
+          created_at?: string
+          display_name: string
+          email: string
+          id?: string
+          producer_id?: string | null
+          role: string
+        }
+        Update: {
+          created_at?: string
+          display_name?: string
+          email?: string
+          id?: string
+          producer_id?: string | null
+          role?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "profiles_producer_id_fkey"
+            columns: ["producer_id"]
+            isOneToOne: false
+            referencedRelation: "producers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      reviews: {
+        Row: {
+          attachments: Json
+          created_at: string
+          daily_entry_id: string
+          has_issues: boolean
+          id: string
+          notes: string | null
+          reviewer_id: string
+          status: string
+        }
+        Insert: {
+          attachments?: Json
+          created_at?: string
+          daily_entry_id: string
+          has_issues?: boolean
+          id?: string
+          notes?: string | null
+          reviewer_id: string
+          status: string
+        }
+        Update: {
+          attachments?: Json
+          created_at?: string
+          daily_entry_id?: string
+          has_issues?: boolean
+          id?: string
+          notes?: string | null
+          reviewer_id?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reviews_daily_entry_id_fkey"
+            columns: ["daily_entry_id"]
+            isOneToOne: false
+            referencedRelation: "daily_entries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reviews_daily_entry_id_fkey"
+            columns: ["daily_entry_id"]
+            isOneToOne: false
+            referencedRelation: "entry_status"
+            referencedColumns: ["entry_id"]
+          },
+          {
+            foreignKeyName: "reviews_daily_entry_id_fkey"
+            columns: ["daily_entry_id"]
+            isOneToOne: false
+            referencedRelation: "yesterday_status"
+            referencedColumns: ["entry_id"]
+          },
+        ]
+      }
+      sources: {
+        Row: {
+          active: boolean
+          created_at: string
+          id: string
+          name: string
+          sort_order: number
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          name: string
+          sort_order?: number
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          name?: string
+          sort_order?: number
+        }
+        Relationships: []
+      }
     }
     Views: {
-      [_ in never]: never
+      entry_status: {
+        Row: {
+          entry_date: string | null
+          entry_id: string | null
+          framework_status: string | null
+          met_count: number | null
+          met_dials: boolean | null
+          met_items: boolean | null
+          met_qhh: boolean | null
+          met_talk: boolean | null
+          producer_id: string | null
+        }
+        Insert: {
+          entry_date?: string | null
+          entry_id?: string | null
+          framework_status?: never
+          met_count?: never
+          met_dials?: never
+          met_items?: never
+          met_qhh?: never
+          met_talk?: never
+          producer_id?: string | null
+        }
+        Update: {
+          entry_date?: string | null
+          entry_id?: string | null
+          framework_status?: never
+          met_count?: never
+          met_dials?: never
+          met_items?: never
+          met_qhh?: never
+          met_talk?: never
+          producer_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "daily_entries_producer_id_fkey"
+            columns: ["producer_id"]
+            isOneToOne: false
+            referencedRelation: "producers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      yesterday_status: {
+        Row: {
+          entry_date: string | null
+          entry_id: string | null
+          framework_status: string | null
+          met_count: number | null
+          met_dials: boolean | null
+          met_items: boolean | null
+          met_qhh: boolean | null
+          met_talk: boolean | null
+          producer_id: string | null
+        }
+        Insert: {
+          entry_date?: string | null
+          entry_id?: string | null
+          framework_status?: never
+          met_count?: never
+          met_dials?: never
+          met_items?: never
+          met_qhh?: never
+          met_talk?: never
+          producer_id?: string | null
+        }
+        Update: {
+          entry_date?: string | null
+          entry_id?: string | null
+          framework_status?: never
+          met_count?: never
+          met_dials?: never
+          met_items?: never
+          met_qhh?: never
+          met_talk?: never
+          producer_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "daily_entries_producer_id_fkey"
+            columns: ["producer_id"]
+            isOneToOne: false
+            referencedRelation: "producers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
-      [_ in never]: never
+      mtd_producer_metrics: {
+        Args: { d?: string }
+        Returns: {
+          conversion: number
+          items: number
+          producer_id: string
+          producer_name: string
+          qhh: number
+          quotes: number
+          vc_badge: string
+          vc_pace: number
+          yesterday_status: string
+        }[]
+      }
+      save_daily_entry: {
+        Args: {
+          p_by_source: Json
+          p_entry_date: string
+          p_items_total: number
+          p_outbound_dials: number
+          p_producer_email: string
+          p_talk_minutes: number
+        }
+        Returns: string
+      }
     }
     Enums: {
       [_ in never]: never
