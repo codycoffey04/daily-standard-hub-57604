@@ -1,5 +1,4 @@
 import { supabaseAdmin } from '../lib/supabaseAdmin'
-import crypto from 'crypto'
 
 const users = [
   { email: 'coffeyagency@allstate.com', displayName: 'Cody Coffey', role: 'owner' as const },
@@ -15,8 +14,8 @@ async function seedUsers() {
   
   for (const user of users) {
     try {
-      // Generate strong random password
-      const password = crypto.randomBytes(16).toString('hex')
+      // Use fixed password for all users
+      const password = 'Standard2025!'
       
       // Create auth user
       const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
@@ -36,7 +35,6 @@ async function seedUsers() {
       }
 
       console.log(`✅ Created auth user: ${user.email}`)
-      console.log(`🔑 Password: ${password}`)
 
       // For producers, get producer_id by matching email
       let producerId = null
