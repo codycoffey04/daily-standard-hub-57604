@@ -10,9 +10,10 @@ import {
   BarChart, 
   Upload, 
   LogOut, 
-  Home 
+  Home,
+  ClipboardCheck
 } from 'lucide-react'
-import { isOwnerManager } from '@/lib/auth'
+import { isOwnerManager, canAccessAccountabilityReviews } from '@/lib/auth'
 
 export const Navigation: React.FC = () => {
   const { profile, signOut } = useAuth()
@@ -38,6 +39,12 @@ export const Navigation: React.FC = () => {
       label: 'Reviews', 
       icon: CheckCircle,
       allowedRoles: ['owner', 'manager']
+    },
+    { 
+      href: '/accountability', 
+      label: 'Accountability', 
+      icon: ClipboardCheck,
+      allowedRoles: ['owner', 'manager', 'reviewer']
     },
     { 
       href: '/sources', 

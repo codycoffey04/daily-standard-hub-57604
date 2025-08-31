@@ -14,6 +14,7 @@ import ReviewsPage from "./pages/ReviewsPage";
 import SourcesPage from "./pages/SourcesPage";
 import SummariesPage from "./pages/SummariesPage";
 import ImporterPage from "./pages/ImporterPage";
+import { AccountabilityReviewsPage } from "./pages/AccountabilityReviewsPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -48,6 +49,14 @@ const App = () => (
               element={
                 <ProtectedRoute requiresOwnerManager>
                   <ReviewsPage />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/accountability" 
+              element={
+                <ProtectedRoute>
+                  <AccountabilityReviewsPage />
                 </ProtectedRoute>
               } 
             />

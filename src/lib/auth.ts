@@ -2,7 +2,7 @@ import { supabase } from '@/integrations/supabase/client'
 import type { Database } from '@/integrations/supabase/types'
 
 export type Profile = Database['public']['Tables']['profiles']['Row']
-export type UserRole = 'owner' | 'manager' | 'producer'
+export type UserRole = 'owner' | 'manager' | 'producer' | 'reviewer'
 
 export const getProfile = async (): Promise<Profile | null> => {
   try {
@@ -46,11 +46,21 @@ export const isProducer = (profile: Profile | null): boolean => {
   return profile?.role === 'producer'
 }
 
+export const isReviewer = (profile: Profile | null): boolean => {
+  return profile?.role === 'reviewer'
+}
+
+export const canAccessAccountabilityReviews = (profile: Profile | null): boolean => {
+  return profile?.role === 'reviewer' || profile?.role === 'manager' || profile?.role === 'owner'
+}
+
 export const getRedirectPath = (profile: Profile | null): string => {
   if (!profile) return '/login'
   
   if (isOwnerManager(profile)) {
     return '/team'
+  } else if (isReviewer(profile)) {
+    return '/accountability'
   } else {
     return '/home'
   }

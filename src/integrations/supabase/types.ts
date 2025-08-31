@@ -14,6 +14,86 @@ export type Database = {
   }
   public: {
     Tables: {
+      accountability_reviews: {
+        Row: {
+          activities_achieved: string[] | null
+          activity_comments: string | null
+          call_recording_reviewed: string | null
+          call_takeaways: string | null
+          course_corrections_addressed: boolean | null
+          created_at: string | null
+          daily_entry_id: string | null
+          expansion_topics: string | null
+          id: string
+          metrics_achieved: boolean | null
+          quick_meeting_notes: string | null
+          reviewer_id: string | null
+          sales_checklist: string | null
+          weak_steps: string[] | null
+        }
+        Insert: {
+          activities_achieved?: string[] | null
+          activity_comments?: string | null
+          call_recording_reviewed?: string | null
+          call_takeaways?: string | null
+          course_corrections_addressed?: boolean | null
+          created_at?: string | null
+          daily_entry_id?: string | null
+          expansion_topics?: string | null
+          id?: string
+          metrics_achieved?: boolean | null
+          quick_meeting_notes?: string | null
+          reviewer_id?: string | null
+          sales_checklist?: string | null
+          weak_steps?: string[] | null
+        }
+        Update: {
+          activities_achieved?: string[] | null
+          activity_comments?: string | null
+          call_recording_reviewed?: string | null
+          call_takeaways?: string | null
+          course_corrections_addressed?: boolean | null
+          created_at?: string | null
+          daily_entry_id?: string | null
+          expansion_topics?: string | null
+          id?: string
+          metrics_achieved?: boolean | null
+          quick_meeting_notes?: string | null
+          reviewer_id?: string | null
+          sales_checklist?: string | null
+          weak_steps?: string[] | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "accountability_reviews_daily_entry_id_fkey"
+            columns: ["daily_entry_id"]
+            isOneToOne: true
+            referencedRelation: "daily_entries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "accountability_reviews_daily_entry_id_fkey"
+            columns: ["daily_entry_id"]
+            isOneToOne: true
+            referencedRelation: "entry_status"
+            referencedColumns: ["entry_id"]
+          },
+          {
+            foreignKeyName: "accountability_reviews_daily_entry_id_fkey"
+            columns: ["daily_entry_id"]
+            isOneToOne: true
+            referencedRelation: "yesterday_status"
+            referencedColumns: ["entry_id"]
+          },
+          {
+            foreignKeyName: "accountability_reviews_reviewer_id_fkey"
+            columns: ["reviewer_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       daily_entries: {
         Row: {
           created_at: string
