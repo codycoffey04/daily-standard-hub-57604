@@ -81,9 +81,6 @@ export const AdminReviewsPage: React.FC = () => {
             producers!inner(
               display_name
             )
-          ),
-          reviewer:profiles!reviewer_id(
-            display_name
           )
         `)
         .gte('daily_entries.entry_date', format(dateRange.from, 'yyyy-MM-dd'))
@@ -101,6 +98,23 @@ export const AdminReviewsPage: React.FC = () => {
         toast.error('Failed to load reviews')
         throw error
       }
+
+      // Get unique reviewer IDs to fetch reviewer info
+      const reviewerIds = [...new Set(data?.map(review => review.reviewer_id).filter(Boolean))]
+      
+      // Fetch reviewer profiles
+      const { data: reviewerProfiles } = await supabase
+        .from('profiles')
+        .select('id, display_name, email')
+        .in('id', reviewerIds)
+
+      // Create a map of reviewer info for quick lookup
+      const reviewerMap = new Map(
+        reviewerProfiles?.map(profile => [
+          profile.id, 
+          profile.display_name || profile.email || 'Unknown'
+        ]) || []
+      )
 
       // Transform the data
       const transformedData = data?.map(review => ({
@@ -123,7 +137,7 @@ export const AdminReviewsPage: React.FC = () => {
         items_total: review.daily_entries.items_total,
         sales_total: review.daily_entries.sales_total,
         producer_name: review.daily_entries.producers.display_name,
-        reviewer_name: review.reviewer?.display_name || 'Unknown'
+        reviewer_name: reviewerMap.get(review.reviewer_id) || 'Unknown'
       })) || []
 
       return transformedData
