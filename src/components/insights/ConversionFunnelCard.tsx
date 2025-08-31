@@ -80,7 +80,7 @@ export const ConversionFunnelCard: React.FC<ConversionFunnelCardProps> = ({ date
             </div>
             {funnelData.alerts.qhhToItemsAlert && (
               <Badge variant="destructive" className="text-xs">
-                Alert: &gt;20% drop from previous period
+                Alert: 20%+ drop from previous period
               </Badge>
             )}
           </div>
@@ -103,7 +103,7 @@ export const ConversionFunnelCard: React.FC<ConversionFunnelCardProps> = ({ date
             </div>
             {funnelData.alerts.itemsToSalesAlert && (
               <Badge variant="destructive" className="text-xs">
-                Alert: &gt;20% drop from previous period
+                Alert: 20%+ drop from previous period
               </Badge>
             )}
           </div>
