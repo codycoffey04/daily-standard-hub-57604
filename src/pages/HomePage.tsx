@@ -205,6 +205,23 @@ const HomePage: React.FC = () => {
                     />
                   </div>
                 </div>
+
+                <div className="space-y-2">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm font-medium">Sales Made</span>
+                    <span className="text-sm">
+                      {todayEntry?.sales_total || 0} / 1
+                    </span>
+                  </div>
+                  <div className="w-full bg-muted rounded-full h-2">
+                    <div 
+                      className="bg-success rounded-full h-2 transition-all"
+                      style={{ 
+                        width: `${Math.min(100, ((todayEntry?.sales_total || 0) / 1) * 100)}%` 
+                      }}
+                    />
+                  </div>
+                </div>
               </CardContent>
             </Card>
 

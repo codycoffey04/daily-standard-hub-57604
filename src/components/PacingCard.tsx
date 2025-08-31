@@ -10,6 +10,7 @@ interface PacingCardProps {
     qhh: number
     quotes: number
     items: number
+    sales: number
     conversion: number
     vc_pace: number
     vc_badge: 'Green' | 'Amber' | 'Red'
@@ -59,7 +60,7 @@ export const PacingCard: React.FC<PacingCardProps> = ({ metrics, className }) =>
       </CardHeader>
       <CardContent className="space-y-4">
         {/* Key Metrics */}
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-3 gap-3">
           <div className="text-center p-3 bg-muted/50 rounded-lg">
             <div className="text-2xl font-bold text-foreground">{metrics.qhh}</div>
             <div className="text-xs text-muted-foreground">QHH</div>
@@ -69,24 +70,27 @@ export const PacingCard: React.FC<PacingCardProps> = ({ metrics, className }) =>
             <div className="text-xs text-muted-foreground">Quotes</div>
           </div>
           <div className="text-center p-3 bg-muted/50 rounded-lg">
+            <div className="text-2xl font-bold text-foreground">{metrics.conversion}%</div>
+            <div className="text-xs text-muted-foreground">Conversion</div>
+          </div>
+          <div className="text-center p-3 bg-muted/50 rounded-lg">
             <div className="text-2xl font-bold text-foreground">{metrics.items}</div>
             <div className="text-xs text-muted-foreground">Items</div>
           </div>
           <div className="text-center p-3 bg-muted/50 rounded-lg">
-            <div className="text-2xl font-bold text-foreground">{metrics.conversion}%</div>
-            <div className="text-xs text-muted-foreground">Conversion</div>
+            <div className="text-2xl font-bold text-foreground">{metrics.sales}</div>
+            <div className="text-xs text-muted-foreground">Sales</div>
+          </div>
+          <div className="text-center p-3 bg-muted/50 rounded-lg">
+            <Badge variant={getBadgeVariant(metrics.vc_badge)}>
+              {metrics.vc_badge}
+            </Badge>
+            <div className="text-xs text-muted-foreground mt-1">VC Badge</div>
           </div>
         </div>
 
         {/* VC Badge & Pacing */}
         <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <span className="text-sm font-medium">VC Badge (Alabama)</span>
-            <Badge variant={getBadgeVariant(metrics.vc_badge)}>
-              {metrics.vc_badge}
-            </Badge>
-          </div>
-          
           <div className="space-y-2">
             <div className="flex justify-between items-center">
               <span className="text-sm">VC Pace</span>

@@ -43,6 +43,7 @@ export const Leaderboard: React.FC<LeaderboardProps> = ({ metrics, loading, onRe
                 <th className="text-right p-2">QHH</th>
                 <th className="text-right p-2">Quotes</th>
                 <th className="text-right p-2">Items</th>
+                <th className="text-right p-2">Sales</th>
                 <th className="text-right p-2">Conv%</th>
                 <th className="text-center p-2">VC Badge</th>
                 <th className="text-center p-2">Yesterday</th>
@@ -55,6 +56,7 @@ export const Leaderboard: React.FC<LeaderboardProps> = ({ metrics, loading, onRe
                   <td className="p-2 text-right">{metric.qhh}</td>
                   <td className="p-2 text-right">{metric.quotes}</td>
                   <td className="p-2 text-right">{metric.items}</td>
+                  <td className="p-2 text-right">{metric.sales}</td>
                   <td className="p-2 text-right">{metric.conversion}%</td>
                   <td className="p-2 text-center">
                     <Badge variant={metric.vc_badge === 'Green' ? 'default' : metric.vc_badge === 'Amber' ? 'secondary' : 'destructive'}>

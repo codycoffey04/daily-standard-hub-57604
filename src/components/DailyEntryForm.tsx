@@ -27,6 +27,7 @@ export const DailyEntryForm: React.FC<DailyEntryFormProps> = ({
   const [outboundDials, setOutboundDials] = useState(0)
   const [talkMinutes, setTalkMinutes] = useState(0)
   const [itemsTotal, setItemsTotal] = useState(0)
+  const [salesTotal, setSalesTotal] = useState(0)
   const [sourceData, setSourceData] = useState<Record<string, { qhh: number; quotes: number; items: number }>>({})
   const [validationError, setValidationError] = useState('')
 
@@ -40,6 +41,7 @@ export const DailyEntryForm: React.FC<DailyEntryFormProps> = ({
       setOutboundDials(existingEntry.outbound_dials || 0)
       setTalkMinutes(existingEntry.talk_minutes || 0)
       setItemsTotal(existingEntry.items_total || 0)
+      setSalesTotal(existingEntry.sales_total || 0)
       
       // Build source data from existing entry
       const data: Record<string, { qhh: number; quotes: number; items: number }> = {}
