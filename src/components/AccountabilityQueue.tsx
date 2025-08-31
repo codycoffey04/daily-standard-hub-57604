@@ -1,7 +1,9 @@
+import { useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { RefreshCw, Calendar, Phone, Clock, Target, DollarSign } from 'lucide-react'
+import { AccountabilityReviewForm } from './AccountabilityReviewForm'
 
 interface DailyEntryForReview {
   id: string
@@ -28,6 +30,19 @@ export const AccountabilityQueue: React.FC<AccountabilityQueueProps> = ({
   loading,
   onRefresh
 }) => {
+  const [selectedEntry, setSelectedEntry] = useState<DailyEntryForReview | null>(null)
+  const [reviewFormOpen, setReviewFormOpen] = useState(false)
+
+  const handleStartReview = (entry: DailyEntryForReview) => {
+    setSelectedEntry(entry)
+    setReviewFormOpen(true)
+  }
+
+  const handleReviewSuccess = () => {
+    setSelectedEntry(null)
+    setReviewFormOpen(false)
+    onRefresh() // Refresh the queue to remove reviewed entries
+  }
   if (loading) {
     return (
       <Card>
@@ -135,7 +150,11 @@ export const AccountabilityQueue: React.FC<AccountabilityQueueProps> = ({
                     Needs Review
                   </Badge>
                   
-                  <Button variant="default" size="sm">
+                  <Button 
+                    variant="default" 
+                    size="sm"
+                    onClick={() => handleStartReview(entry)}
+                  >
                     Start Review
                   </Button>
                 </div>
@@ -144,6 +163,13 @@ export const AccountabilityQueue: React.FC<AccountabilityQueueProps> = ({
           ))}
         </div>
       )}
+
+      <AccountabilityReviewForm
+        entry={selectedEntry}
+        open={reviewFormOpen}
+        onOpenChange={setReviewFormOpen}
+        onSuccess={handleReviewSuccess}
+      />
     </div>
   )
 }
