@@ -26,6 +26,7 @@ export type Database = {
           outbound_dials: number
           producer_id: string
           qhh_total: number
+          sales_total: number
           talk_minutes: number
           updated_at: string
           updated_by: string | null
@@ -41,6 +42,7 @@ export type Database = {
           outbound_dials?: number
           producer_id: string
           qhh_total?: number
+          sales_total?: number
           talk_minutes?: number
           updated_at?: string
           updated_by?: string | null
@@ -56,6 +58,7 @@ export type Database = {
           outbound_dials?: number
           producer_id?: string
           qhh_total?: number
+          sales_total?: number
           talk_minutes?: number
           updated_at?: string
           updated_by?: string | null
@@ -77,6 +80,7 @@ export type Database = {
           items: number
           qhh: number
           quotes: number
+          sales: number
           source_id: string
         }
         Insert: {
@@ -85,6 +89,7 @@ export type Database = {
           items?: number
           qhh?: number
           quotes?: number
+          sales?: number
           source_id: string
         }
         Update: {
@@ -93,6 +98,7 @@ export type Database = {
           items?: number
           qhh?: number
           quotes?: number
+          sales?: number
           source_id?: string
         }
         Relationships: [
@@ -365,20 +371,31 @@ export type Database = {
           producer_name: string
           qhh: number
           quotes: number
+          sales: number
           vc_badge: string
           vc_pace: number
           yesterday_status: string
         }[]
       }
       save_daily_entry: {
-        Args: {
-          p_by_source: Json
-          p_entry_date: string
-          p_items_total: number
-          p_outbound_dials: number
-          p_producer_email: string
-          p_talk_minutes: number
-        }
+        Args:
+          | {
+              p_by_source: Json
+              p_entry_date: string
+              p_items_total: number
+              p_outbound_dials: number
+              p_producer_email: string
+              p_talk_minutes: number
+            }
+          | {
+              p_by_source?: Json
+              p_entry_date: string
+              p_items_total: number
+              p_outbound_dials: number
+              p_producer_email: string
+              p_sales_total?: number
+              p_talk_minutes: number
+            }
         Returns: string
       }
     }
