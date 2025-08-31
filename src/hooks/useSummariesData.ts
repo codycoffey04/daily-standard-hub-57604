@@ -1,0 +1,313 @@
+import { useQuery } from '@tanstack/react-query'
+import { supabase } from '@/integrations/supabase/client'
+
+export interface QHHBySourceData {
+  source_name: string
+  qhh: number
+}
+
+export interface QuotesByProducerData {
+  producer_name: string
+  quotes: number
+}
+
+export interface QuotesBySourceData {
+  source_name: string
+  quotes: number
+}
+
+export interface ItemsByProducerData {
+  producer_name: string
+  items: number
+}
+
+export interface ItemsBySourceData {
+  source_name: string
+  items: number
+}
+
+export interface ProducerSourceMatrixData {
+  producer_name: string
+  source_name: string
+  quotes: number
+  qhh: number
+  items: number
+}
+
+export interface CloseRateData {
+  source_name: string
+  close_rate: number
+  items: number
+  qhh: number
+}
+
+function getDateRange(year: number, month: number | null) {
+  if (month === null) {
+    // Full year
+    return {
+      startDate: `${year}-01-01`,
+      endDate: `${year}-12-31`
+    }
+  } else {
+    // Specific month
+    const startDate = `${year}-${month.toString().padStart(2, '0')}-01`
+    const endDate = new Date(year, month, 0).toISOString().split('T')[0] // Last day of month
+    return { startDate, endDate }
+  }
+}
+
+export function useQHHBySource(year: number, month: number | null) {
+  return useQuery({
+    queryKey: ['qhh-by-source', year, month],
+    queryFn: async (): Promise<QHHBySourceData[]> => {
+      const { startDate, endDate } = getDateRange(year, month)
+      
+      const { data, error } = await supabase
+        .from('daily_entry_sources')
+        .select(`
+          qhh,
+          sources!inner(name),
+          daily_entries!inner(entry_date)
+        `)
+        .gte('daily_entries.entry_date', startDate)
+        .lte('daily_entries.entry_date', endDate)
+        .eq('sources.active', true)
+      
+      if (error) throw error
+      
+      // Group by source and sum QHH
+      const grouped = data.reduce((acc: Record<string, number>, item: any) => {
+        const sourceName = item.sources.name
+        acc[sourceName] = (acc[sourceName] || 0) + item.qhh
+        return acc
+      }, {})
+      
+      return Object.entries(grouped)
+        .map(([source_name, qhh]) => ({ source_name, qhh }))
+        .sort((a, b) => b.qhh - a.qhh)
+    }
+  })
+}
+
+export function useQuotesByProducer(year: number, month: number | null) {
+  return useQuery({
+    queryKey: ['quotes-by-producer', year, month],
+    queryFn: async (): Promise<QuotesByProducerData[]> => {
+      const { startDate, endDate } = getDateRange(year, month)
+      
+      const { data, error } = await supabase
+        .from('daily_entry_sources')
+        .select(`
+          quotes,
+          daily_entries!inner(
+            producer_id,
+            entry_date,
+            producers!inner(display_name)
+          )
+        `)
+        .gte('daily_entries.entry_date', startDate)
+        .lte('daily_entries.entry_date', endDate)
+      
+      if (error) throw error
+      
+      // Group by producer and sum quotes
+      const grouped = data.reduce((acc: Record<string, number>, item: any) => {
+        const producerName = item.daily_entries.producers.display_name
+        acc[producerName] = (acc[producerName] || 0) + item.quotes
+        return acc
+      }, {})
+      
+      return Object.entries(grouped)
+        .map(([producer_name, quotes]) => ({ producer_name, quotes }))
+        .sort((a, b) => b.quotes - a.quotes)
+    }
+  })
+}
+
+export function useQuotesBySource(year: number, month: number | null) {
+  return useQuery({
+    queryKey: ['quotes-by-source', year, month],
+    queryFn: async (): Promise<QuotesBySourceData[]> => {
+      const { startDate, endDate } = getDateRange(year, month)
+      
+      const { data, error } = await supabase
+        .from('daily_entry_sources')
+        .select(`
+          quotes,
+          sources!inner(name),
+          daily_entries!inner(entry_date)
+        `)
+        .gte('daily_entries.entry_date', startDate)
+        .lte('daily_entries.entry_date', endDate)
+        .eq('sources.active', true)
+      
+      if (error) throw error
+      
+      // Group by source and sum quotes
+      const grouped = data.reduce((acc: Record<string, number>, item: any) => {
+        const sourceName = item.sources.name
+        acc[sourceName] = (acc[sourceName] || 0) + item.quotes
+        return acc
+      }, {})
+      
+      return Object.entries(grouped)
+        .map(([source_name, quotes]) => ({ source_name, quotes }))
+        .sort((a, b) => b.quotes - a.quotes)
+    }
+  })
+}
+
+export function useItemsByProducer(year: number, month: number | null) {
+  return useQuery({
+    queryKey: ['items-by-producer', year, month],
+    queryFn: async (): Promise<ItemsByProducerData[]> => {
+      const { startDate, endDate } = getDateRange(year, month)
+      
+      const { data, error } = await supabase
+        .from('daily_entries')
+        .select(`
+          items_total,
+          producers!inner(display_name)
+        `)
+        .gte('entry_date', startDate)
+        .lte('entry_date', endDate)
+      
+      if (error) throw error
+      
+      // Group by producer and sum items
+      const grouped = data.reduce((acc: Record<string, number>, item: any) => {
+        const producerName = item.producers.display_name
+        acc[producerName] = (acc[producerName] || 0) + item.items_total
+        return acc
+      }, {})
+      
+      return Object.entries(grouped)
+        .map(([producer_name, items]) => ({ producer_name, items }))
+        .sort((a, b) => b.items - a.items)
+    }
+  })
+}
+
+export function useItemsBySource(year: number, month: number | null) {
+  return useQuery({
+    queryKey: ['items-by-source', year, month],
+    queryFn: async (): Promise<ItemsBySourceData[]> => {
+      const { startDate, endDate } = getDateRange(year, month)
+      
+      // Use direct approach - sum items from daily_entry_sources
+      const { data, error } = await supabase
+        .from('daily_entry_sources')
+        .select(`
+          items,
+          sources!inner(name),
+          daily_entries!inner(entry_date)
+        `)
+        .gte('daily_entries.entry_date', startDate)
+        .lte('daily_entries.entry_date', endDate)
+        .eq('sources.active', true)
+      
+      if (error) throw error
+      
+      // Group by source and sum items (direct from source-level data)
+      const grouped = data.reduce((acc: Record<string, number>, item: any) => {
+        const sourceName = item.sources.name
+        acc[sourceName] = (acc[sourceName] || 0) + item.items
+        return acc
+      }, {})
+      
+      return Object.entries(grouped)
+        .map(([source_name, items]) => ({ source_name, items }))
+        .sort((a, b) => b.items - a.items)
+    }
+  })
+}
+
+export function useProducerSourceMatrix(year: number, month: number | null) {
+  return useQuery({
+    queryKey: ['producer-source-matrix', year, month],
+    queryFn: async (): Promise<ProducerSourceMatrixData[]> => {
+      const { startDate, endDate } = getDateRange(year, month)
+      
+      const { data, error } = await supabase
+        .from('daily_entry_sources')
+        .select(`
+          quotes,
+          qhh,
+          items,
+          sources!inner(name),
+          daily_entries!inner(
+            entry_date,
+            producers!inner(display_name)
+          )
+        `)
+        .gte('daily_entries.entry_date', startDate)
+        .lte('daily_entries.entry_date', endDate)
+        .eq('sources.active', true)
+      
+      if (error) throw error
+      
+      // Group by producer-source combination
+      const grouped = data.reduce((acc: Record<string, any>, item: any) => {
+        const key = `${item.daily_entries.producers.display_name}|${item.sources.name}`
+        if (!acc[key]) {
+          acc[key] = {
+            producer_name: item.daily_entries.producers.display_name,
+            source_name: item.sources.name,
+            quotes: 0,
+            qhh: 0,
+            items: 0
+          }
+        }
+        acc[key].quotes += item.quotes
+        acc[key].qhh += item.qhh
+        acc[key].items += item.items
+        return acc
+      }, {})
+      
+      return Object.values(grouped)
+    }
+  })
+}
+
+export function useCloseRateAnalysis(year: number, month: number | null) {
+  return useQuery({
+    queryKey: ['close-rate-analysis', year, month],
+    queryFn: async (): Promise<CloseRateData[]> => {
+      const { startDate, endDate } = getDateRange(year, month)
+      
+      const { data, error } = await supabase
+        .from('daily_entry_sources')
+        .select(`
+          qhh,
+          items,
+          sources!inner(name),
+          daily_entries!inner(entry_date)
+        `)
+        .gte('daily_entries.entry_date', startDate)
+        .lte('daily_entries.entry_date', endDate)
+        .eq('sources.active', true)
+      
+      if (error) throw error
+      
+      // Group by source and calculate close rates
+      const grouped = data.reduce((acc: Record<string, { qhh: number, items: number }>, item: any) => {
+        const sourceName = item.sources.name
+        if (!acc[sourceName]) {
+          acc[sourceName] = { qhh: 0, items: 0 }
+        }
+        acc[sourceName].qhh += item.qhh
+        acc[sourceName].items += item.items
+        return acc
+      }, {})
+      
+      return Object.entries(grouped)
+        .map(([source_name, data]) => ({
+          source_name,
+          qhh: data.qhh,
+          items: data.items,
+          close_rate: data.qhh > 0 ? (data.items / data.qhh) * 100 : 0
+        }))
+        .sort((a, b) => b.close_rate - a.close_rate)
+    }
+  })
+}
