@@ -101,15 +101,12 @@ export const AdminReviewsPage: React.FC = () => {
 
       // Get unique reviewer IDs to fetch reviewer info
       const reviewerIds = [...new Set(data?.map(review => review.reviewer_id).filter(Boolean))]
-      console.log('DEBUG: reviewerIds extracted:', reviewerIds)
       
       // Fetch reviewer profiles
       const { data: reviewerProfiles } = await supabase
         .from('profiles')
         .select('id, display_name, email')
         .in('id', reviewerIds)
-      
-      console.log('DEBUG: reviewerProfiles query result:', reviewerProfiles)
 
       // Create a map of reviewer info for quick lookup
       const reviewerMap = new Map(
@@ -118,36 +115,30 @@ export const AdminReviewsPage: React.FC = () => {
           profile.display_name || profile.email || 'Unknown'
         ]) || []
       )
-      console.log('DEBUG: reviewerMap created:', Array.from(reviewerMap.entries()))
 
       // Transform the data
-      const transformedData = data?.map(review => {
-        const reviewerName = reviewerMap.get(review.reviewer_id) || 'Unknown'
-        console.log(`DEBUG: Looking up reviewer_id ${review.reviewer_id}, found: ${reviewerName}`)
-        
-        return {
-          id: review.id,
-          created_at: review.created_at,
-          daily_entry_id: review.daily_entry_id,
-          reviewer_id: review.reviewer_id,
-          metrics_achieved: review.metrics_achieved,
-          weak_steps: review.weak_steps,
-          expansion_topics: review.expansion_topics,
-          course_corrections_addressed: review.course_corrections_addressed,
-          sales_checklist: review.sales_checklist,
-          call_recording_reviewed: review.call_recording_reviewed,
-          activity_comments: review.activity_comments,
-          activities_achieved: review.activities_achieved,
-          call_takeaways: review.call_takeaways,
-          quick_meeting_notes: review.quick_meeting_notes,
-          entry_date: review.daily_entries.entry_date,
-          qhh_total: review.daily_entries.qhh_total,
-          items_total: review.daily_entries.items_total,
-          sales_total: review.daily_entries.sales_total,
-          producer_name: review.daily_entries.producers.display_name,
-          reviewer_name: reviewerName
-        }
-      }) || []
+      const transformedData = data?.map(review => ({
+        id: review.id,
+        created_at: review.created_at,
+        daily_entry_id: review.daily_entry_id,
+        reviewer_id: review.reviewer_id,
+        metrics_achieved: review.metrics_achieved,
+        weak_steps: review.weak_steps,
+        expansion_topics: review.expansion_topics,
+        course_corrections_addressed: review.course_corrections_addressed,
+        sales_checklist: review.sales_checklist,
+        call_recording_reviewed: review.call_recording_reviewed,
+        activity_comments: review.activity_comments,
+        activities_achieved: review.activities_achieved,
+        call_takeaways: review.call_takeaways,
+        quick_meeting_notes: review.quick_meeting_notes,
+        entry_date: review.daily_entries.entry_date,
+        qhh_total: review.daily_entries.qhh_total,
+        items_total: review.daily_entries.items_total,
+        sales_total: review.daily_entries.sales_total,
+        producer_name: review.daily_entries.producers.display_name,
+        reviewer_name: reviewerMap.get(review.reviewer_id) || 'Unknown'
+      })) || []
 
       return transformedData
     }
