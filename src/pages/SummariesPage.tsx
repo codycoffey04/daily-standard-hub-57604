@@ -1,266 +1,133 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Navigation } from '@/components/Navigation'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { MonthYearPickers } from '@/components/MonthYearPickers'
-import { SummaryBarChart } from '@/components/charts/SummaryBarChart'
-import { ProducerSourceMatrix } from '@/components/charts/ProducerSourceMatrix'
-import { CloseRateChart } from '@/components/charts/CloseRateChart'
-import { Skeleton } from '@/components/ui/skeleton'
-import { BarChart, Calendar } from 'lucide-react'
-import {
-  useQHHBySource,
-  useQuotesByProducer,
-  useQuotesBySource,
-  useItemsByProducer,
-  useItemsBySource,
-  useProducerSourceMatrix,
-  useCloseRateAnalysis
-} from '@/hooks/useSummariesData'
+import { ReportSidebar } from '@/components/reports/ReportSidebar'
+import { ReportHeader } from '@/components/reports/ReportHeader'
+import { QHHBySourceReport } from '@/components/reports/QHHBySourceReport'
+import { QuotesBySourceReport } from '@/components/reports/QuotesBySourceReport'
+import { ItemsByProducerReport } from '@/components/reports/ItemsByProducerReport'
+import { ProducerSourceMatrixReport } from '@/components/reports/ProducerSourceMatrixReport'
+import { reportCategories, getReportById } from '@/config/reportConfig'
 
-interface SummaryReportsGridProps {
+// Placeholder components for future reports
+const PlaceholderReport: React.FC<{ reportTitle: string }> = ({ reportTitle }) => (
+  <div className="flex items-center justify-center h-96 bg-muted/20 rounded-lg border-2 border-dashed border-muted">
+    <div className="text-center space-y-3">
+      <div className="text-lg font-medium text-muted-foreground">
+        {reportTitle}
+      </div>
+      <p className="text-sm text-muted-foreground">
+        Coming soon - This report is under development
+      </p>
+    </div>
+  </div>
+)
+
+interface ReportContentProps {
+  reportId: string
   selectedYear: number
   selectedMonth: number | null
 }
 
-const SummaryReportsGrid: React.FC<SummaryReportsGridProps> = ({
+const ReportContent: React.FC<ReportContentProps> = ({
+  reportId,
   selectedYear,
   selectedMonth
 }) => {
-  const qhhBySource = useQHHBySource(selectedYear, selectedMonth)
-  const quotesByProducer = useQuotesByProducer(selectedYear, selectedMonth)
-  const quotesBySource = useQuotesBySource(selectedYear, selectedMonth)
-  const itemsByProducer = useItemsByProducer(selectedYear, selectedMonth)
-  const itemsBySource = useItemsBySource(selectedYear, selectedMonth)
-  const producerSourceMatrix = useProducerSourceMatrix(selectedYear, selectedMonth)
-  const closeRateAnalysis = useCloseRateAnalysis(selectedYear, selectedMonth)
-
-  const LoadingSkeleton = () => (
-    <div className="h-64 space-y-3 p-4">
-      <Skeleton className="h-4 w-3/4" />
-      <Skeleton className="h-32 w-full" />
-      <Skeleton className="h-4 w-1/2" />
-    </div>
-  )
-
-  return (
-    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">QHH by Source</CardTitle>
-          <CardDescription>Qualified household distribution</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {qhhBySource.isLoading ? (
-            <LoadingSkeleton />
-          ) : qhhBySource.error ? (
-            <div className="h-64 flex items-center justify-center text-destructive">
-              Error loading data
-            </div>
-          ) : (
-            <SummaryBarChart
-              data={qhhBySource.data?.map(item => ({
-                name: item.source_name,
-                value: item.qhh
-              })) || []}
-              title="QHH"
-              color="hsl(var(--chart-1))"
-              height={250}
-            />
-          )}
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">Quotes by Producer</CardTitle>
-          <CardDescription>Total quotes per producer</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {quotesByProducer.isLoading ? (
-            <LoadingSkeleton />
-          ) : quotesByProducer.error ? (
-            <div className="h-64 flex items-center justify-center text-destructive">
-              Error loading data
-            </div>
-          ) : (
-            <SummaryBarChart
-              data={quotesByProducer.data?.map(item => ({
-                name: item.producer_name,
-                value: item.quotes
-              })) || []}
-              title="Quotes"
-              color="hsl(var(--chart-2))"
-              height={250}
-            />
-          )}
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">Quotes by Source</CardTitle>
-          <CardDescription>Quote generation by lead source</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {quotesBySource.isLoading ? (
-            <LoadingSkeleton />
-          ) : quotesBySource.error ? (
-            <div className="h-64 flex items-center justify-center text-destructive">
-              Error loading data
-            </div>
-          ) : (
-            <SummaryBarChart
-              data={quotesBySource.data?.map(item => ({
-                name: item.source_name,
-                value: item.quotes
-              })) || []}
-              title="Quotes"
-              color="hsl(var(--chart-3))"
-              height={250}
-            />
-          )}
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">Items by Producer</CardTitle>
-          <CardDescription>Items sold by producer</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {itemsByProducer.isLoading ? (
-            <LoadingSkeleton />
-          ) : itemsByProducer.error ? (
-            <div className="h-64 flex items-center justify-center text-destructive">
-              Error loading data
-            </div>
-          ) : (
-            <SummaryBarChart
-              data={itemsByProducer.data?.map(item => ({
-                name: item.producer_name,
-                value: item.items
-              })) || []}
-              title="Items"
-              color="hsl(var(--chart-4))"
-              height={250}
-            />
-          )}
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">Items by Source</CardTitle>
-          <CardDescription>Sales performance by source</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {itemsBySource.isLoading ? (
-            <LoadingSkeleton />
-          ) : itemsBySource.error ? (
-            <div className="h-64 flex items-center justify-center text-destructive">
-              Error loading data
-            </div>
-          ) : (
-            <SummaryBarChart
-              data={itemsBySource.data?.map(item => ({
-                name: item.source_name,
-                value: item.items
-              })) || []}
-              title="Items"
-              color="hsl(var(--chart-5))"
-              height={250}
-            />
-          )}
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">Producer × Source Matrix</CardTitle>
-          <CardDescription>Performance by producer and source</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {producerSourceMatrix.isLoading ? (
-            <LoadingSkeleton />
-          ) : producerSourceMatrix.error ? (
-            <div className="h-64 flex items-center justify-center text-destructive">
-              Error loading data
-            </div>
-          ) : (
-            <ProducerSourceMatrix
-              data={producerSourceMatrix.data || []}
-              height={250}
-            />
-          )}
-        </CardContent>
-      </Card>
-
-      <Card className="md:col-span-2 xl:col-span-3">
-        <CardHeader>
-          <CardTitle className="text-lg">Close Rate Analysis</CardTitle>
-          <CardDescription>Close rate per source (Items ÷ QHH × 100)</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {closeRateAnalysis.isLoading ? (
-            <LoadingSkeleton />
-          ) : closeRateAnalysis.error ? (
-            <div className="h-64 flex items-center justify-center text-destructive">
-              Error loading data
-            </div>
-          ) : (
-            <CloseRateChart
-              data={closeRateAnalysis.data || []}
-              height={300}
-            />
-          )}
-        </CardContent>
-      </Card>
-    </div>
-  )
+  switch (reportId) {
+    case 'qhh-by-source':
+      return <QHHBySourceReport selectedYear={selectedYear} selectedMonth={selectedMonth} />
+    case 'quotes-by-source':
+      return <QuotesBySourceReport selectedYear={selectedYear} selectedMonth={selectedMonth} />
+    case 'items-by-producer':
+      return <ItemsByProducerReport selectedYear={selectedYear} selectedMonth={selectedMonth} />
+    case 'producer-source-matrix':
+      return <ProducerSourceMatrixReport selectedYear={selectedYear} selectedMonth={selectedMonth} />
+    default:
+      const report = getReportById(reportId)
+      return <PlaceholderReport reportTitle={report?.title || 'Unknown Report'} />
+  }
 }
 
 const SummariesPage: React.FC = () => {
   const [selectedYear, setSelectedYear] = useState(2025)
   const [selectedMonth, setSelectedMonth] = useState<number | null>(null)
+  const [activeReportId, setActiveReportId] = useState('qhh-by-source')
+  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(
+    new Set(['lead-source-analysis']) // Start with lead source analysis expanded
+  )
+
+  // Find the active report config
+  const activeReport = getReportById(activeReportId)
+
+  // Initialize expanded categories to include the category of the active report
+  useEffect(() => {
+    if (activeReport) {
+      setExpandedCategories(prev => new Set([...prev, activeReport.category]))
+    }
+  }, [activeReport])
+
+  const handleCategoryToggle = (categoryId: string) => {
+    setExpandedCategories(prev => {
+      const newSet = new Set(prev)
+      if (newSet.has(categoryId)) {
+        newSet.delete(categoryId)
+      } else {
+        newSet.add(categoryId)
+      }
+      return newSet
+    })
+  }
+
+  const handleReportChange = (reportId: string) => {
+    setActiveReportId(reportId)
+  }
+
+  if (!activeReport) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Navigation />
+        <div className="flex items-center justify-center h-96">
+          <div className="text-center space-y-3">
+            <div className="text-lg font-medium text-foreground">
+              Report not found
+            </div>
+            <p className="text-muted-foreground">
+              The requested report could not be loaded
+            </p>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background to-secondary/20">
+    <div className="min-h-screen bg-background">
       <Navigation />
-      
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="mb-8">
-          <div className="flex items-center space-x-3 mb-2">
-            <BarChart className="h-8 w-8 text-primary" />
-            <h1 className="text-3xl font-bold text-foreground">Summaries & Reports</h1>
-          </div>
-          <p className="text-muted-foreground">
-            Comprehensive analytics and performance summaries
-          </p>
-        </div>
-
-        {/* Date Filters */}
-        <Card className="mb-6">
-          <CardHeader>
-            <CardTitle className="flex items-center space-x-2">
-              <Calendar className="h-5 w-5" />
-              <span>Report Period</span>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <MonthYearPickers
+      <div className="flex h-[calc(100vh-64px)]">
+        <ReportSidebar
+          activeReportId={activeReportId}
+          onReportChange={handleReportChange}
+          expandedCategories={expandedCategories}
+          onCategoryToggle={handleCategoryToggle}
+        />
+        
+        <div className="flex-1 flex flex-col overflow-hidden">
+          <ReportHeader
+            report={activeReport}
+            selectedYear={selectedYear}
+            selectedMonth={selectedMonth}
+            onYearChange={setSelectedYear}
+            onMonthChange={setSelectedMonth}
+          />
+          
+          <div className="flex-1 overflow-y-auto p-6">
+            <ReportContent
+              reportId={activeReportId}
               selectedYear={selectedYear}
               selectedMonth={selectedMonth}
-              onYearChange={setSelectedYear}
-              onMonthChange={setSelectedMonth}
             />
-          </CardContent>
-        </Card>
-
-        {/* Summary Reports Grid */}
-        <SummaryReportsGrid 
-          selectedYear={selectedYear} 
-          selectedMonth={selectedMonth} 
-        />
+          </div>
+        </div>
       </div>
     </div>
   )
