@@ -152,14 +152,17 @@
   /* VC badges */
   .vc-green {
     @apply bg-green-500 text-white px-2 py-1 rounded text-xs font-medium;
+    background-color: hsl(142 76% 36%) !important;
   }
   
   .vc-amber {
     @apply bg-yellow-500 text-black px-2 py-1 rounded text-xs font-medium;
+    background-color: hsl(48 96% 53%) !important;
   }
   
   .vc-red {
     @apply bg-red-500 text-white px-2 py-1 rounded text-xs font-medium;
+    background-color: hsl(0 84% 60%) !important;
   }
 
   /* Cards with subtle gradients */
