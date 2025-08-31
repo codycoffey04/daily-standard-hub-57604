@@ -72,6 +72,32 @@ export const Leaderboard: React.FC<LeaderboardProps> = ({ metrics, loading, onRe
                   </td>
                 </tr>
               ))}
+              {metrics.length > 0 && (
+                <tr className="border-t-2 border-border bg-muted/50">
+                  <td className="p-2 font-bold">TEAM TOTAL</td>
+                  <td className="p-2 text-right font-bold">
+                    {metrics.reduce((sum, metric) => sum + metric.qhh, 0)}
+                  </td>
+                  <td className="p-2 text-right font-bold">
+                    {metrics.reduce((sum, metric) => sum + metric.quotes, 0)}
+                  </td>
+                  <td className="p-2 text-right font-bold">
+                    {metrics.reduce((sum, metric) => sum + metric.items, 0)}
+                  </td>
+                  <td className="p-2 text-right font-bold">
+                    {metrics.reduce((sum, metric) => sum + metric.sales, 0)}
+                  </td>
+                  <td className="p-2 text-right font-bold">
+                    {(() => {
+                      const totalSales = metrics.reduce((sum, metric) => sum + metric.sales, 0);
+                      const totalQHH = metrics.reduce((sum, metric) => sum + metric.qhh, 0);
+                      return totalQHH > 0 ? ((totalSales / totalQHH) * 100).toFixed(2) : '0.00';
+                    })()}%
+                  </td>
+                  <td className="p-2 text-center">-</td>
+                  <td className="p-2 text-center">-</td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>
