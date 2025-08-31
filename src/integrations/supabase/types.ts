@@ -447,6 +447,9 @@ export type Database = {
         Returns: {
           conversion: number
           items: number
+          office_total_items: number
+          office_vc_badge: string
+          office_vc_pace: number
           producer_id: string
           producer_name: string
           qhh: number

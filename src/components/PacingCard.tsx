@@ -15,6 +15,9 @@ interface PacingCardProps {
     vc_pace: number
     vc_badge: 'Green' | 'Amber' | 'Red'
     yesterday_status: 'Top' | 'Bottom' | 'Outside' | null
+    office_total_items: number
+    office_vc_pace: number
+    office_vc_badge: 'Green' | 'Amber' | 'Red'
   }
   className?: string
 }
@@ -46,8 +49,11 @@ export const PacingCard: React.FC<PacingCardProps> = ({ metrics, className }) =>
     }
   }
 
-  const vcTarget = 69 // Monthly VC goal
-  const remainingItems = Math.max(0, vcTarget - metrics.items)
+  const officeTarget = 69 // Office VC goal
+  const remainingItems = Math.max(0, officeTarget - metrics.office_total_items)
+  const userContributionPct = metrics.office_total_items > 0 
+    ? Math.round((metrics.items / metrics.office_total_items) * 100) 
+    : 0
 
   return (
     <Card className={className}>
@@ -89,31 +95,44 @@ export const PacingCard: React.FC<PacingCardProps> = ({ metrics, className }) =>
           </div>
         </div>
 
-        {/* VC Badge & Pacing */}
+        {/* Office VC Progress */}
         <div className="space-y-3">
           <div className="space-y-2">
             <div className="flex justify-between items-center">
-              <span className="text-sm">VC Pace</span>
-              <span className={cn('text-sm font-medium', getVCBadgeColor(metrics.vc_badge))}>
-                {metrics.vc_pace}%
+              <span className="text-sm font-medium">Office VC Target</span>
+              <span className="text-sm">{officeTarget} items</span>
+            </div>
+            
+            <div className="flex justify-between items-center">
+              <span className="text-sm">Office Progress</span>
+              <span className={cn('text-sm font-medium', getVCBadgeColor(metrics.office_vc_badge))}>
+                {metrics.office_total_items} of {officeTarget}
               </span>
             </div>
             <div className="w-full bg-muted rounded-full h-2">
               <div 
                 className={cn(
                   'rounded-full h-2 transition-all',
-                  metrics.vc_badge === 'Green' ? 'bg-success' :
-                  metrics.vc_badge === 'Amber' ? 'bg-warning' : 'bg-destructive'
+                  metrics.office_vc_badge === 'Green' ? 'bg-success' :
+                  metrics.office_vc_badge === 'Amber' ? 'bg-warning' : 'bg-destructive'
                 )}
-                style={{ width: `${Math.min(100, metrics.vc_pace)}%` }}
+                style={{ width: `${Math.min(100, (metrics.office_total_items / officeTarget) * 100)}%` }}
               />
             </div>
           </div>
 
-          <div className="text-xs text-muted-foreground">
-            <div className="flex justify-between">
-              <span>Target: {vcTarget} items</span>
-              <span>Need: {remainingItems} more</span>
+          <div className="space-y-1">
+            <div className="flex justify-between text-xs text-muted-foreground">
+              <span>Your Contribution</span>
+              <span>{metrics.items} items ({userContributionPct}% of goal)</span>
+            </div>
+            <div className="flex justify-between text-xs text-muted-foreground">
+              <span>Office Needs</span>
+              <span>{remainingItems} more</span>
+            </div>
+            <div className="flex justify-between text-xs text-muted-foreground">
+              <span>Office Pace</span>
+              <span>{metrics.office_vc_pace} items/month</span>
             </div>
           </div>
         </div>
