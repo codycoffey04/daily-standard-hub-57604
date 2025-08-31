@@ -1,14 +1,27 @@
-import React, { useState, useRef } from 'react'
+import React, { useState, useRef, useEffect } from 'react'
 import { supabase } from '@/integrations/supabase/client'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Switch } from '@/components/ui/switch'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import { toast } from '@/hooks/use-toast'
 import { Upload, FileText, CheckCircle, AlertTriangle, Download } from 'lucide-react'
+
+interface Source {
+  id: string
+  name: string
+  sort_order: number
+  active: boolean
+}
+
+interface Producer {
+  id: string
+  email: string
+  display_name: string
+  active: boolean
+}
 
 interface ValidationResult {
   isValid: boolean
@@ -20,10 +33,32 @@ interface ValidationResult {
 export const CSVImporter: React.FC = () => {
   const [file, setFile] = useState<File | null>(null)
   const [loading, setLoading] = useState(false)
-  const [strictMode, setStrictMode] = useState(true)
   const [validationResult, setValidationResult] = useState<ValidationResult | null>(null)
   const [importComplete, setImportComplete] = useState(false)
+  const [sources, setSources] = useState<Source[]>([])
+  const [producers, setProducers] = useState<Producer[]>([])
   const fileInputRef = useRef<HTMLInputElement>(null)
+
+  // Load sources and producers on mount
+  useEffect(() => {
+    loadSources()
+    loadProducers()
+  }, [])
+
+  const loadSources = async () => {
+    const { data } = await supabase
+      .from('sources')
+      .select('*')
+      .order('sort_order')
+    if (data) setSources(data)
+  }
+
+  const loadProducers = async () => {
+    const { data } = await supabase
+      .from('producers')
+      .select('*')
+    if (data) setProducers(data)
+  }
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0]
@@ -40,19 +75,21 @@ export const CSVImporter: React.FC = () => {
     }
   }
 
+  // Enhanced CSV parser with proper quote handling
   const parseCSV = (csvText: string): any[] => {
     const lines = csvText.split('\n')
-    const headers = lines[0].split(',').map(h => h.trim().toLowerCase())
+    const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''))
     const rows = []
 
     for (let i = 1; i < lines.length; i++) {
       if (lines[i].trim() === '') continue
       
+      // Simple CSV parsing - can be enhanced for complex quoting
       const values = lines[i].split(',')
       const row: any = {}
       
       headers.forEach((header, index) => {
-        row[header] = values[index]?.trim() || ''
+        row[header] = values[index]?.trim().replace(/"/g, '') || ''
       })
       
       rows.push(row)
@@ -61,36 +98,149 @@ export const CSVImporter: React.FC = () => {
     return rows
   }
 
+  // Detect CSV format (App vs JotForm)
+  const detectCSVFormat = (headers: string[]): 'app' | 'jotform' => {
+    const jotformHeaders = ['NAME', 'TODAYS DATE', 'OUTBOUND DIALS', 'TOTAL TALK TIME']
+    return jotformHeaders.some(h => headers.includes(h)) ? 'jotform' : 'app'
+  }
+
+  // Convert JotForm format to App format
+  const convertJotFormRow = (row: any): any => {
+    const converted: any = {}
+    
+    // Map JotForm fields to App fields
+    if (row['NAME']) {
+      // Convert name to email format (firstname.lastname@temp.com)
+      const name = row['NAME'].toLowerCase().replace(/\s+/g, '.')
+      converted.producer_email = `${name}@temp.com`
+      converted.producer_name = row['NAME']
+    }
+    
+    if (row['TODAYS DATE']) {
+      // Convert MM/DD/YYYY to YYYY-MM-DD
+      const dateParts = row['TODAYS DATE'].split('/')
+      if (dateParts.length === 3) {
+        converted.entry_date = `${dateParts[2]}-${dateParts[0].padStart(2, '0')}-${dateParts[1].padStart(2, '0')}`
+      }
+    }
+    
+    if (row['OUTBOUND DIALS: ___ / 100']) {
+      const match = row['OUTBOUND DIALS: ___ / 100'].match(/(\d+)/)
+      converted.outbound_dials = match ? parseInt(match[1]) : 0
+    }
+    
+    if (row['TOTAL TALK TIME: ___ / 180 MINS']) {
+      const match = row['TOTAL TALK TIME: ___ / 180 MINS'].match(/(\d+)/)
+      converted.talk_minutes = match ? parseInt(match[1]) : 0
+    }
+    
+    if (row['How many ITEMS did you SELL today?']) {
+      converted.items_total = parseInt(row['How many ITEMS did you SELL today?'] || '0')
+    }
+    
+    // Map source columns (LS - X for QHH, QT - X for Quotes)
+    Object.keys(row).forEach(key => {
+      if (key.startsWith('LS - ')) {
+        const sourceName = key.replace('LS - ', '')
+        const slug = sourceName.toLowerCase().replace(/[^a-z0-9]+/g, '_')
+        converted[`${slug}_qhh`] = parseInt(row[key] || '0')
+      }
+      if (key.startsWith('QT - ')) {
+        const sourceName = key.replace('QT - ', '')
+        const slug = sourceName.toLowerCase().replace(/[^a-z0-9]+/g, '_')
+        converted[`${slug}_quotes`] = parseInt(row[key] || '0')
+      }
+    })
+    
+    return converted
+  }
+
+  // Canonicalize source name (preserve historical names, create if needed)
+  const canonicalizeSource = async (sourceName: string): Promise<string> => {
+    const trimmed = sourceName.trim()
+    if (!trimmed) return 'Other'
+    
+    // Case-insensitive lookup in existing sources
+    const existing = sources.find(s => s.name.toLowerCase() === trimmed.toLowerCase())
+    if (existing) return existing.name
+    
+    // Create new source if it doesn't exist
+    try {
+      const { data, error } = await supabase
+        .from('sources')
+        .insert({
+          name: trimmed,
+          active: true,
+          sort_order: sources.length + 1
+        })
+        .select()
+        .single()
+      
+      if (!error && data) {
+        setSources(prev => [...prev, data])
+        return data.name
+      }
+    } catch (error) {
+      console.warn('Failed to create source:', trimmed, error)
+    }
+    
+    return 'Other'
+  }
+
+  // Auto-create missing producer
+  const createProducerFromName = async (name: string, email: string): Promise<Producer | null> => {
+    try {
+      const { data, error } = await supabase
+        .from('producers')
+        .insert({
+          email,
+          display_name: name,
+          active: false // Historical producers are inactive
+        })
+        .select()
+        .single()
+      
+      if (!error && data) {
+        setProducers(prev => [...prev, data])
+        return data
+      }
+    } catch (error) {
+      console.error('Failed to create producer:', name, error)
+    }
+    
+    return null
+  }
+
   const validateData = async (rows: any[]): Promise<ValidationResult> => {
     const errors: string[] = []
     const warnings: string[] = []
     const processedRows: any[] = []
+    
+    if (rows.length === 0) {
+      errors.push('No data rows found in CSV')
+      return { isValid: false, errors, warnings, processedRows }
+    }
 
-    // Load sources for validation
-    const { data: sources } = await supabase
-      .from('sources')
-      .select('*')
-      .eq('active', true)
-      .order('sort_order')
+    // Detect format
+    const headers = Object.keys(rows[0])
+    const format = detectCSVFormat(headers)
+    
+    warnings.push(`Detected ${format === 'jotform' ? 'JotForm RAW' : 'App Template'} format`)
 
-    const sourceMap = new Map(sources?.map(s => [s.name.toLowerCase(), s]) || [])
-
-    // Load producers for validation
-    const { data: producers } = await supabase
-      .from('producers')
-      .select('*')
-      .eq('active', true)
-
-    const producerMap = new Map(producers?.map(p => [p.email.toLowerCase(), p]) || [])
+    // Create producer map (case-insensitive emails)
+    const producerMap = new Map(producers.map(p => [p.email.toLowerCase(), p]))
 
     for (let i = 0; i < rows.length; i++) {
-      const row = rows[i]
+      const rawRow = rows[i]
       const rowNum = i + 2 // Account for header row
 
       try {
+        // Convert JotForm to App format if needed
+        const row = format === 'jotform' ? convertJotFormRow(rawRow) : rawRow
+
         // Required fields validation
         if (!row.producer_email) {
-          errors.push(`Row ${rowNum}: Missing producer_email`)
+          errors.push(`Row ${rowNum}: Missing producer identifier`)
           continue
         }
 
@@ -99,18 +249,26 @@ export const CSVImporter: React.FC = () => {
           continue
         }
 
-        // Producer validation
-        const producer = producerMap.get(row.producer_email.toLowerCase())
+        // Producer validation and auto-creation
+        let producer = producerMap.get(row.producer_email.toLowerCase())
+        if (!producer && row.producer_name) {
+          // Auto-create missing producer for historical data
+          producer = await createProducerFromName(row.producer_name, row.producer_email)
+          if (producer) {
+            producerMap.set(producer.email.toLowerCase(), producer)
+            warnings.push(`Row ${rowNum}: Auto-created inactive producer ${producer.display_name}`)
+          }
+        }
+        
         if (!producer) {
-          errors.push(`Row ${rowNum}: Unknown producer ${row.producer_email}`)
+          errors.push(`Row ${rowNum}: Unknown producer ${row.producer_email} and no name provided for auto-creation`)
           continue
         }
 
-        // Date validation
+        // Date validation (no restrictions - allow any date)
         const entryDate = new Date(row.entry_date)
-        const today = new Date()
-        if (entryDate > today) {
-          errors.push(`Row ${rowNum}: Entry date cannot be in the future`)
+        if (isNaN(entryDate.getTime())) {
+          errors.push(`Row ${rowNum}: Invalid date format`)
           continue
         }
 
@@ -119,29 +277,62 @@ export const CSVImporter: React.FC = () => {
         const talkMinutes = parseInt(row.talk_minutes || '0')
         const itemsTotal = parseInt(row.items_total || '0')
 
-        if (outboundDials < 0 || talkMinutes< 0 || itemsTotal < 0) {
+        if (outboundDials < 0 || talkMinutes < 0 || itemsTotal < 0) {
           errors.push(`Row ${rowNum}: All numeric values must be non-negative`)
           continue
         }
 
-        // Build source data
-        const bySource: any = {}
+        // Build source data and validate totals
+        const bySourceData: any[] = []
         let sourceItemsSum = 0
+        let sourceQHHSum = 0
 
-        sources?.forEach(source => {
-          const slug = source.name.toLowerCase().replace(/[^a-z0-9]+/g, '_')
-          const qhh = parseInt(row[`${slug}_qhh`] || '0')
-          const quotes = parseInt(row[`${slug}_quotes`] || '0')
-          const items = parseInt(row[`${slug}_items`] || '0')
-
-          if (qhh < 0 || quotes < 0 || items < 0) {
-            errors.push(`Row ${rowNum}: Source ${source.name} values must be non-negative`)
-            return
+        // Process source columns dynamically
+        const sourceColumns = Object.keys(row).filter(key => 
+          key.includes('_qhh') || key.includes('_quotes') || key.includes('_items')
+        )
+        
+        const sourceGroups = new Map<string, any>()
+        
+        for (const col of sourceColumns) {
+          const match = col.match(/^(.+)_(qhh|quotes|items)$/)
+          if (match) {
+            const sourceName = match[1].replace(/_/g, ' ')
+            const metric = match[2]
+            const value = parseInt(row[col] || '0')
+            
+            if (value < 0) {
+              errors.push(`Row ${rowNum}: Source ${sourceName} ${metric} must be non-negative`)
+              continue
+            }
+            
+            if (!sourceGroups.has(sourceName)) {
+              sourceGroups.set(sourceName, { qhh: 0, quotes: 0, items: 0 })
+            }
+            sourceGroups.get(sourceName)[metric] = value
           }
+        }
 
-          bySource[slug] = { qhh, quotes, items }
-          sourceItemsSum += items
-        })
+        // Convert to final format and validate
+        for (const [sourceName, metrics] of sourceGroups) {
+          const canonicalName = await canonicalizeSource(sourceName)
+          const source = sources.find(s => s.name === canonicalName)
+          
+          if (!source) {
+            errors.push(`Row ${rowNum}: Could not resolve source ${sourceName}`)
+            continue
+          }
+          
+          bySourceData.push({
+            source_id: source.id,
+            qhh: metrics.qhh,
+            quotes: metrics.quotes,
+            items: metrics.items
+          })
+          
+          sourceItemsSum += metrics.items
+          sourceQHHSum += metrics.qhh
+        }
 
         // Items total validation
         if (itemsTotal !== sourceItemsSum) {
@@ -150,12 +341,13 @@ export const CSVImporter: React.FC = () => {
         }
 
         processedRows.push({
-          producer_email: row.producer_email,
+          producer_email: producer.email,
           entry_date: row.entry_date,
           outbound_dials: outboundDials,
           talk_minutes: talkMinutes,
           items_total: itemsTotal,
-          by_source: bySource
+          qhh_total: sourceQHHSum,
+          by_source: bySourceData
         })
 
       } catch (error) {
@@ -184,7 +376,7 @@ export const CSVImporter: React.FC = () => {
       if (result.isValid) {
         toast({
           title: "Validation Passed",
-          description: `${result.processedRows.length} rows ready for import`
+          description: `${result.processedRows.length} rows ready for import${result.warnings.length > 0 ? ` (${result.warnings.length} warnings)` : ''}`
         })
       } else {
         toast({
@@ -254,41 +446,29 @@ export const CSVImporter: React.FC = () => {
     }
   }
 
-  const downloadTemplate = () => {
-    const headers = [
+  // Dynamic template generation based on current sources
+  const downloadTemplate = async () => {
+    await loadSources() // Refresh sources before generating template
+    
+    const baseHeaders = [
       'producer_email',
       'entry_date',
-      'outbound_dials',
+      'outbound_dials', 
       'talk_minutes',
-      'items_total',
-      // Source columns will be added dynamically
-      'digital_marketing_qhh',
-      'digital_marketing_quotes',
-      'digital_marketing_items',
-      'net_lead_qhh',
-      'net_lead_quotes',
-      'net_lead_items',
-      'direct_mail_qhh',
-      'direct_mail_quotes',
-      'direct_mail_items',
-      'call_in_qhh',
-      'call_in_quotes',
-      'call_in_items',
-      'walk_in_qhh',
-      'walk_in_quotes',
-      'walk_in_items',
-      'cross_sell_qhh',
-      'cross_sell_quotes',
-      'cross_sell_items',
-      'referral_qhh',
-      'referral_quotes',
-      'referral_items',
-      'other_qhh',
-      'other_quotes',
-      'other_items'
+      'items_total'
     ]
-
-    const csv = headers.join(',') + '\n'
+    
+    // Add source-specific columns dynamically
+    const sourceHeaders: string[] = []
+    sources.filter(s => s.active).forEach(source => {
+      const slug = source.name.toLowerCase().replace(/[^a-z0-9]+/g, '_')
+      sourceHeaders.push(`${slug}_qhh`)
+      sourceHeaders.push(`${slug}_quotes`)
+      sourceHeaders.push(`${slug}_items`)
+    })
+    
+    const allHeaders = [...baseHeaders, ...sourceHeaders]
+    const csv = allHeaders.join(',') + '\n'
     const blob = new Blob([csv], { type: 'text/csv' })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
@@ -321,17 +501,6 @@ export const CSVImporter: React.FC = () => {
               <Download className="h-4 w-4" />
               <span>Download Template</span>
             </Button>
-            
-            <div className="flex items-center space-x-2">
-              <Switch
-                id="strict-mode"
-                checked={strictMode}
-                onCheckedChange={setStrictMode}
-              />
-              <Label htmlFor="strict-mode" className="text-sm">
-                Strict Mode
-              </Label>
-            </div>
           </div>
 
           <div className="space-y-2">
