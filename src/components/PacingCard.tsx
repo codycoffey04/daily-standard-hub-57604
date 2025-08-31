@@ -51,9 +51,9 @@ export const PacingCard: React.FC<PacingCardProps> = ({ metrics, className }) =>
 
   const officeTarget = 69 // Office VC goal
   const remainingItems = Math.max(0, officeTarget - metrics.office_total_items)
-  const userContributionPct = metrics.office_total_items > 0 
-    ? Math.round((metrics.items / metrics.office_total_items) * 100) 
-    : 0
+  const userContributionPct = officeTarget > 0 
+    ? ((metrics.items / officeTarget) * 100).toFixed(1)
+    : '0.0'
 
   return (
     <Card className={className}>
@@ -88,10 +88,10 @@ export const PacingCard: React.FC<PacingCardProps> = ({ metrics, className }) =>
             <div className="text-xs text-muted-foreground">Sales</div>
           </div>
           <div className="text-center p-3 bg-muted/50 rounded-lg">
-            <Badge className={getVCBadgeClassName(metrics.vc_badge)}>
-              {metrics.vc_badge}
+            <Badge className={getVCBadgeClassName(metrics.office_vc_badge)}>
+              {metrics.office_vc_badge}
             </Badge>
-            <div className="text-xs text-muted-foreground mt-1">VC Badge</div>
+            <div className="text-xs text-muted-foreground mt-1">Office VC</div>
           </div>
         </div>
 
