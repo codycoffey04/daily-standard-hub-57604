@@ -15,6 +15,7 @@ import SourcesPage from "./pages/SourcesPage";
 import SummariesPage from "./pages/SummariesPage";
 import ImporterPage from "./pages/ImporterPage";
 import { AccountabilityReviewsPage } from "./pages/AccountabilityReviewsPage";
+import { AdminReviewsPage } from "./pages/AdminReviewsPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -81,6 +82,14 @@ const App = () => (
               element={
                 <ProtectedRoute requiresOwnerManager>
                   <ImporterPage />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/admin/reviews" 
+              element={
+                <ProtectedRoute requiresOwnerManager>
+                  <AdminReviewsPage />
                 </ProtectedRoute>
               } 
             />

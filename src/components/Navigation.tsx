@@ -11,7 +11,8 @@ import {
   Upload, 
   LogOut, 
   Home,
-  ClipboardCheck
+  ClipboardCheck,
+  Database
 } from 'lucide-react'
 import { isOwnerManager, canAccessAccountabilityReviews } from '@/lib/auth'
 
@@ -62,6 +63,12 @@ export const Navigation: React.FC = () => {
       href: '/importer', 
       label: 'Importer', 
       icon: Upload,
+      allowedRoles: ['owner', 'manager']
+    },
+    { 
+      href: '/admin/reviews', 
+      label: 'Admin Reviews', 
+      icon: Database,
       allowedRoles: ['owner', 'manager']
     }
   ]
