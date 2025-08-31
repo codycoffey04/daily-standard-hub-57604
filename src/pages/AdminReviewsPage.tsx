@@ -12,8 +12,13 @@ import { Calendar } from '@/components/ui/calendar'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import { ReviewDetailsModal } from '@/components/ReviewDetailsModal'
-import { CalendarIcon, Eye, Database, AlertTriangle, CheckCircle2 } from 'lucide-react'
+import { ConversionFunnelCard } from '@/components/insights/ConversionFunnelCard'
+import { ProducerPerformanceCard } from '@/components/insights/ProducerPerformanceCard'
+import { SalesProcessGapsCard } from '@/components/insights/SalesProcessGapsCard'
+import { CoachingEffectivenessCard } from '@/components/insights/CoachingEffectivenessCard'
+import { CalendarIcon, Eye, Database, AlertTriangle, CheckCircle2, Brain, ChevronDown, ChevronUp } from 'lucide-react'
 import { format, subDays } from 'date-fns'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
@@ -51,6 +56,7 @@ export const AdminReviewsPage: React.FC = () => {
   const [selectedProducer, setSelectedProducer] = useState<string>('all')
   const [issuesOnly, setIssuesOnly] = useState(false)
   const [selectedReview, setSelectedReview] = useState<AdminReview | null>(null)
+  const [insightsExpanded, setInsightsExpanded] = useState(true)
 
   // Fetch reviews data
   const { data: reviews = [], isLoading, error } = useQuery({
@@ -212,6 +218,46 @@ export const AdminReviewsPage: React.FC = () => {
             View and manage completed accountability reviews
           </p>
         </div>
+
+        {/* AI Insights Section */}
+        <Collapsible open={insightsExpanded} onOpenChange={setInsightsExpanded} className="mb-6">
+          <Card>
+            <CollapsibleTrigger asChild>
+              <CardHeader className="cursor-pointer hover:bg-muted/50 transition-colors">
+                <CardTitle className="flex items-center justify-between">
+                  <div className="flex items-center space-x-2">
+                    <Brain className="h-5 w-5 text-primary" />
+                    <span>AI Pattern Analysis</span>
+                  </div>
+                  {insightsExpanded ? (
+                    <ChevronUp className="h-4 w-4" />
+                  ) : (
+                    <ChevronDown className="h-4 w-4" />
+                  )}
+                </CardTitle>
+              </CardHeader>
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+              <CardContent>
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  <ConversionFunnelCard dateRange={dateRange} />
+                  <ProducerPerformanceCard 
+                    dateRange={dateRange} 
+                    selectedProducer={selectedProducer}
+                  />
+                  <SalesProcessGapsCard 
+                    dateRange={dateRange} 
+                    selectedProducer={selectedProducer}
+                  />
+                  <CoachingEffectivenessCard 
+                    dateRange={dateRange} 
+                    selectedProducer={selectedProducer}
+                  />
+                </div>
+              </CardContent>
+            </CollapsibleContent>
+          </Card>
+        </Collapsible>
 
         {/* Filters */}
         <Card className="mb-6">
