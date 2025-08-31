@@ -20,16 +20,16 @@ interface PacingCardProps {
 }
 
 export const PacingCard: React.FC<PacingCardProps> = ({ metrics, className }) => {
-  const getBadgeVariant = (badge: string) => {
+  const getVCBadgeClassName = (badge: string) => {
     switch (badge) {
       case 'Green':
-        return 'default'
+        return 'vc-green'
       case 'Amber':
-        return 'secondary'
+        return 'vc-amber'
       case 'Red':
-        return 'destructive'
+        return 'vc-red'
       default:
-        return 'outline'
+        return ''
     }
   }
 
@@ -82,7 +82,7 @@ export const PacingCard: React.FC<PacingCardProps> = ({ metrics, className }) =>
             <div className="text-xs text-muted-foreground">Sales</div>
           </div>
           <div className="text-center p-3 bg-muted/50 rounded-lg">
-            <Badge variant={getBadgeVariant(metrics.vc_badge)}>
+            <Badge className={getVCBadgeClassName(metrics.vc_badge)}>
               {metrics.vc_badge}
             </Badge>
             <div className="text-xs text-muted-foreground mt-1">VC Badge</div>
