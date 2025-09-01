@@ -4,7 +4,7 @@ import { supabase } from '@/integrations/supabase/client'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Leaderboard } from '@/components/Leaderboard'
-import { Navigation } from '@/components/Navigation'
+
 import { Users, Calendar } from 'lucide-react'
 
 const TeamPage: React.FC = () => {
@@ -43,10 +43,7 @@ const TeamPage: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background to-secondary/20">
-      <Navigation />
-      
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="mb-8">
           <div className="flex items-center space-x-3 mb-2">
             <Users className="h-8 w-8 text-primary" />
@@ -103,7 +100,6 @@ const TeamPage: React.FC = () => {
           onRefresh={loadTeamMetrics}
         />
       </div>
-    </div>
   )
 }
 

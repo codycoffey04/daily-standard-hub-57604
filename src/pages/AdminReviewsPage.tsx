@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '@/integrations/supabase/client'
-import { Navigation } from '@/components/Navigation'
+
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -188,9 +188,7 @@ export const AdminReviewsPage: React.FC = () => {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-background">
-        <Navigation />
-        <div className="container mx-auto px-4 py-8">
+      <div className="container mx-auto px-4 py-8">
           <Card>
             <CardContent className="flex items-center justify-center py-8">
               <div className="text-center">
@@ -201,15 +199,11 @@ export const AdminReviewsPage: React.FC = () => {
             </CardContent>
           </Card>
         </div>
-      </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <Navigation />
-      
-      <div className="container mx-auto px-4 py-8">
+    <div className="container mx-auto px-4 py-8">
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-foreground mb-2">
             Admin Reviews Dashboard
@@ -450,16 +444,15 @@ export const AdminReviewsPage: React.FC = () => {
             )}
           </CardContent>
         </Card>
-      </div>
 
-      {/* Review Details Modal */}
-      {selectedReview && (
-        <ReviewDetailsModal
-          review={selectedReview}
-          isOpen={!!selectedReview}
-          onClose={() => setSelectedReview(null)}
-        />
-      )}
-    </div>
+        {/* Review Details Modal */}
+        {selectedReview && (
+          <ReviewDetailsModal
+            review={selectedReview}
+            isOpen={!!selectedReview}
+            onClose={() => setSelectedReview(null)}
+          />
+        )}
+      </div>
   )
 }

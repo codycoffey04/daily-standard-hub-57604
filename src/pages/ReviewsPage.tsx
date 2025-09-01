@@ -3,7 +3,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { supabase } from '@/integrations/supabase/client'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { ReviewQueue } from '@/components/ReviewQueue'
-import { Navigation } from '@/components/Navigation'
+
 import { CheckCircle, FileText } from 'lucide-react'
 
 const ReviewsPage: React.FC = () => {
@@ -59,10 +59,7 @@ const ReviewsPage: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background to-secondary/20">
-      <Navigation />
-      
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="mb-8">
           <div className="flex items-center space-x-3 mb-2">
             <CheckCircle className="h-8 w-8 text-primary" />
@@ -81,7 +78,6 @@ const ReviewsPage: React.FC = () => {
           onRefresh={loadReviewQueue}
         />
       </div>
-    </div>
   )
 }
 

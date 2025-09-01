@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
+import { AppLayout } from "@/components/AppLayout";
 
 // Pages
 import LoginPage from "./pages/LoginPage";
@@ -33,7 +34,9 @@ const App = () => (
               path="/home" 
               element={
                 <ProtectedRoute>
-                  <HomePage />
+                  <AppLayout>
+                    <HomePage />
+                  </AppLayout>
                 </ProtectedRoute>
               } 
             />
@@ -41,7 +44,9 @@ const App = () => (
               path="/team" 
               element={
                 <ProtectedRoute requiresOwnerManager>
-                  <TeamPage />
+                  <AppLayout>
+                    <TeamPage />
+                  </AppLayout>
                 </ProtectedRoute>
               } 
             />
@@ -49,7 +54,9 @@ const App = () => (
               path="/reviews" 
               element={
                 <ProtectedRoute requiresOwnerManager>
-                  <ReviewsPage />
+                  <AppLayout>
+                    <ReviewsPage />
+                  </AppLayout>
                 </ProtectedRoute>
               } 
             />
@@ -57,7 +64,9 @@ const App = () => (
               path="/accountability" 
               element={
                 <ProtectedRoute>
-                  <AccountabilityReviewsPage />
+                  <AppLayout>
+                    <AccountabilityReviewsPage />
+                  </AppLayout>
                 </ProtectedRoute>
               } 
             />
@@ -65,7 +74,9 @@ const App = () => (
               path="/sources" 
               element={
                 <ProtectedRoute requiresOwnerManager>
-                  <SourcesPage />
+                  <AppLayout>
+                    <SourcesPage />
+                  </AppLayout>
                 </ProtectedRoute>
               } 
             />
@@ -73,7 +84,9 @@ const App = () => (
               path="/summaries" 
               element={
                 <ProtectedRoute requiresOwnerManager>
-                  <SummariesPage />
+                  <AppLayout>
+                    <SummariesPage />
+                  </AppLayout>
                 </ProtectedRoute>
               } 
             />
@@ -81,7 +94,9 @@ const App = () => (
               path="/importer" 
               element={
                 <ProtectedRoute requiresOwnerManager>
-                  <ImporterPage />
+                  <AppLayout>
+                    <ImporterPage />
+                  </AppLayout>
                 </ProtectedRoute>
               } 
             />
@@ -89,7 +104,9 @@ const App = () => (
               path="/admin/reviews" 
               element={
                 <ProtectedRoute requiresOwnerManager>
-                  <AdminReviewsPage />
+                  <AppLayout>
+                    <AdminReviewsPage />
+                  </AppLayout>
                 </ProtectedRoute>
               } 
             />

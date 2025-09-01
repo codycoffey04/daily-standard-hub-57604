@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { Navigation } from '@/components/Navigation'
+
 import { ReportSidebar } from '@/components/reports/ReportSidebar'
 import { ReportHeader } from '@/components/reports/ReportHeader'
 import { QHHBySourceReport } from '@/components/reports/QHHBySourceReport'
@@ -109,54 +109,48 @@ const SummariesPage: React.FC = () => {
 
   if (!activeReport) {
     return (
-      <div className="min-h-screen bg-background">
-        <Navigation />
-        <div className="flex items-center justify-center h-96">
-          <div className="text-center space-y-3">
-            <div className="text-lg font-medium text-foreground">
-              Report not found
-            </div>
-            <p className="text-muted-foreground">
-              The requested report could not be loaded
-            </p>
+      <div className="flex items-center justify-center h-96">
+        <div className="text-center space-y-3">
+          <div className="text-lg font-medium text-foreground">
+            Report not found
           </div>
+          <p className="text-muted-foreground">
+            The requested report could not be loaded
+          </p>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <Navigation />
-      <div className="flex h-[calc(100vh-64px)]">
-        <ReportSidebar
-          activeReportId={activeReportId}
-          onReportChange={handleReportChange}
-          expandedCategories={expandedCategories}
-          onCategoryToggle={handleCategoryToggle}
-          collapsed={sidebarCollapsed}
-          onToggle={handleSidebarToggle}
+    <div className="flex h-screen">
+      <ReportSidebar
+        activeReportId={activeReportId}
+        onReportChange={handleReportChange}
+        expandedCategories={expandedCategories}
+        onCategoryToggle={handleCategoryToggle}
+        collapsed={sidebarCollapsed}
+        onToggle={handleSidebarToggle}
+      />
+      
+      <div className={cn(
+        "flex-1 flex flex-col overflow-hidden transition-all duration-300 ease-in-out",
+        sidebarCollapsed ? "ml-0" : "ml-8"
+      )}>
+        <ReportHeader
+          report={activeReport}
+          selectedYear={selectedYear}
+          selectedMonth={selectedMonth}
+          onYearChange={setSelectedYear}
+          onMonthChange={setSelectedMonth}
         />
         
-        <div className={cn(
-          "flex-1 flex flex-col overflow-hidden transition-all duration-300 ease-in-out",
-          sidebarCollapsed ? "ml-0" : "ml-8"
-        )}>
-          <ReportHeader
-            report={activeReport}
+        <div className="flex-1 overflow-y-auto p-6">
+          <ReportContent
+            reportId={activeReportId}
             selectedYear={selectedYear}
             selectedMonth={selectedMonth}
-            onYearChange={setSelectedYear}
-            onMonthChange={setSelectedMonth}
           />
-          
-          <div className="flex-1 overflow-y-auto p-6">
-            <ReportContent
-              reportId={activeReportId}
-              selectedYear={selectedYear}
-              selectedMonth={selectedMonth}
-            />
-          </div>
         </div>
       </div>
     </div>
