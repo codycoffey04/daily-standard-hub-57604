@@ -7,6 +7,8 @@ import { QuotesBySourceReport } from '@/components/reports/QuotesBySourceReport'
 import { ItemsByProducerReport } from '@/components/reports/ItemsByProducerReport'
 import { ProducerSourceMatrixReport } from '@/components/reports/ProducerSourceMatrixReport'
 import { reportCategories, getReportById } from '@/config/reportConfig'
+import { useIsMobile } from '@/hooks/use-mobile'
+import { cn } from '@/lib/utils'
 
 // Placeholder components for future reports
 const PlaceholderReport: React.FC<{ reportTitle: string }> = ({ reportTitle }) => (
@@ -49,12 +51,31 @@ const ReportContent: React.FC<ReportContentProps> = ({
 }
 
 const SummariesPage: React.FC = () => {
+  const isMobile = useIsMobile()
   const [selectedYear, setSelectedYear] = useState(2025)
   const [selectedMonth, setSelectedMonth] = useState<number | null>(null)
   const [activeReportId, setActiveReportId] = useState('qhh-by-source')
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(
     new Set(['lead-source-analysis']) // Start with lead source analysis expanded
   )
+  
+  // Sidebar collapsed state with localStorage persistence
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
+    const stored = localStorage.getItem('reports-sidebar-collapsed')
+    return stored ? JSON.parse(stored) : isMobile
+  })
+
+  // Persist sidebar state to localStorage
+  useEffect(() => {
+    localStorage.setItem('reports-sidebar-collapsed', JSON.stringify(sidebarCollapsed))
+  }, [sidebarCollapsed])
+
+  // Update sidebar state when mobile state changes
+  useEffect(() => {
+    if (isMobile && !sidebarCollapsed) {
+      setSidebarCollapsed(true)
+    }
+  }, [isMobile, sidebarCollapsed])
 
   // Find the active report config
   const activeReport = getReportById(activeReportId)
@@ -80,6 +101,10 @@ const SummariesPage: React.FC = () => {
 
   const handleReportChange = (reportId: string) => {
     setActiveReportId(reportId)
+  }
+
+  const handleSidebarToggle = () => {
+    setSidebarCollapsed(prev => !prev)
   }
 
   if (!activeReport) {
@@ -109,9 +134,14 @@ const SummariesPage: React.FC = () => {
           onReportChange={handleReportChange}
           expandedCategories={expandedCategories}
           onCategoryToggle={handleCategoryToggle}
+          collapsed={sidebarCollapsed}
+          onToggle={handleSidebarToggle}
         />
         
-        <div className="flex-1 flex flex-col overflow-hidden ml-8">
+        <div className={cn(
+          "flex-1 flex flex-col overflow-hidden transition-all duration-300 ease-in-out",
+          sidebarCollapsed ? "ml-2" : "ml-8"
+        )}>
           <ReportHeader
             report={activeReport}
             selectedYear={selectedYear}
