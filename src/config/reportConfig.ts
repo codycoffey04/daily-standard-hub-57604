@@ -109,6 +109,38 @@ export const reportCategories: ReportCategory[] = [
     title: 'Producer Analytics',
     reports: [
       {
+        id: 'qhh-by-producer',
+        title: 'QHH by Producer by Month',
+        icon: Database,
+        description: 'Quality hours breakdown by producer',
+        component: 'QHHByProducerReport',
+        category: 'producer-analytics'
+      },
+      {
+        id: 'quotes-by-producer',
+        title: 'Quotes by Producer by Month',
+        icon: MessageSquare,
+        description: 'Quote totals by producer',
+        component: 'QuotesByProducerReport',
+        category: 'producer-analytics'
+      },
+      {
+        id: 'producer-source-matrix-qhh',
+        title: 'Producer × Source Matrix - QHH',
+        icon: Target,
+        description: 'QHH breakdown by producer and source',
+        component: 'ProducerSourceMatrixQHHReport',
+        category: 'producer-analytics'
+      },
+      {
+        id: 'producer-source-matrix-quotes',
+        title: 'Producer × Source Matrix - Quotes',
+        icon: BarChart3,
+        description: 'Quotes breakdown by producer and source',
+        component: 'ProducerSourceMatrixQuotesReport',
+        category: 'producer-analytics'
+      },
+      {
         id: 'items-by-producer',
         title: 'Items by Producer',
         icon: UserCheck,

@@ -88,6 +88,43 @@ export function useQHHBySource(year: number, month: number | null) {
   })
 }
 
+export function useQHHByProducer(year: number, month: number | null) {
+  const { startDate, endDate } = getDateRange(year, month)
+  
+  return useQuery({
+    queryKey: ['qhh-by-producer', year, month],
+    queryFn: async () => {
+      const query = supabase
+        .from('daily_entries')
+        .select(`
+          producer_id,
+          producers!inner(display_name),
+          daily_entry_sources!inner(qhh)
+        `)
+        .gte('entry_date', startDate)
+        .lte('entry_date', endDate)
+
+      const { data, error } = await query
+
+      if (error) throw error
+
+      // Group by producer and sum QHH
+      const producerMap = new Map<string, { producer: string, qhh: number }>()
+
+      data?.forEach((entry: any) => {
+        const producerName = entry.producers.display_name
+        entry.daily_entry_sources.forEach((source: any) => {
+          const existing = producerMap.get(producerName) || { producer: producerName, qhh: 0 }
+          existing.qhh += source.qhh || 0
+          producerMap.set(producerName, existing)
+        })
+      })
+
+      return Array.from(producerMap.values()).sort((a, b) => b.qhh - a.qhh)
+    }
+  })
+}
+
 export function useQuotesByProducer(year: number, month: number | null) {
   return useQuery({
     queryKey: ['quotes-by-producer', year, month],
