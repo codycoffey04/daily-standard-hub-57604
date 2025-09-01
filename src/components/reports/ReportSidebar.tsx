@@ -25,7 +25,7 @@ export const ReportSidebar: React.FC<ReportSidebarProps> = ({
   }
 
   return (
-    <div className="w-72 bg-sidebar border-r border-sidebar-border h-full flex flex-col">
+    <div className="w-80 bg-sidebar border-r border-sidebar-border h-full flex flex-col">
       <div className="p-4 border-b border-sidebar-border">
         <h2 className="text-lg font-semibold text-sidebar-foreground">
           Reports & Analytics
@@ -80,12 +80,12 @@ export const ReportSidebar: React.FC<ReportSidebarProps> = ({
                               >
                                 <Icon className="h-4 w-4 mr-3 flex-shrink-0" />
                                 <div className="flex-1 min-w-0">
-                                  <div className="text-sm font-medium truncate">
-                                    {report.title}
-                                  </div>
-                                  <div className="text-xs opacity-75 mt-0.5 line-clamp-2">
-                                    {report.description}
-                                  </div>
+                                <div className="text-sm font-medium truncate" title={report.title}>
+                                  {report.title}
+                                </div>
+                                <div className="text-xs opacity-75 mt-0.5 line-clamp-2" title={report.description}>
+                                  {report.description}
+                                </div>
                                 </div>
                               </Button>
                             </TooltipTrigger>
