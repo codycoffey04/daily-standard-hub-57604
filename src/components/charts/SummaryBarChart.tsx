@@ -28,18 +28,21 @@ export const SummaryBarChart: React.FC<SummaryBarChartProps> = ({
   return (
     <ChartContainer config={chartConfig} className="w-full" style={{ height }}>
       <ResponsiveContainer width="100%" height="100%">
-        <BarChart data={data} margin={{ top: 20, right: 30, left: 20, bottom: 60 }}>
+        <BarChart data={data} margin={{ top: 50, right: 30, left: 20, bottom: 80 }}>
           <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
           <XAxis 
             dataKey="name" 
-            className="text-xs"
+            className="text-xs fill-muted-foreground"
             angle={-45}
             textAnchor="end"
-            height={100}
+            height={80}
             interval={0}
-            tickFormatter={(value) => truncateText(value, 15)}
+            tickFormatter={(value) => truncateText(value, 12)}
           />
-          <YAxis className="text-xs" />
+          <YAxis 
+            className="text-xs fill-muted-foreground" 
+            tickFormatter={formatValue}
+          />
           <ChartTooltip 
             content={<ChartTooltipContent 
               formatter={(value) => [formatValue(Number(value)), title]}
@@ -54,8 +57,9 @@ export const SummaryBarChart: React.FC<SummaryBarChartProps> = ({
             <LabelList 
               dataKey="value" 
               position="top" 
-              className="fill-foreground text-xs font-medium"
-              formatter={formatValue}
+              className="fill-foreground text-xs font-bold"
+              formatter={(value: number) => formatValue(value)}
+              offset={8}
             />
           </Bar>
         </BarChart>
