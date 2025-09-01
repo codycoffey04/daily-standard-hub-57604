@@ -111,7 +111,7 @@ const SummariesPage: React.FC = () => {
           onCategoryToggle={handleCategoryToggle}
         />
         
-        <div className="flex-1 flex flex-col overflow-hidden">
+        <div className="flex-1 flex flex-col overflow-hidden ml-6">
           <ReportHeader
             report={activeReport}
             selectedYear={selectedYear}

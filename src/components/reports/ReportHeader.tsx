@@ -36,29 +36,14 @@ export const ReportHeader: React.FC<ReportHeaderProps> = ({
 
   return (
     <div className="bg-card border-b border-border p-6">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-6">
-          <MonthYearPickers
-            selectedYear={selectedYear}
-            selectedMonth={selectedMonth}
-            onYearChange={onYearChange}
-            onMonthChange={onMonthChange}
-          />
-        </div>
-
-        <div className="flex items-center space-x-4">
-          <div className="p-2 bg-primary/10 rounded-lg">
-            <Icon className="h-6 w-6 text-primary" />
-          </div>
-          <div className="text-center">
-            <h1 className="text-2xl font-bold text-foreground">
-              {report.title}
-            </h1>
-            <p className="text-muted-foreground mt-1">
-              {report.description}
-            </p>
-          </div>
-        </div>
+      {/* Top row: Date filters on left, action buttons on right */}
+      <div className="flex items-center justify-between mb-6">
+        <MonthYearPickers
+          selectedYear={selectedYear}
+          selectedMonth={selectedMonth}
+          onYearChange={onYearChange}
+          onMonthChange={onMonthChange}
+        />
 
         <div className="flex items-center space-x-2">
           {onRefresh && (
@@ -93,6 +78,21 @@ export const ReportHeader: React.FC<ReportHeaderProps> = ({
             <Printer className="h-4 w-4" />
             <span>Print</span>
           </Button>
+        </div>
+      </div>
+
+      {/* Second row: Centered title and description */}
+      <div className="flex items-center justify-center space-x-4">
+        <div className="p-2 bg-primary/10 rounded-lg">
+          <Icon className="h-6 w-6 text-primary" />
+        </div>
+        <div className="text-center">
+          <h1 className="text-2xl font-bold text-foreground">
+            {report.title}
+          </h1>
+          <p className="text-muted-foreground mt-1">
+            {report.description}
+          </p>
         </div>
       </div>
     </div>
