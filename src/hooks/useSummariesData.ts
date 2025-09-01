@@ -71,7 +71,6 @@ export function useQHHBySource(year: number, month: number | null) {
         `)
         .gte('daily_entries.entry_date', startDate)
         .lte('daily_entries.entry_date', endDate)
-        .eq('sources.active', true)
       
       if (error) throw error
       
@@ -139,7 +138,6 @@ export function useQuotesBySource(year: number, month: number | null) {
         `)
         .gte('daily_entries.entry_date', startDate)
         .lte('daily_entries.entry_date', endDate)
-        .eq('sources.active', true)
       
       if (error) throw error
       
@@ -204,7 +202,6 @@ export function useItemsBySource(year: number, month: number | null) {
         `)
         .gte('daily_entries.entry_date', startDate)
         .lte('daily_entries.entry_date', endDate)
-        .eq('sources.active', true)
       
       if (error) throw error
       
@@ -242,7 +239,6 @@ export function useProducerSourceMatrix(year: number, month: number | null) {
         `)
         .gte('daily_entries.entry_date', startDate)
         .lte('daily_entries.entry_date', endDate)
-        .eq('sources.active', true)
       
       if (error) throw error
       
@@ -285,7 +281,6 @@ export function useCloseRateAnalysis(year: number, month: number | null) {
         `)
         .gte('daily_entries.entry_date', startDate)
         .lte('daily_entries.entry_date', endDate)
-        .eq('sources.active', true)
       
       if (error) throw error
       

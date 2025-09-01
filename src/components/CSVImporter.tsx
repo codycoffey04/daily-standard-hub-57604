@@ -8,13 +8,9 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import { toast } from '@/hooks/use-toast'
 import { Upload, FileText, CheckCircle, AlertTriangle, Download } from 'lucide-react'
+import { useSourcesForSelection, sortSourcesWithOtherLast, type Source } from '@/hooks/useSourcesForSelection'
 
-interface Source {
-  id: string
-  name: string
-  sort_order: number
-  active: boolean
-}
+// Source interface now imported from hook
 
 interface Producer {
   id: string
@@ -35,23 +31,16 @@ export const CSVImporter: React.FC = () => {
   const [loading, setLoading] = useState(false)
   const [validationResult, setValidationResult] = useState<ValidationResult | null>(null)
   const [importComplete, setImportComplete] = useState(false)
-  const [sources, setSources] = useState<Source[]>([])
   const [producers, setProducers] = useState<Producer[]>([])
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  // Load sources and producers on mount
+  // Load all sources (including inactive) with proper sorting
+  const { data: sources = [], isLoading: sourcesLoading } = useSourcesForSelection()
+
+  // Load producers on mount
   useEffect(() => {
-    loadSources()
     loadProducers()
   }, [])
-
-  const loadSources = async () => {
-    const { data } = await supabase
-      .from('sources')
-      .select('*')
-      .order('sort_order')
-    if (data) setSources(data)
-  }
 
   const loadProducers = async () => {
     const { data } = await supabase
@@ -177,7 +166,7 @@ export const CSVImporter: React.FC = () => {
         .single()
       
       if (!error && data) {
-        setSources(prev => [...prev, data])
+        // Note: Sources will be refreshed by the hook automatically
         return data.name
       }
     } catch (error) {
@@ -446,10 +435,8 @@ export const CSVImporter: React.FC = () => {
     }
   }
 
-  // Dynamic template generation based on current sources
-  const downloadTemplate = async () => {
-    await loadSources() // Refresh sources before generating template
-    
+  // Dynamic template generation based on all sources
+  const downloadTemplate = () => {
     const baseHeaders = [
       'producer_email',
       'entry_date',
@@ -458,9 +445,9 @@ export const CSVImporter: React.FC = () => {
       'items_total'
     ]
     
-    // Add source-specific columns dynamically
+    // Add source-specific columns dynamically for ALL sources (including inactive)
     const sourceHeaders: string[] = []
-    sources.filter(s => s.active).forEach(source => {
+    sources.forEach(source => {
       const slug = source.name.toLowerCase().replace(/[^a-z0-9]+/g, '_')
       sourceHeaders.push(`${slug}_qhh`)
       sourceHeaders.push(`${slug}_quotes`)

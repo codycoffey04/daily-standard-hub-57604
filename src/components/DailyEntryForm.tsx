@@ -9,6 +9,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import { toast } from '@/hooks/use-toast'
 import { Calendar, Lock, Save } from 'lucide-react'
+import { useSourcesForSelection, type Source } from '@/hooks/useSourcesForSelection'
 
 interface DailyEntryFormProps {
   producerId: string
@@ -22,7 +23,6 @@ export const DailyEntryForm: React.FC<DailyEntryFormProps> = ({
   onSubmitted
 }) => {
   const [loading, setLoading] = useState(false)
-  const [sources, setSources] = useState<any[]>([])
   const [entryDate, setEntryDate] = useState(getDefaultEntryDate())
   const [outboundDials, setOutboundDials] = useState(0)
   const [talkMinutes, setTalkMinutes] = useState(0)
@@ -31,9 +31,8 @@ export const DailyEntryForm: React.FC<DailyEntryFormProps> = ({
   const [sourceData, setSourceData] = useState<Record<string, { qhh: number; quotes: number; items: number }>>({})
   const [validationError, setValidationError] = useState('')
 
-  useEffect(() => {
-    loadSources()
-  }, [])
+  // Load all sources (including inactive) with proper "Other" sorting
+  const { data: sources = [], isLoading: sourcesLoading } = useSourcesForSelection()
 
   useEffect(() => {
     if (existingEntry) {
@@ -56,24 +55,11 @@ export const DailyEntryForm: React.FC<DailyEntryFormProps> = ({
     }
   }, [existingEntry])
 
-  const loadSources = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('sources')
-        .select('*')
-        .eq('active', true)
-        .order('sort_order')
-
-      if (error) {
-        console.error('Error loading sources:', error)
-        return
-      }
-
-      setSources(data || [])
-      
-      // Initialize source data if not already set
+  // Initialize source data when sources are loaded
+  useEffect(() => {
+    if (sources.length > 0) {
       const initialData: Record<string, { qhh: number; quotes: number; items: number }> = {}
-      data?.forEach(source => {
+      sources.forEach(source => {
         if (!sourceData[source.id]) {
           initialData[source.id] = { qhh: 0, quotes: 0, items: 0 }
         }
@@ -81,10 +67,8 @@ export const DailyEntryForm: React.FC<DailyEntryFormProps> = ({
       if (Object.keys(initialData).length > 0) {
         setSourceData(prev => ({ ...prev, ...initialData }))
       }
-    } catch (error) {
-      console.error('Error loading sources:', error)
     }
-  }
+  }, [sources])
 
   const updateSourceData = (sourceId: string, field: 'qhh' | 'quotes' | 'items', value: number) => {
     setSourceData(prev => ({
