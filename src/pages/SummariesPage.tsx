@@ -140,7 +140,7 @@ const SummariesPage: React.FC = () => {
         
         <div className={cn(
           "flex-1 flex flex-col overflow-hidden transition-all duration-300 ease-in-out",
-          sidebarCollapsed ? "ml-2" : "ml-8"
+          sidebarCollapsed ? "ml-0" : "ml-8"
         )}>
           <ReportHeader
             report={activeReport}

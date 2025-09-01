@@ -28,70 +28,31 @@ export const ReportSidebar: React.FC<ReportSidebarProps> = ({
     onReportChange(report.id)
   }
 
+  // Floating toggle button when sidebar is collapsed
   if (collapsed) {
     return (
-      <div className="w-16 bg-sidebar border-r border-sidebar-border h-full flex flex-col transition-all duration-300 ease-in-out">
-        <div className="p-3 border-b border-sidebar-border flex justify-center">
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={onToggle}
-                  className="h-8 w-8 p-0"
-                >
-                  <Menu className="h-4 w-4" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent side="right">
-                <p>Expand sidebar</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-        </div>
-
-        <ScrollArea className="flex-1">
-          <div className="p-2 space-y-2">
-            {reportCategories.flatMap(category => 
-              expandedCategories.has(category.id) ? category.reports : []
-            ).map((report) => {
-              const isActive = activeReportId === report.id
-              const Icon = report.icon
-              
-              return (
-                <TooltipProvider key={report.id}>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        className={cn(
-                          "w-full h-10 p-0 flex items-center justify-center",
-                          isActive 
-                            ? "bg-sidebar-primary text-sidebar-primary-foreground" 
-                            : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-                        )}
-                        onClick={() => handleReportClick(report)}
-                      >
-                        <Icon className="h-4 w-4" />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent side="right" className="max-w-xs">
-                      <div className="font-medium">{report.title}</div>
-                      <div className="text-xs mt-1 opacity-75">{report.description}</div>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              )
-            })}
-          </div>
-        </ScrollArea>
-      </div>
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onToggle}
+              className="fixed top-20 left-4 z-50 h-10 w-10 p-0 bg-background shadow-lg border-border hover:bg-accent animate-fade-in"
+            >
+              <Menu className="h-4 w-4" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent side="right">
+            <p>Show sidebar</p>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
     )
   }
 
   return (
-    <div className="w-80 bg-sidebar border-r border-sidebar-border h-full flex flex-col transition-all duration-300 ease-in-out">
+    <div className="w-80 bg-sidebar border-r border-sidebar-border h-full flex flex-col transition-all duration-300 ease-in-out animate-slide-in-right">
       <div className="p-4 border-b border-sidebar-border">
         <div className="flex items-center justify-between">
           <div className="flex-1">
