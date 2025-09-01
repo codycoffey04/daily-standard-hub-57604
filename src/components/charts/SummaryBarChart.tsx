@@ -1,6 +1,7 @@
 import React from 'react'
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer } from 'recharts'
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, LabelList } from 'recharts'
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart'
+import { formatNumber, truncateText } from '@/lib/utils'
 
 interface SummaryBarChartProps {
   data: Array<{ name: string; value: number }>
@@ -14,8 +15,8 @@ export const SummaryBarChart: React.FC<SummaryBarChartProps> = ({
   data,
   title,
   color = "hsl(var(--primary))",
-  height = 300,
-  formatValue = (value) => value.toString()
+  height = 400,
+  formatValue = (value) => formatNumber(value)
 }) => {
   const chartConfig = {
     value: {
@@ -34,20 +35,29 @@ export const SummaryBarChart: React.FC<SummaryBarChartProps> = ({
             className="text-xs"
             angle={-45}
             textAnchor="end"
-            height={80}
+            height={100}
             interval={0}
+            tickFormatter={(value) => truncateText(value, 15)}
           />
           <YAxis className="text-xs" />
           <ChartTooltip 
             content={<ChartTooltipContent 
               formatter={(value) => [formatValue(Number(value)), title]}
+              labelFormatter={(label) => String(label)}
             />}
           />
           <Bar 
             dataKey="value" 
             fill={color}
             radius={[4, 4, 0, 0]}
-          />
+          >
+            <LabelList 
+              dataKey="value" 
+              position="top" 
+              className="fill-foreground text-xs font-medium"
+              formatter={formatValue}
+            />
+          </Bar>
         </BarChart>
       </ResponsiveContainer>
     </ChartContainer>

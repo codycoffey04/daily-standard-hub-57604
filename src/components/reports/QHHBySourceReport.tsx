@@ -2,7 +2,9 @@ import React from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { SummaryBarChart } from '@/components/charts/SummaryBarChart'
 import { useQHHBySource } from '@/hooks/useSummariesData'
-import { Skeleton } from '@/components/ui/skeleton'
+import { ChartLoading } from '@/components/ui/chart-loading'
+import { EmptyState } from '@/components/ui/empty-state'
+import { formatNumber } from '@/lib/utils'
 import { AlertCircle } from 'lucide-react'
 
 interface QHHBySourceReportProps {
@@ -19,13 +21,26 @@ export const QHHBySourceReport: React.FC<QHHBySourceReportProps> = ({
   if (isLoading) {
     return (
       <div className="space-y-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {[1, 2, 3].map(i => (
+            <Card key={i}>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <div className="h-4 w-20 bg-muted animate-pulse rounded" />
+              </CardHeader>
+              <CardContent>
+                <div className="h-8 w-16 bg-muted animate-pulse rounded mb-2" />
+                <div className="h-3 w-24 bg-muted animate-pulse rounded" />
+              </CardContent>
+            </Card>
+          ))}
+        </div>
         <Card>
           <CardHeader>
-            <Skeleton className="h-6 w-48" />
-            <Skeleton className="h-4 w-96" />
+            <div className="h-6 w-48 bg-muted animate-pulse rounded mb-2" />
+            <div className="h-4 w-96 bg-muted animate-pulse rounded" />
           </CardHeader>
           <CardContent>
-            <Skeleton className="h-96 w-full" />
+            <ChartLoading />
           </CardContent>
         </Card>
       </div>
@@ -65,7 +80,7 @@ export const QHHBySourceReport: React.FC<QHHBySourceReportProps> = ({
             <CardTitle className="text-sm font-medium">Total QHH</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{totalQHH}</div>
+            <div className="text-2xl font-bold">{formatNumber(totalQHH)}</div>
             <p className="text-xs text-muted-foreground">
               Across all sources
             </p>
@@ -81,7 +96,7 @@ export const QHHBySourceReport: React.FC<QHHBySourceReportProps> = ({
               {data?.[0]?.source_name || 'N/A'}
             </div>
             <p className="text-xs text-muted-foreground">
-              {data?.[0]?.qhh || 0} QHH
+              {formatNumber(data?.[0]?.qhh || 0)} QHH
             </p>
           </CardContent>
         </Card>
@@ -111,13 +126,11 @@ export const QHHBySourceReport: React.FC<QHHBySourceReportProps> = ({
             <SummaryBarChart
               data={chartData}
               title="QHH"
-              height={500}
+              height={450}
               color="hsl(var(--primary))"
             />
           ) : (
-            <div className="flex items-center justify-center h-96 text-muted-foreground">
-              No data available for the selected period
-            </div>
+            <EmptyState />
           )}
         </CardContent>
       </Card>
