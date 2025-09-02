@@ -191,7 +191,7 @@ export const DailyEntryForm: React.FC<DailyEntryFormProps> = ({
     }
   }
 
-  const isLocked = isPast6PM(entryDate)
+  const isLocked = existingEntry && isPast6PM(entryDate)
   const canEdit = !isLocked // For now, assuming manager override will be handled elsewhere
 
   return (
