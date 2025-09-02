@@ -10,6 +10,7 @@ import { Badge } from '@/components/ui/badge'
 import { toast } from '@/hooks/use-toast'
 import { Calendar, Lock, Save } from 'lucide-react'
 import { useSourcesForSelection, type Source } from '@/hooks/useSourcesForSelection'
+import { QuotedHouseholdForm, type QuotedHousehold } from './QuotedHouseholdForm'
 
 interface DailyEntryFormProps {
   producerId: string
@@ -30,6 +31,7 @@ export const DailyEntryForm: React.FC<DailyEntryFormProps> = ({
   const [salesTotal, setSalesTotal] = useState(0)
   const [sourceData, setSourceData] = useState<Record<string, { qhh: number; quotes: number; items: number }>>({})
   const [validationError, setValidationError] = useState('')
+  const [quotedHouseholds, setQuotedHouseholds] = useState<QuotedHousehold[]>([])
 
   // Load all sources (including inactive) with proper "Other" sorting
   const { data: sources = [], isLoading: sourcesLoading } = useSourcesForSelection()
@@ -52,6 +54,19 @@ export const DailyEntryForm: React.FC<DailyEntryFormProps> = ({
         }
       })
       setSourceData(data)
+
+      // Load existing quoted households
+      const loadQuotedHouseholds = async () => {
+        const { data: qhhData } = await (supabase as any)
+          .from('quoted_households')
+          .select('*')
+          .eq('daily_entry_id', existingEntry.id)
+        
+        if (qhhData) {
+          setQuotedHouseholds(qhhData as QuotedHousehold[])
+        }
+      }
+      loadQuotedHouseholds()
     }
   }, [existingEntry])
 
@@ -103,6 +118,22 @@ export const DailyEntryForm: React.FC<DailyEntryFormProps> = ({
     if (entryDate > today) {
       setValidationError('Entry date cannot be in the future')
       return false
+    }
+
+    // Validate QHH entries match QHH total
+    const totalQHH = Object.values(sourceData).reduce((sum, data) => sum + (data.qhh || 0), 0)
+    if (quotedHouseholds.length !== totalQHH) {
+      setValidationError(`Number of QHH entries (${quotedHouseholds.length}) must match QHH total (${totalQHH})`)
+      return false
+    }
+
+    // Validate phone numbers in QHH entries
+    const phoneRegex = /^\(\d{3}\) \d{3}-\d{4}$/
+    for (const qhh of quotedHouseholds) {
+      if (!phoneRegex.test(qhh.phone_number)) {
+        setValidationError(`Invalid phone number format: ${qhh.phone_number}`)
+        return false
+      }
     }
 
     setValidationError('')
@@ -172,6 +203,36 @@ export const DailyEntryForm: React.FC<DailyEntryFormProps> = ({
 
       if (sourceError) throw sourceError
 
+      // Save quoted households
+      if (quotedHouseholds.length > 0) {
+        // Delete existing QHH entries if editing
+        if (existingEntry) {
+          await (supabase as any)
+            .from('quoted_households')
+            .delete()
+            .eq('daily_entry_id', entryId)
+        }
+
+        // Insert new QHH entries
+        const qhhEntries = quotedHouseholds.map(qhh => ({
+          daily_entry_id: entryId,
+          full_name: qhh.full_name,
+          phone_number: qhh.phone_number,
+          policies_quoted: qhh.policies_quoted,
+          lead_source_id: qhh.lead_source_id,
+          notes: qhh.notes || null,
+          quick_action_status: qhh.quick_action_status,
+          opted_into_hearsay: qhh.opted_into_hearsay,
+          created_by: producerId
+        }))
+
+        const { error: qhhError } = await (supabase as any)
+          .from('quoted_households')
+          .insert(qhhEntries)
+
+        if (qhhError) throw qhhError
+      }
+
       toast({
         title: "Success",
         description: "Daily entry saved successfully"
@@ -193,6 +254,22 @@ export const DailyEntryForm: React.FC<DailyEntryFormProps> = ({
 
   const isLocked = existingEntry && isPast6PM(entryDate)
   const canEdit = !isLocked // For now, assuming manager override will be handled elsewhere
+
+  // Calculate total QHH from source data
+  const totalQHH = Object.values(sourceData).reduce((sum, data) => sum + (data.qhh || 0), 0)
+
+  // QHH handlers
+  const handleAddQHH = (qhh: QuotedHousehold) => {
+    setQuotedHouseholds(prev => [...prev, qhh])
+  }
+
+  const handleEditQHH = (index: number, qhh: QuotedHousehold) => {
+    setQuotedHouseholds(prev => prev.map((item, i) => i === index ? qhh : item))
+  }
+
+  const handleDeleteQHH = (index: number) => {
+    setQuotedHouseholds(prev => prev.filter((_, i) => i !== index))
+  }
 
   return (
     <Card>
@@ -311,6 +388,19 @@ export const DailyEntryForm: React.FC<DailyEntryFormProps> = ({
               ))}
             </div>
           </div>
+
+          {/* Quoted Households Section */}
+          {totalQHH > 0 && (
+            <QuotedHouseholdForm
+              quotedHouseholds={quotedHouseholds}
+              onAdd={handleAddQHH}
+              onEdit={handleEditQHH}
+              onDelete={handleDeleteQHH}
+              sources={sources}
+              totalQHH={totalQHH}
+              canEdit={canEdit}
+            />
+          )}
 
           {/* Items Total (Auto-calculated) */}
           <div className="form-section">
