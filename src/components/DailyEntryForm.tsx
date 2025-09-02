@@ -27,9 +27,9 @@ export const DailyEntryForm: React.FC<DailyEntryFormProps> = ({
   const [entryDate, setEntryDate] = useState(getDefaultEntryDate())
   const [outboundDials, setOutboundDials] = useState(0)
   const [talkMinutes, setTalkMinutes] = useState(0)
-  const [itemsTotal, setItemsTotal] = useState(0)
-  const [salesTotal, setSalesTotal] = useState(0)
-  const [sourceData, setSourceData] = useState<Record<string, { qhh: number; quotes: number; items: number }>>({})
+  const [qhhTotal, setQhhTotal] = useState(0)
+  const [itemsSold, setItemsSold] = useState(0)
+  const [salesMade, setSalesMade] = useState(0)
   const [validationError, setValidationError] = useState('')
   const [quotedHouseholds, setQuotedHouseholds] = useState<QuotedHousehold[]>([])
 
@@ -41,19 +41,9 @@ export const DailyEntryForm: React.FC<DailyEntryFormProps> = ({
       setEntryDate(existingEntry.entry_date)
       setOutboundDials(existingEntry.outbound_dials || 0)
       setTalkMinutes(existingEntry.talk_minutes || 0)
-      setItemsTotal(existingEntry.items_total || 0)
-      setSalesTotal(existingEntry.sales_total || 0)
-      
-      // Build source data from existing entry
-      const data: Record<string, { qhh: number; quotes: number; items: number }> = {}
-      existingEntry.daily_entry_sources?.forEach((des: any) => {
-        data[des.source_id] = {
-          qhh: des.qhh || 0,
-          quotes: des.quotes || 0,
-          items: des.items || 0
-        }
-      })
-      setSourceData(data)
+      setQhhTotal(existingEntry.qhh_total || 0)
+      setItemsSold(existingEntry.items_total || 0)
+      setSalesMade(existingEntry.sales_total || 0)
 
       // Load existing quoted households
       const loadQuotedHouseholds = async () => {
@@ -70,46 +60,9 @@ export const DailyEntryForm: React.FC<DailyEntryFormProps> = ({
     }
   }, [existingEntry])
 
-  // Initialize source data when sources are loaded
-  useEffect(() => {
-    if (sources.length > 0) {
-      const initialData: Record<string, { qhh: number; quotes: number; items: number }> = {}
-      sources.forEach(source => {
-        if (!sourceData[source.id]) {
-          initialData[source.id] = { qhh: 0, quotes: 0, items: 0 }
-        }
-      })
-      if (Object.keys(initialData).length > 0) {
-        setSourceData(prev => ({ ...prev, ...initialData }))
-      }
-    }
-  }, [sources])
-
-  const updateSourceData = (sourceId: string, field: 'qhh' | 'quotes' | 'items', value: number) => {
-    setSourceData(prev => ({
-      ...prev,
-      [sourceId]: {
-        ...prev[sourceId],
-        [field]: Math.max(0, value)
-      }
-    }))
-  }
-
-  // Auto-calculate items total from source breakdown
-  useEffect(() => {
-    const calculatedTotal = Object.values(sourceData).reduce((sum, data) => sum + (data.items || 0), 0)
-    setItemsTotal(calculatedTotal)
-  }, [sourceData])
 
   const validateForm = () => {
-    const calculatedItemsTotal = Object.values(sourceData).reduce((sum, data) => sum + (data.items || 0), 0)
-    
-    if (itemsTotal !== calculatedItemsTotal) {
-      setValidationError(`Items total (${itemsTotal}) must equal sum of items by source (${calculatedItemsTotal})`)
-      return false
-    }
-
-    if (outboundDials < 0 || talkMinutes < 0 || itemsTotal < 0) {
+    if (outboundDials < 0 || talkMinutes < 0 || qhhTotal < 0 || itemsSold < 0 || salesMade < 0) {
       setValidationError('All values must be non-negative')
       return false
     }
@@ -121,9 +74,8 @@ export const DailyEntryForm: React.FC<DailyEntryFormProps> = ({
     }
 
     // Validate QHH entries match QHH total
-    const totalQHH = Object.values(sourceData).reduce((sum, data) => sum + (data.qhh || 0), 0)
-    if (quotedHouseholds.length !== totalQHH) {
-      setValidationError(`Number of QHH entries (${quotedHouseholds.length}) must match QHH total (${totalQHH})`)
+    if (quotedHouseholds.length !== qhhTotal) {
+      setValidationError(`Number of QHH entries (${quotedHouseholds.length}) must match QHH total (${qhhTotal})`)
       return false
     }
 
@@ -156,7 +108,9 @@ export const DailyEntryForm: React.FC<DailyEntryFormProps> = ({
         entry_month: entryDate.substring(0, 7), // YYYY-MM format
         outbound_dials: outboundDials,
         talk_minutes: talkMinutes,
-        items_total: itemsTotal
+        qhh_total: qhhTotal,
+        items_total: itemsSold,
+        sales_total: salesMade
       }
 
       let entryId = existingEntry?.id
@@ -179,7 +133,23 @@ export const DailyEntryForm: React.FC<DailyEntryFormProps> = ({
         entryId = data.id
       }
 
-      // Update source data
+      // Calculate source data from QHH entries
+      const sourceBreakdown: Record<string, { qhh: number; quotes: number; items: number }> = {}
+      
+      // Initialize all sources with zero values
+      sources.forEach(source => {
+        sourceBreakdown[source.id] = { qhh: 0, quotes: 0, items: 0 }
+      })
+      
+      // Aggregate data from individual QHH entries
+      quotedHouseholds.forEach(qhh => {
+        if (qhh.lead_source_id && sourceBreakdown[qhh.lead_source_id]) {
+          sourceBreakdown[qhh.lead_source_id].qhh += 1
+          sourceBreakdown[qhh.lead_source_id].quotes += qhh.policies_quoted
+        }
+      })
+
+      // Update source data in database
       if (existingEntry) {
         // Delete existing source entries
         await supabase
@@ -188,20 +158,27 @@ export const DailyEntryForm: React.FC<DailyEntryFormProps> = ({
           .eq('daily_entry_id', entryId)
       }
 
-      // Insert new source entries
-      const sourceEntries = sources.map(source => ({
-        daily_entry_id: entryId,
-        source_id: source.id,
-        qhh: sourceData[source.id]?.qhh || 0,
-        quotes: sourceData[source.id]?.quotes || 0,
-        items: sourceData[source.id]?.items || 0
-      }))
+      // Insert new source entries (only non-zero values)
+      const sourceEntries = sources
+        .filter(source => {
+          const data = sourceBreakdown[source.id]
+          return data.qhh > 0 || data.quotes > 0 || data.items > 0
+        })
+        .map(source => ({
+          daily_entry_id: entryId,
+          source_id: source.id,
+          qhh: sourceBreakdown[source.id].qhh,
+          quotes: sourceBreakdown[source.id].quotes,
+          items: sourceBreakdown[source.id].items
+        }))
 
-      const { error: sourceError } = await supabase
-        .from('daily_entry_sources')
-        .insert(sourceEntries)
+      if (sourceEntries.length > 0) {
+        const { error: sourceError } = await supabase
+          .from('daily_entry_sources')
+          .insert(sourceEntries)
 
-      if (sourceError) throw sourceError
+        if (sourceError) throw sourceError
+      }
 
       // Save quoted households
       if (quotedHouseholds.length > 0) {
@@ -255,8 +232,6 @@ export const DailyEntryForm: React.FC<DailyEntryFormProps> = ({
   const isLocked = existingEntry && isPast6PM(entryDate)
   const canEdit = !isLocked // For now, assuming manager override will be handled elsewhere
 
-  // Calculate total QHH from source data
-  const totalQHH = Object.values(sourceData).reduce((sum, data) => sum + (data.qhh || 0), 0)
 
   // QHH handlers
   const handleAddQHH = (qhh: QuotedHousehold) => {
@@ -313,10 +288,10 @@ export const DailyEntryForm: React.FC<DailyEntryFormProps> = ({
             />
           </div>
 
-          {/* Effort Metrics */}
+          {/* Daily Totals */}
           <div className="form-section">
-            <h3 className="text-lg font-semibold mb-4">Effort Metrics</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <h3 className="text-lg font-semibold mb-4">Daily Totals</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="outbound-dials">Outbound Dials</Label>
                 <Input
@@ -339,85 +314,56 @@ export const DailyEntryForm: React.FC<DailyEntryFormProps> = ({
                   disabled={!canEdit}
                 />
               </div>
+              <div className="space-y-2">
+                <Label htmlFor="qhh-total">QHH Total</Label>
+                <Input
+                  id="qhh-total"
+                  type="number"
+                  min="0"
+                  value={qhhTotal}
+                  onChange={(e) => setQhhTotal(parseInt(e.target.value) || 0)}
+                  disabled={!canEdit}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="items-sold">Items Sold</Label>
+                <Input
+                  id="items-sold"
+                  type="number"
+                  min="0"
+                  value={itemsSold}
+                  onChange={(e) => setItemsSold(parseInt(e.target.value) || 0)}
+                  disabled={!canEdit}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="sales-made">Sales Made</Label>
+                <Input
+                  id="sales-made"
+                  type="number"
+                  min="0"
+                  value={salesMade}
+                  onChange={(e) => setSalesMade(parseInt(e.target.value) || 0)}
+                  disabled={!canEdit}
+                />
+              </div>
             </div>
           </div>
 
-          {/* Source Breakdown */}
-          <div className="form-section">
-            <h3 className="text-lg font-semibold mb-4">By Source</h3>
-            <div className="space-y-4">
-              {sources.map(source => (
-                <div key={source.id} className="grid grid-cols-1 md:grid-cols-4 gap-4 p-4 border rounded-lg">
-                  <div className="font-medium text-sm flex items-center">
-                    {source.name}
-                  </div>
-                  <div className="space-y-1">
-                    <Label className="text-xs">QHH</Label>
-                    <Input
-                      type="number"
-                      min="0"
-                      value={sourceData[source.id]?.qhh || 0}
-                      onChange={(e) => updateSourceData(source.id, 'qhh', parseInt(e.target.value) || 0)}
-                      disabled={!canEdit}
-                      className="h-8"
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <Label className="text-xs">Quotes</Label>
-                    <Input
-                      type="number"
-                      min="0"
-                      value={sourceData[source.id]?.quotes || 0}
-                      onChange={(e) => updateSourceData(source.id, 'quotes', parseInt(e.target.value) || 0)}
-                      disabled={!canEdit}
-                      className="h-8"
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <Label className="text-xs">Items</Label>
-                    <Input
-                      type="number"
-                      min="0"
-                      value={sourceData[source.id]?.items || 0}
-                      onChange={(e) => updateSourceData(source.id, 'items', parseInt(e.target.value) || 0)}
-                      disabled={!canEdit}
-                      className="h-8"
-                    />
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
 
           {/* Quoted Households Section */}
-          {totalQHH > 0 && (
+          {qhhTotal > 0 && (
             <QuotedHouseholdForm
               quotedHouseholds={quotedHouseholds}
               onAdd={handleAddQHH}
               onEdit={handleEditQHH}
               onDelete={handleDeleteQHH}
               sources={sources}
-              totalQHH={totalQHH}
+              totalQHH={qhhTotal}
               canEdit={canEdit}
             />
           )}
 
-          {/* Items Total (Auto-calculated) */}
-          <div className="form-section">
-            <div className="space-y-2">
-              <Label htmlFor="items-total">Items Total (Auto-calculated)</Label>
-              <Input
-                id="items-total"
-                type="number"
-                value={itemsTotal}
-                disabled
-                className="bg-muted"
-              />
-              <p className="text-xs text-muted-foreground">
-                This field is automatically calculated from the sum of items by source
-              </p>
-            </div>
-          </div>
 
           {canEdit && (
             <Button 
