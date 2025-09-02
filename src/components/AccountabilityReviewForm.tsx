@@ -28,6 +28,8 @@ import { Phone, Clock, Target, DollarSign, Calendar } from 'lucide-react'
 import { supabase } from '@/integrations/supabase/client'
 import { useAuth } from '@/contexts/AuthContext'
 import { useToast } from '@/hooks/use-toast'
+import { QHHDetailsCard } from '@/components/QHHDetailsCard'
+import { useQHHDetails } from '@/hooks/useQHHDetails'
 
 interface DailyEntryForReview {
   id: string
@@ -89,6 +91,9 @@ export const AccountabilityReviewForm: React.FC<AccountabilityReviewFormProps> =
   const { user } = useAuth()
   const { toast } = useToast()
   const [isSubmitting, setIsSubmitting] = useState(false)
+
+  // Fetch QHH details for the entry
+  const { data: qhhDetails, isLoading: qhhLoading } = useQHHDetails(entry?.id || null)
 
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
@@ -221,6 +226,21 @@ export const AccountabilityReviewForm: React.FC<AccountabilityReviewFormProps> =
             </div>
           </CardContent>
         </Card>
+
+        {/* QHH Details Section */}
+        {qhhLoading ? (
+          <Card>
+            <CardContent className="py-8 text-center">
+              <div className="text-muted-foreground">Loading QHH details...</div>
+            </CardContent>
+          </Card>
+        ) : qhhDetails ? (
+          <QHHDetailsCard 
+            qhhData={qhhDetails.qhh}
+            analytics={qhhDetails.analytics}
+            reportedTotal={entry.qhh_total}
+          />
+        ) : null}
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
