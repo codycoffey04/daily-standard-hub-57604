@@ -271,6 +271,84 @@ export type Database = {
           },
         ]
       }
+      quoted_households: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          daily_entry_id: string | null
+          full_name: string
+          id: string
+          lead_source_id: string | null
+          notes: string | null
+          opted_into_hearsay: boolean | null
+          phone_number: string
+          policies_quoted: number
+          quick_action_status: string
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          daily_entry_id?: string | null
+          full_name: string
+          id?: string
+          lead_source_id?: string | null
+          notes?: string | null
+          opted_into_hearsay?: boolean | null
+          phone_number: string
+          policies_quoted: number
+          quick_action_status: string
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          daily_entry_id?: string | null
+          full_name?: string
+          id?: string
+          lead_source_id?: string | null
+          notes?: string | null
+          opted_into_hearsay?: boolean | null
+          phone_number?: string
+          policies_quoted?: number
+          quick_action_status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quoted_households_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quoted_households_daily_entry_id_fkey"
+            columns: ["daily_entry_id"]
+            isOneToOne: false
+            referencedRelation: "daily_entries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quoted_households_daily_entry_id_fkey"
+            columns: ["daily_entry_id"]
+            isOneToOne: false
+            referencedRelation: "entry_status"
+            referencedColumns: ["entry_id"]
+          },
+          {
+            foreignKeyName: "quoted_households_daily_entry_id_fkey"
+            columns: ["daily_entry_id"]
+            isOneToOne: false
+            referencedRelation: "yesterday_status"
+            referencedColumns: ["entry_id"]
+          },
+          {
+            foreignKeyName: "quoted_households_lead_source_id_fkey"
+            columns: ["lead_source_id"]
+            isOneToOne: false
+            referencedRelation: "sources"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       reviews: {
         Row: {
           attachments: Json
@@ -442,6 +520,20 @@ export type Database = {
       }
     }
     Functions: {
+      get_qhh_details_for_review: {
+        Args: { p_daily_entry_id: string }
+        Returns: {
+          full_name: string
+          id: string
+          lead_source_id: string
+          notes: string
+          opted_into_hearsay: boolean
+          phone_number: string
+          policies_quoted: number
+          quick_action_status: string
+          source_name: string
+        }[]
+      }
       mtd_producer_metrics: {
         Args: { d?: string }
         Returns: {

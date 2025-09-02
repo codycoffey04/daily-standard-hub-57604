@@ -30,22 +30,15 @@ export const useQHHDetails = (dailyEntryId: string | null) => {
     queryFn: async (): Promise<{ qhh: QHHDetail[]; analytics: QHHAnalytics }> => {
       if (!dailyEntryId) throw new Error('Daily entry ID is required')
 
-      // First, get the quoted households
-      const { data: qhhData, error: qhhError } = await supabase
-        .rpc('sql', {
-          query: `
-            SELECT qh.*, s.name as source_name
-            FROM quoted_households qh
-            LEFT JOIN sources s ON qh.lead_source_id = s.id
-            WHERE qh.daily_entry_id = $1
-            ORDER BY qh.created_at ASC
-          `,
-          params: [dailyEntryId]
+      // Use the database function to get QHH details with source names
+      const { data, error } = await supabase
+        .rpc('get_qhh_details_for_review', {
+          p_daily_entry_id: dailyEntryId
         })
 
-      if (qhhError) throw qhhError
+      if (error) throw error
 
-      const qhh: QHHDetail[] = qhhData || []
+      const qhh: QHHDetail[] = data || []
 
       // Calculate analytics
       const totalCount = qhh.length
