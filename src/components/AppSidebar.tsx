@@ -5,11 +5,9 @@ import { Button } from '@/components/ui/button'
 import { 
   Calendar, 
   Users, 
-  CheckCircle, 
   Settings, 
   BarChart, 
   Upload, 
-  Home,
   ClipboardCheck,
   Database,
   Menu,
@@ -30,33 +28,9 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({ collapsed, onToggle }) =
 
   const navigationItems = [
     { 
-      href: '/home', 
-      label: 'Home', 
-      icon: Home,
-      allowedRoles: ['owner', 'manager', 'producer']
-    },
-    { 
       href: '/team', 
       label: 'Team', 
       icon: Users,
-      allowedRoles: ['owner', 'manager']
-    },
-    { 
-      href: '/reviews', 
-      label: 'Reviews', 
-      icon: CheckCircle,
-      allowedRoles: ['owner', 'manager']
-    },
-    { 
-      href: '/accountability', 
-      label: 'Accountability', 
-      icon: ClipboardCheck,
-      allowedRoles: ['owner', 'manager', 'reviewer']
-    },
-    { 
-      href: '/sources', 
-      label: 'Sources', 
-      icon: Settings,
       allowedRoles: ['owner', 'manager']
     },
     { 
@@ -66,15 +40,27 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({ collapsed, onToggle }) =
       allowedRoles: ['owner', 'manager']
     },
     { 
-      href: '/importer', 
-      label: 'Importer', 
-      icon: Upload,
-      allowedRoles: ['owner', 'manager']
+      href: '/accountability', 
+      label: 'Accountability', 
+      icon: ClipboardCheck,
+      allowedRoles: ['owner', 'manager', 'reviewer']
     },
     { 
       href: '/admin/reviews', 
       label: 'Admin Reviews', 
       icon: Database,
+      allowedRoles: ['owner', 'manager']
+    },
+    { 
+      href: '/sources', 
+      label: 'Sources', 
+      icon: Settings,
+      allowedRoles: ['owner', 'manager']
+    },
+    { 
+      href: '/importer', 
+      label: 'Importer', 
+      icon: Upload,
       allowedRoles: ['owner', 'manager']
     }
   ]

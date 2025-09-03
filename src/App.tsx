@@ -9,9 +9,7 @@ import { AppLayout } from "@/components/AppLayout";
 
 // Pages
 import LoginPage from "./pages/LoginPage";
-import HomePage from "./pages/HomePage";
 import TeamPage from "./pages/TeamPage";
-import ReviewsPage from "./pages/ReviewsPage";
 import SourcesPage from "./pages/SourcesPage";
 import SummariesPage from "./pages/SummariesPage";
 import ImporterPage from "./pages/ImporterPage";
@@ -31,51 +29,11 @@ const App = () => (
           <Routes>
             <Route path="/login" element={<LoginPage />} />
             <Route 
-              path="/home" 
-              element={
-                <ProtectedRoute>
-                  <AppLayout>
-                    <HomePage />
-                  </AppLayout>
-                </ProtectedRoute>
-              } 
-            />
-            <Route 
               path="/team" 
               element={
                 <ProtectedRoute requiresOwnerManager>
                   <AppLayout>
                     <TeamPage />
-                  </AppLayout>
-                </ProtectedRoute>
-              } 
-            />
-            <Route 
-              path="/reviews" 
-              element={
-                <ProtectedRoute requiresOwnerManager>
-                  <AppLayout>
-                    <ReviewsPage />
-                  </AppLayout>
-                </ProtectedRoute>
-              } 
-            />
-            <Route 
-              path="/accountability" 
-              element={
-                <ProtectedRoute>
-                  <AppLayout>
-                    <AccountabilityReviewsPage />
-                  </AppLayout>
-                </ProtectedRoute>
-              } 
-            />
-            <Route 
-              path="/sources" 
-              element={
-                <ProtectedRoute requiresOwnerManager>
-                  <AppLayout>
-                    <SourcesPage />
                   </AppLayout>
                 </ProtectedRoute>
               } 
@@ -91,11 +49,11 @@ const App = () => (
               } 
             />
             <Route 
-              path="/importer" 
+              path="/accountability" 
               element={
-                <ProtectedRoute requiresOwnerManager>
+                <ProtectedRoute>
                   <AppLayout>
-                    <ImporterPage />
+                    <AccountabilityReviewsPage />
                   </AppLayout>
                 </ProtectedRoute>
               } 
@@ -110,7 +68,27 @@ const App = () => (
                 </ProtectedRoute>
               } 
             />
-            <Route path="/" element={<LoginPage />} />
+            <Route 
+              path="/sources" 
+              element={
+                <ProtectedRoute requiresOwnerManager>
+                  <AppLayout>
+                    <SourcesPage />
+                  </AppLayout>
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/importer" 
+              element={
+                <ProtectedRoute requiresOwnerManager>
+                  <AppLayout>
+                    <ImporterPage />
+                  </AppLayout>
+                </ProtectedRoute>
+              } 
+            />
+            <Route path="/" element={<TeamPage />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
