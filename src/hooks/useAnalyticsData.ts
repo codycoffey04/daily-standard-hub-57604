@@ -137,116 +137,170 @@ export const useProducerPerformanceAlerts = (dateRange: { from: Date; to: Date }
   return useQuery({
     queryKey: ['producer-performance-alerts', dateRange, selectedProducer],
     queryFn: async (): Promise<ProducerAlert[]> => {
+      // Query daily_entries directly for real performance data
       let query = supabase
-        .from('accountability_reviews')
+        .from('daily_entries')
         .select(`
-          daily_entries!inner(
-            producer_id,
-            qhh_total,
-            items_total,
-            entry_date,
-            producers!inner(
-              display_name
-            )
-          ),
-          metrics_achieved,
-          weak_steps
+          producer_id,
+          entry_date,
+          qhh_total,
+          items_total,
+          sales_total,
+          producers!inner(
+            display_name,
+            active
+          )
         `)
-        .gte('daily_entries.entry_date', format(dateRange.from, 'yyyy-MM-dd'))
-        .lte('daily_entries.entry_date', format(dateRange.to, 'yyyy-MM-dd'))
+        .gte('entry_date', format(dateRange.from, 'yyyy-MM-dd'))
+        .lte('entry_date', format(dateRange.to, 'yyyy-MM-dd'))
+        .eq('producers.active', true)
 
       if (selectedProducer && selectedProducer !== 'all') {
-        query = query.eq('daily_entries.producer_id', selectedProducer)
+        query = query.eq('producer_id', selectedProducer)
       }
 
-      const { data: reviewsData } = await query
+      const { data: dailyEntries, error } = await query
 
-      // Group by producer
+      if (error) throw error
+
+      // Group by producer and calculate metrics
       const producerMap = new Map<string, {
         name: string
         totalQhh: number
         totalItems: number
-        failedMetrics: number
-        totalReviews: number
-        weakSteps: string[]
+        totalSales: number
+        totalDays: number
+        workingDays: number
+        zeroItemDays: number
+        consecutiveZeroDays: number
+        entries: Array<{ date: string; qhh: number; items: number; sales: number }>
       }>()
 
-      reviewsData?.forEach(review => {
-        const producerId = review.daily_entries.producer_id
-        const producerName = review.daily_entries.producers.display_name
+      dailyEntries?.forEach(entry => {
+        const producerId = entry.producer_id
+        const producerName = entry.producers.display_name
         
         if (!producerMap.has(producerId)) {
           producerMap.set(producerId, {
             name: producerName,
             totalQhh: 0,
             totalItems: 0,
-            failedMetrics: 0,
-            totalReviews: 0,
-            weakSteps: []
+            totalSales: 0,
+            totalDays: 0,
+            workingDays: 0,
+            zeroItemDays: 0,
+            consecutiveZeroDays: 0,
+            entries: []
           })
         }
 
         const producer = producerMap.get(producerId)!
-        producer.totalQhh += review.daily_entries.qhh_total
-        producer.totalItems += review.daily_entries.items_total
-        producer.totalReviews += 1
+        producer.totalQhh += entry.qhh_total
+        producer.totalItems += entry.items_total
+        producer.totalSales += entry.sales_total
+        producer.totalDays += 1
         
-        if (review.metrics_achieved === false) {
-          producer.failedMetrics += 1
+        // Count working days (days with any activity)
+        if (entry.qhh_total > 0 || entry.items_total > 0) {
+          producer.workingDays += 1
         }
         
-        if (review.weak_steps) {
-          producer.weakSteps.push(...review.weak_steps)
+        // Count zero item days
+        if (entry.items_total === 0) {
+          producer.zeroItemDays += 1
         }
+        
+        producer.entries.push({
+          date: entry.entry_date,
+          qhh: entry.qhh_total,
+          items: entry.items_total,
+          sales: entry.sales_total
+        })
       })
 
-      // Generate alerts
+      // Calculate consecutive zero days for each producer
+      producerMap.forEach((producer, producerId) => {
+        const sortedEntries = producer.entries.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+        let consecutiveZeros = 0
+        
+        for (const entry of sortedEntries) {
+          if (entry.items === 0) {
+            consecutiveZeros += 1
+          } else {
+            break
+          }
+        }
+        
+        producer.consecutiveZeroDays = consecutiveZeros
+      })
+
+      // Generate alerts with new thresholds
       const alerts: ProducerAlert[] = []
       
       producerMap.forEach((data, producerId) => {
-        const conversionRate = data.totalQhh > 0 ? (data.totalItems / data.totalQhh) * 100 : 0
-        const failedMetricsRate = data.totalReviews > 0 ? (data.failedMetrics / data.totalReviews) * 100 : 0
+        const qhhToItemsConversion = data.totalQhh > 0 ? (data.totalItems / data.totalQhh) * 100 : 0
+        const itemsToSalesConversion = data.totalItems > 0 ? (data.totalSales / data.totalItems) * 100 : 0
+        const dailyQhhAverage = data.workingDays > 0 ? data.totalQhh / data.workingDays : 0
+        
+        // Calculate monthly pace (assume 20 working days per month)
+        const daysInPeriod = Math.max(1, data.workingDays)
+        const monthlyQhhPace = (data.totalQhh / daysInPeriod) * 20
         
         const issues: string[] = []
         let severity: 'Critical' | 'Warning' | 'OK' = 'OK'
 
-        // Check conversion rate
-        if (conversionRate < 25) {
-          issues.push(`Low QHH→Items conversion (${conversionRate.toFixed(1)}%)`)
+        // CRITICAL THRESHOLDS
+        if (qhhToItemsConversion < 15 && data.totalQhh > 0) {
+          issues.push(`${qhhToItemsConversion.toFixed(1)}% QHH→Items conversion (should be 20%+)`)
+          severity = 'Critical'
+        }
+        
+        if (dailyQhhAverage < 5 && data.workingDays > 0) {
+          issues.push(`${dailyQhhAverage.toFixed(1)} QHH/day (${((dailyQhhAverage / 10) * 100).toFixed(0)}% of 10/day target)`)
+          severity = 'Critical'
+        }
+        
+        if (data.consecutiveZeroDays >= 3) {
+          issues.push(`${data.consecutiveZeroDays} consecutive days with zero items`)
+          severity = 'Critical'
+        }
+        
+        if (monthlyQhhPace < 100) {
+          issues.push(`Monthly pace: ${monthlyQhhPace.toFixed(0)} QHH (${((monthlyQhhPace / 200) * 100).toFixed(0)}% of 200/month target)`)
           severity = 'Critical'
         }
 
-        // Check failed metrics
-        if (failedMetricsRate >= 50) {
-          issues.push(`High failure rate (${failedMetricsRate.toFixed(0)}% of reviews)`)
-          severity = 'Critical'
-        } else if (failedMetricsRate >= 25) {
-          issues.push(`Moderate failure rate (${failedMetricsRate.toFixed(0)}% of reviews)`)
-          if (severity !== 'Critical') severity = 'Warning'
+        // WARNING THRESHOLDS (only if not already critical)
+        if (severity !== 'Critical') {
+          if (qhhToItemsConversion >= 15 && qhhToItemsConversion < 20 && data.totalQhh > 0) {
+            issues.push(`${qhhToItemsConversion.toFixed(1)}% QHH→Items conversion (below 20% target)`)
+            severity = 'Warning'
+          }
+          
+          if (dailyQhhAverage >= 5 && dailyQhhAverage < 8 && data.workingDays > 0) {
+            issues.push(`${dailyQhhAverage.toFixed(1)} QHH/day (below 10/day target)`)
+            severity = 'Warning'
+          }
+          
+          if (itemsToSalesConversion < 40 && data.totalItems > 0) {
+            issues.push(`${itemsToSalesConversion.toFixed(1)}% Items→Sales conversion (should be 40%+)`)
+            severity = 'Warning'
+          }
+          
+          if (monthlyQhhPace >= 100 && monthlyQhhPace < 150) {
+            issues.push(`Monthly pace: ${monthlyQhhPace.toFixed(0)} QHH (below 200/month target)`)
+            severity = 'Warning'
+          }
         }
 
-        // Check repeated weak steps
-        const weakStepCounts = data.weakSteps.reduce((acc, step) => {
-          acc[step] = (acc[step] || 0) + 1
-          return acc
-        }, {} as Record<string, number>)
-
-        const repeatedSteps = Object.entries(weakStepCounts)
-          .filter(([, count]) => count >= 2)
-          .map(([step]) => step)
-
-        if (repeatedSteps.length > 0) {
-          issues.push(`Repeated issues: ${repeatedSteps.join(', ')}`)
-          if (severity === 'OK') severity = 'Warning'
-        }
-
+        // Only create alerts for producers with issues
         if (issues.length > 0) {
           alerts.push({
             producer_id: producerId,
             producer_name: data.name,
             severity,
             issues,
-            conversion_rate: conversionRate
+            conversion_rate: qhhToItemsConversion
           })
         }
       })
