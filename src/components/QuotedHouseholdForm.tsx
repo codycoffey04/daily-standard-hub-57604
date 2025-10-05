@@ -98,7 +98,7 @@ export const QuotedHouseholdForm: React.FC<QuotedHouseholdFormProps> = ({
       notes: '',
       quick_action_status: '',
       opted_into_hearsay: false,
-      items_sold: 1
+      items_sold: undefined
     })
     setErrors({})
     setShowForm(false)
@@ -267,13 +267,15 @@ export const QuotedHouseholdForm: React.FC<QuotedHouseholdFormProps> = ({
                     min={1}
                     max={10}
                     required
-                    value={Number(formData.items_sold ?? 1)}
-                    onChange={(e) =>
+                    value={formData.items_sold ?? ''}
+                    placeholder="Enter number of items sold"
+                    onChange={(e) => {
+                      const val = e.target.value;
                       setFormData((prev) => ({
                         ...prev,
-                        items_sold: Math.max(1, Math.min(10, Number(e.target.value) || 1))
+                        items_sold: val === '' ? undefined : Math.max(1, Math.min(10, Number(val)))
                       }))
-                    }
+                    }}
                   />
                   {errors.items_sold && <p className="text-sm text-destructive">{errors.items_sold}</p>}
                 </div>
