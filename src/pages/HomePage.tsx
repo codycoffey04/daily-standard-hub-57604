@@ -35,23 +35,28 @@ const HomePage: React.FC = () => {
         .eq('id', profile.producer_id)
         .single()
 
-      // Load today's entry if exists
-      const { data: entry } = await supabase
-        .from('daily_entries')
-        .select(`
-          *,
-          daily_entry_sources (
-            id,
-            source_id,
-            qhh,
-            quotes,
-            items,
-            sources (id, name)
-          )
-        `)
-        .eq('producer_id', profile.producer_id)
-        .eq('entry_date', getDefaultEntryDate())
-        .single()
+    // Load today's entry if exists
+    const { data: entry, error: entryError } = await supabase
+      .from('daily_entries')
+      .select(`
+        *,
+        daily_entry_sources (
+          id,
+          source_id,
+          qhh,
+          quotes,
+          items,
+          sources (id, name)
+        )
+      `)
+      .eq('producer_id', profile.producer_id)
+      .eq('entry_date', getDefaultEntryDate())
+      .maybeSingle()
+
+    // Log unexpected errors (but not "no rows found")
+    if (entryError && entryError.code !== 'PGRST116') {
+      console.error('Error loading today entry:', entryError)
+    }
 
       // Load yesterday status
       const { data: status } = await (supabase as any)

@@ -79,6 +79,13 @@ export type Database = {
             referencedColumns: ["entry_id"]
           },
           {
+            foreignKeyName: "accountability_reviews_daily_entry_id_fkey"
+            columns: ["daily_entry_id"]
+            isOneToOne: true
+            referencedRelation: "yesterday_status"
+            referencedColumns: ["entry_id"]
+          },
+          {
             foreignKeyName: "accountability_reviews_reviewer_id_fkey"
             columns: ["reviewer_id"]
             isOneToOne: false
@@ -187,6 +194,13 @@ export type Database = {
             columns: ["daily_entry_id"]
             isOneToOne: false
             referencedRelation: "entry_status"
+            referencedColumns: ["entry_id"]
+          },
+          {
+            foreignKeyName: "daily_entry_sources_daily_entry_id_fkey"
+            columns: ["daily_entry_id"]
+            isOneToOne: false
+            referencedRelation: "yesterday_status"
             referencedColumns: ["entry_id"]
           },
           {
@@ -323,6 +337,13 @@ export type Database = {
             referencedColumns: ["entry_id"]
           },
           {
+            foreignKeyName: "quoted_households_daily_entry_id_fkey"
+            columns: ["daily_entry_id"]
+            isOneToOne: false
+            referencedRelation: "yesterday_status"
+            referencedColumns: ["entry_id"]
+          },
+          {
             foreignKeyName: "quoted_households_lead_source_id_fkey"
             columns: ["lead_source_id"]
             isOneToOne: false
@@ -377,6 +398,13 @@ export type Database = {
             referencedRelation: "entry_status"
             referencedColumns: ["entry_id"]
           },
+          {
+            foreignKeyName: "reviews_daily_entry_id_fkey"
+            columns: ["daily_entry_id"]
+            isOneToOne: false
+            referencedRelation: "yesterday_status"
+            referencedColumns: ["entry_id"]
+          },
         ]
       }
       sources: {
@@ -427,6 +455,68 @@ export type Database = {
     }
     Views: {
       entry_status: {
+        Row: {
+          created_at: string | null
+          entry_date: string | null
+          entry_id: string | null
+          framework_status: string | null
+          items_total: number | null
+          met_count: number | null
+          met_dials: boolean | null
+          met_items: boolean | null
+          met_qhh: boolean | null
+          met_talk: boolean | null
+          outbound_dials: number | null
+          producer_id: string | null
+          qhh_total: number | null
+          talk_minutes: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          entry_date?: string | null
+          entry_id?: string | null
+          framework_status?: never
+          items_total?: number | null
+          met_count?: never
+          met_dials?: never
+          met_items?: never
+          met_qhh?: never
+          met_talk?: never
+          outbound_dials?: number | null
+          producer_id?: string | null
+          qhh_total?: number | null
+          talk_minutes?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          entry_date?: string | null
+          entry_id?: string | null
+          framework_status?: never
+          items_total?: number | null
+          met_count?: never
+          met_dials?: never
+          met_items?: never
+          met_qhh?: never
+          met_talk?: never
+          outbound_dials?: number | null
+          producer_id?: string | null
+          qhh_total?: number | null
+          talk_minutes?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "daily_entries_producer_id_fkey"
+            columns: ["producer_id"]
+            isOneToOne: false
+            referencedRelation: "producers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      yesterday_status: {
         Row: {
           created_at: string | null
           entry_date: string | null
@@ -545,6 +635,10 @@ export type Database = {
           yesterday_status: string
         }[]
       }
+      safe_is_manager_or_owner: {
+        Args: Record<PropertyKey, never>
+        Returns: boolean
+      }
       save_daily_entry: {
         Args: {
           p_by_source?: Json
@@ -556,6 +650,10 @@ export type Database = {
           p_talk_minutes: number
         }
         Returns: string
+      }
+      user_is_producer_of: {
+        Args: { target_producer_id: string }
+        Returns: boolean
       }
     }
     Enums: {
