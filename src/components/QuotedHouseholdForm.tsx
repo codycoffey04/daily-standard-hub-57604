@@ -127,8 +127,7 @@ export const QuotedHouseholdForm: React.FC<QuotedHouseholdFormProps> = ({
     return Object.keys(newErrors).length === 0
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
+  const handleSubmit = () => {
     if (!validateForm()) return
 
     if (editingIndex !== null) {
@@ -179,7 +178,7 @@ export const QuotedHouseholdForm: React.FC<QuotedHouseholdFormProps> = ({
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="full-name">Full Name *</Label>
@@ -303,7 +302,7 @@ export const QuotedHouseholdForm: React.FC<QuotedHouseholdFormProps> = ({
               </div>
 
               <div className="flex space-x-2 pt-2">
-                <Button type="submit" size="sm">
+                <Button type="button" size="sm" onClick={handleSubmit}>
                   <Save className="h-4 w-4 mr-1" />
                   {editingIndex !== null ? 'Update' : 'Add'} QHH
                 </Button>
@@ -311,7 +310,7 @@ export const QuotedHouseholdForm: React.FC<QuotedHouseholdFormProps> = ({
                   Cancel
                 </Button>
               </div>
-            </form>
+            </div>
           </CardContent>
         </Card>
       )}
