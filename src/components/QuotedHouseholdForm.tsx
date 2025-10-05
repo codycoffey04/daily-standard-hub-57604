@@ -19,6 +19,7 @@ export interface QuotedHousehold {
   notes: string
   quick_action_status: string
   opted_into_hearsay: boolean
+  items_sold?: number
 }
 
 const QUICK_ACTION_OPTIONS = [
@@ -96,7 +97,8 @@ export const QuotedHouseholdForm: React.FC<QuotedHouseholdFormProps> = ({
       lead_source_id: '',
       notes: '',
       quick_action_status: '',
-      opted_into_hearsay: false
+      opted_into_hearsay: false,
+      items_sold: 1
     })
     setErrors({})
     setShowForm(false)
@@ -113,6 +115,13 @@ export const QuotedHouseholdForm: React.FC<QuotedHouseholdFormProps> = ({
     }
     if (!formData.lead_source_id) newErrors.lead_source_id = 'Lead source is required'
     if (!formData.quick_action_status) newErrors.quick_action_status = 'Quick action status is required'
+    
+    // Validate items_sold when status is SOLD
+    if (formData.quick_action_status === 'SOLD') {
+      if (!formData.items_sold || formData.items_sold < 1) {
+        newErrors.items_sold = 'Items sold is required for SOLD status'
+      }
+    }
     
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
@@ -249,6 +258,30 @@ export const QuotedHouseholdForm: React.FC<QuotedHouseholdFormProps> = ({
                 {errors.quick_action_status && <p className="text-sm text-destructive">{errors.quick_action_status}</p>}
               </div>
 
+              {/* Items Sold - Show only when status is SOLD */}
+              {formData.quick_action_status === 'SOLD' && (
+                <div className="space-y-2">
+                  <Label>Items Sold from this Household *</Label>
+                  <Select 
+                    value={formData.items_sold?.toString() || '1'} 
+                    onValueChange={(value) => setFormData(prev => ({ 
+                      ...prev, 
+                      items_sold: parseInt(value) 
+                    }))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {POLICIES_OPTIONS.map(num => (
+                        <SelectItem key={num} value={num.toString()}>{num}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {errors.items_sold && <p className="text-sm text-destructive">{errors.items_sold}</p>}
+                </div>
+              )}
+
               <div className="space-y-2">
                 <Label htmlFor="notes">Specific Notes on Call</Label>
                 <Textarea
@@ -310,6 +343,11 @@ export const QuotedHouseholdForm: React.FC<QuotedHouseholdFormProps> = ({
                       <div>
                         <span className="font-medium">Source:</span> {source?.name || 'Unknown'}
                       </div>
+                      {qhh.quick_action_status === 'SOLD' && qhh.items_sold && (
+                        <div>
+                          <span className="font-medium">Items Sold:</span> {qhh.items_sold}
+                        </div>
+                      )}
                       <div>
                         <span className="font-medium">Hearsay:</span> {qhh.opted_into_hearsay ? 'Yes' : 'No'}
                       </div>

@@ -54,11 +54,11 @@ const HomePage: React.FC = () => {
         .single()
 
       // Load yesterday status
-      const { data: status } = await supabase
+      const { data: status } = await (supabase as any)
         .from('yesterday_status')
         .select('*')
         .eq('producer_id', profile.producer_id)
-        .single()
+        .maybeSingle()
 
       // Load MTD metrics
       const { data: metrics } = await supabase

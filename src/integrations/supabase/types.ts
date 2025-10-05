@@ -264,6 +264,7 @@ export type Database = {
           daily_entry_id: string | null
           full_name: string
           id: string
+          items_sold: number | null
           lead_source_id: string | null
           notes: string | null
           opted_into_hearsay: boolean | null
@@ -277,6 +278,7 @@ export type Database = {
           daily_entry_id?: string | null
           full_name: string
           id?: string
+          items_sold?: number | null
           lead_source_id?: string | null
           notes?: string | null
           opted_into_hearsay?: boolean | null
@@ -290,6 +292,7 @@ export type Database = {
           daily_entry_id?: string | null
           full_name?: string
           id?: string
+          items_sold?: number | null
           lead_source_id?: string | null
           notes?: string | null
           opted_into_hearsay?: boolean | null

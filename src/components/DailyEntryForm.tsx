@@ -79,6 +79,18 @@ export const DailyEntryForm: React.FC<DailyEntryFormProps> = ({
       return false
     }
 
+    // Validate items sold from SOLD households match total items sold
+    const soldHouseholds = quotedHouseholds.filter(qhh => qhh.quick_action_status === 'SOLD')
+    const itemsFromSoldHouseholds = soldHouseholds.reduce((sum, qhh) => sum + (qhh.items_sold || 0), 0)
+    
+    if (itemsFromSoldHouseholds !== itemsSold) {
+      setValidationError(
+        `Items sold in households (${itemsFromSoldHouseholds}) must match total items sold (${itemsSold}). ` +
+        `Please verify your SOLD households have the correct items sold values.`
+      )
+      return false
+    }
+
     // Validate phone numbers in QHH entries
     const phoneRegex = /^\(\d{3}\) \d{3}-\d{4}$/
     for (const qhh of quotedHouseholds) {
@@ -101,6 +113,11 @@ export const DailyEntryForm: React.FC<DailyEntryFormProps> = ({
 
     setLoading(true)
     try {
+      // Get current authenticated user ID
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) {
+        throw new Error('Not authenticated')
+      }
       // Save/update daily entry
       const entryData = {
         producer_id: producerId,
@@ -200,7 +217,8 @@ export const DailyEntryForm: React.FC<DailyEntryFormProps> = ({
           notes: qhh.notes || null,
           quick_action_status: qhh.quick_action_status,
           opted_into_hearsay: qhh.opted_into_hearsay,
-          created_by: producerId
+          items_sold: qhh.items_sold || null,
+          created_by: user.id
         }))
 
         const { error: qhhError } = await (supabase as any)
@@ -219,11 +237,21 @@ export const DailyEntryForm: React.FC<DailyEntryFormProps> = ({
       
     } catch (error: any) {
       console.error('Error saving entry:', error)
-      toast({
-        title: "Error",
-        description: error.message || "Failed to save entry",
-        variant: "destructive"
-      })
+      
+      // Check for RLS violations specifically
+      if (error.message?.includes('row-level security policy')) {
+        toast({
+          title: "Permission Error",
+          description: "Unable to save entry. Please contact support if this persists.",
+          variant: "destructive"
+        })
+      } else {
+        toast({
+          title: "Error",
+          description: error.message || "Failed to save entry",
+          variant: "destructive"
+        })
+      }
     } finally {
       setLoading(false)
     }
