@@ -543,24 +543,15 @@ export type Database = {
         }[]
       }
       save_daily_entry: {
-        Args:
-          | {
-              p_by_source: Json
-              p_entry_date: string
-              p_items_total: number
-              p_outbound_dials: number
-              p_producer_email: string
-              p_talk_minutes: number
-            }
-          | {
-              p_by_source?: Json
-              p_entry_date: string
-              p_items_total: number
-              p_outbound_dials: number
-              p_producer_email: string
-              p_sales_total?: number
-              p_talk_minutes: number
-            }
+        Args: {
+          p_by_source?: Json
+          p_entry_date: string
+          p_items_total: number
+          p_outbound_dials: number
+          p_producer_email: string
+          p_sales_total?: number
+          p_talk_minutes: number
+        }
         Returns: string
       }
     }
