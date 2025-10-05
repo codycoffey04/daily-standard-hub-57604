@@ -80,7 +80,7 @@ export const DailyEntryForm: React.FC<DailyEntryFormProps> = ({
     }
 
     // Validate items sold from SOLD households match total items sold
-    const soldHouseholds = quotedHouseholds.filter(qhh => qhh.quick_action_status === 'SOLD')
+    const soldHouseholds = quotedHouseholds.filter(qhh => (qhh.quick_action_status ?? '').toUpperCase() === 'SOLD')
     const itemsFromSoldHouseholds = soldHouseholds.reduce((sum, qhh) => sum + (qhh.items_sold || 0), 0)
     
     if (itemsFromSoldHouseholds !== itemsSold) {
