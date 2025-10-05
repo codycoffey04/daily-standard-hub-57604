@@ -62,6 +62,6 @@ export const getRedirectPath = (profile: Profile | null): string => {
   } else if (isReviewer(profile)) {
     return '/accountability'
   } else {
-    return '/home'
+    return '/producer'
   }
 }

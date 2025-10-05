@@ -26,7 +26,7 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   }
 
   if (requiresOwnerManager && !isOwnerManager(profile)) {
-    return <Navigate to="/home" replace />
+    return <Navigate to="/producer" replace />
   }
 
   return <>{children}</>

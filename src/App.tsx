@@ -9,6 +9,7 @@ import { AppLayout } from "@/components/AppLayout";
 
 // Pages
 import LoginPage from "./pages/LoginPage";
+import HomePage from "./pages/HomePage";
 import TeamPage from "./pages/TeamPage";
 import SourcesPage from "./pages/SourcesPage";
 import SummariesPage from "./pages/SummariesPage";
@@ -29,7 +30,17 @@ const App = () => (
           <Routes>
             <Route path="/login" element={<LoginPage />} />
             <Route 
-              path="/team" 
+              path="/producer" 
+              element={
+                <ProtectedRoute>
+                  <AppLayout>
+                    <HomePage />
+                  </AppLayout>
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/team"
               element={
                 <ProtectedRoute requiresOwnerManager>
                   <AppLayout>

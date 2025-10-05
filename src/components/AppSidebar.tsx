@@ -11,7 +11,8 @@ import {
   ClipboardCheck,
   Database,
   Menu,
-  X
+  X,
+  Home
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -27,6 +28,12 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({ collapsed, onToggle }) =
   const isActive = (path: string) => location.pathname === path
 
   const navigationItems = [
+    { 
+      href: '/producer', 
+      label: 'My Dashboard', 
+      icon: Home,
+      allowedRoles: ['producer']
+    },
     { 
       href: '/team', 
       label: 'Team', 
