@@ -117,7 +117,7 @@ export const QuotedHouseholdForm: React.FC<QuotedHouseholdFormProps> = ({
     if (!formData.quick_action_status) newErrors.quick_action_status = 'Quick action status is required'
     
     // Validate items_sold when status is SOLD
-    if (formData.quick_action_status === 'SOLD') {
+    if ((formData.quick_action_status ?? '').toUpperCase() === 'SOLD') {
       if (!formData.items_sold || formData.items_sold < 1) {
         newErrors.items_sold = 'Items sold is required for SOLD status'
       }
@@ -259,25 +259,23 @@ export const QuotedHouseholdForm: React.FC<QuotedHouseholdFormProps> = ({
               </div>
 
               {/* Items Sold - Show only when status is SOLD */}
-              {formData.quick_action_status === 'SOLD' && (
+              {(formData.quick_action_status ?? '').toUpperCase() === 'SOLD' && (
                 <div className="space-y-2">
-                  <Label>Items Sold from this Household *</Label>
-                  <Select 
-                    value={formData.items_sold?.toString() || '1'} 
-                    onValueChange={(value) => setFormData(prev => ({ 
-                      ...prev, 
-                      items_sold: parseInt(value) 
-                    }))}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {POLICIES_OPTIONS.map(num => (
-                        <SelectItem key={num} value={num.toString()}>{num}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <Label htmlFor="items_sold">Items Sold *</Label>
+                  <Input
+                    id="items_sold"
+                    type="number"
+                    min={1}
+                    max={10}
+                    required
+                    value={Number(formData.items_sold ?? 1)}
+                    onChange={(e) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        items_sold: Math.max(1, Math.min(10, Number(e.target.value) || 1))
+                      }))
+                    }
+                  />
                   {errors.items_sold && <p className="text-sm text-destructive">{errors.items_sold}</p>}
                 </div>
               )}
@@ -343,7 +341,7 @@ export const QuotedHouseholdForm: React.FC<QuotedHouseholdFormProps> = ({
                       <div>
                         <span className="font-medium">Source:</span> {source?.name || 'Unknown'}
                       </div>
-                      {qhh.quick_action_status === 'SOLD' && qhh.items_sold && (
+                      {(qhh.quick_action_status ?? '').toUpperCase() === 'SOLD' && qhh.items_sold && (
                         <div>
                           <span className="font-medium">Items Sold:</span> {qhh.items_sold}
                         </div>
