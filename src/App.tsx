@@ -2,10 +2,12 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { useAuth } from "@/contexts/AuthContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { AppLayout } from "@/components/AppLayout";
+import { getRedirectPath } from "@/lib/auth";
 
 // Pages
 import LoginPage from "./pages/LoginPage";
@@ -19,6 +21,12 @@ import { AdminReviewsPage } from "./pages/AdminReviewsPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
+
+const RootRedirect = () => {
+  const { profile } = useAuth();
+  const redirectPath = getRedirectPath(profile);
+  return <Navigate to={redirectPath} replace />;
+};
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -99,7 +107,14 @@ const App = () => (
                 </ProtectedRoute>
               } 
             />
-            <Route path="/" element={<TeamPage />} />
+            <Route 
+              path="/" 
+              element={
+                <ProtectedRoute>
+                  <RootRedirect />
+                </ProtectedRoute>
+              } 
+            />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
