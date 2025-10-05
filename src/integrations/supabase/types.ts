@@ -487,6 +487,10 @@ export type Database = {
       }
     }
     Functions: {
+      current_producer_id: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
       get_qhh_details_for_review: {
         Args: { p_daily_entry_id: string }
         Returns: {
@@ -511,6 +515,14 @@ export type Database = {
       is_manager_or_owner: {
         Args: { _user_id: string }
         Returns: boolean
+      }
+      is_owner_manager: {
+        Args: Record<PropertyKey, never>
+        Returns: boolean
+      }
+      jsonb_diff: {
+        Args: { l: Json; r: Json }
+        Returns: Json
       }
       mtd_producer_metrics: {
         Args: { d?: string }
