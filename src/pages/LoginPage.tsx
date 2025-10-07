@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
 import { signIn, getRedirectPath } from '@/lib/auth'
+import { supabase } from '@/integrations/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -34,6 +35,17 @@ const LoginPage: React.FC = () => {
       
       if (error) {
         setError(error.message)
+        return
+      }
+
+      // After successful sign-in, verify the profile is active
+      const { getProfile } = await import('@/lib/auth')
+      const userProfile = await getProfile()
+      
+      if (userProfile && (userProfile as any).active === false) {
+        await supabase.auth.signOut()
+        setError('Your account has been deactivated. Contact your administrator.')
+        return
       }
     } catch (err) {
       setError('An unexpected error occurred')

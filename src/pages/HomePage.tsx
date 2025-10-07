@@ -33,7 +33,7 @@ const HomePage: React.FC = () => {
         .from('producers')
         .select('*')
         .eq('id', profile.producer_id)
-        .single()
+        .maybeSingle()
 
     // Load today's entry if exists
     const { data: entry, error: entryError } = await supabase
