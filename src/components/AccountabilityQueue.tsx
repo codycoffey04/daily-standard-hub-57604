@@ -136,7 +136,7 @@ export const AccountabilityQueue: React.FC<AccountabilityQueueProps> = ({
                   </div>
 
                   <div className="flex items-center gap-2">
-                    <DollarSign className="h-4 w-4 text-muted-foreground" />
+                    <Target className="h-4 w-4 text-muted-foreground" />
                     <div>
                       <div className="text-sm text-muted-foreground">Sales</div>
                       <div className="font-medium">{entry.sales_total}</div>
