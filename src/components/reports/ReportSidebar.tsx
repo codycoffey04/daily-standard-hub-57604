@@ -6,6 +6,7 @@ import { Separator } from '@/components/ui/separator'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { reportCategories, type ReportConfig } from '@/config/reportConfig'
 import { cn } from '@/lib/utils'
+import { useAuth } from '@/contexts/AuthContext'
 
 interface ReportSidebarProps {
   activeReportId: string
@@ -24,9 +25,19 @@ export const ReportSidebar: React.FC<ReportSidebarProps> = ({
   collapsed,
   onToggle
 }) => {
+  const { profile } = useAuth()
+  
   const handleReportClick = (report: ReportConfig) => {
     onReportChange(report.id)
   }
+
+  // Filter categories based on role - hide Lead Source Analysis from managers
+  const visibleCategories = reportCategories.filter(category => {
+    if (category.id === 'lead-source-analysis' && profile?.role === 'manager') {
+      return false
+    }
+    return true
+  })
 
   // Floating toggle button when sidebar is collapsed
   if (collapsed) {
@@ -76,7 +87,7 @@ export const ReportSidebar: React.FC<ReportSidebarProps> = ({
 
       <ScrollArea className="flex-1">
         <div className="p-2">
-          {reportCategories.map((category, categoryIndex) => {
+          {visibleCategories.map((category, categoryIndex) => {
             const isExpanded = expandedCategories.has(category.id)
             
             return (
@@ -139,7 +150,7 @@ export const ReportSidebar: React.FC<ReportSidebarProps> = ({
                   </div>
                 )}
                 
-                {categoryIndex < reportCategories.length - 1 && (
+                {categoryIndex < visibleCategories.length - 1 && (
                   <Separator className="my-3" />
                 )}
               </div>
