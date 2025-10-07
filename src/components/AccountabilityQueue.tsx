@@ -139,7 +139,7 @@ export const AccountabilityQueue: React.FC<AccountabilityQueueProps> = ({
                     <DollarSign className="h-4 w-4 text-muted-foreground" />
                     <div>
                       <div className="text-sm text-muted-foreground">Sales</div>
-                      <div className="font-medium">${entry.sales_total}</div>
+                      <div className="font-medium">{entry.sales_total}</div>
                     </div>
                   </div>
                 </div>
