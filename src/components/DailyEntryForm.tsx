@@ -328,6 +328,7 @@ export const DailyEntryForm: React.FC<DailyEntryFormProps> = ({
                   min="0"
                   value={outboundDials}
                   onChange={(e) => setOutboundDials(parseInt(e.target.value) || 0)}
+                  onFocus={(e) => e.target.select()}
                   disabled={!canEdit}
                 />
               </div>
@@ -339,6 +340,7 @@ export const DailyEntryForm: React.FC<DailyEntryFormProps> = ({
                   min="0"
                   value={talkMinutes}
                   onChange={(e) => setTalkMinutes(parseInt(e.target.value) || 0)}
+                  onFocus={(e) => e.target.select()}
                   disabled={!canEdit}
                 />
               </div>
@@ -350,6 +352,7 @@ export const DailyEntryForm: React.FC<DailyEntryFormProps> = ({
                   min="0"
                   value={qhhTotal}
                   onChange={(e) => setQhhTotal(parseInt(e.target.value) || 0)}
+                  onFocus={(e) => e.target.select()}
                   disabled={!canEdit}
                 />
               </div>
@@ -361,6 +364,7 @@ export const DailyEntryForm: React.FC<DailyEntryFormProps> = ({
                   min="0"
                   value={itemsSold}
                   onChange={(e) => setItemsSold(parseInt(e.target.value) || 0)}
+                  onFocus={(e) => e.target.select()}
                   disabled={!canEdit}
                 />
               </div>
@@ -372,6 +376,7 @@ export const DailyEntryForm: React.FC<DailyEntryFormProps> = ({
                   min="0"
                   value={salesMade}
                   onChange={(e) => setSalesMade(parseInt(e.target.value) || 0)}
+                  onFocus={(e) => e.target.select()}
                   disabled={!canEdit}
                 />
               </div>
