@@ -43,7 +43,7 @@ export const useQHHDetails = (dailyEntryId: string | null) => {
 
       if (error) throw error
 
-      const qhh: QHHDetail[] = (data as QHHDetail[]) || []
+      const qhh: QHHDetail[] = (data as unknown as QHHDetail[]) || []
 
       // Calculate analytics
       const totalCount = qhh.length

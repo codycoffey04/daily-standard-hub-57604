@@ -238,6 +238,7 @@ export type Database = {
       }
       profiles: {
         Row: {
+          active: boolean | null
           created_at: string
           display_name: string
           email: string
@@ -246,6 +247,7 @@ export type Database = {
           role: string
         }
         Insert: {
+          active?: boolean | null
           created_at?: string
           display_name: string
           email: string
@@ -254,6 +256,7 @@ export type Database = {
           role: string
         }
         Update: {
+          active?: boolean | null
           created_at?: string
           display_name?: string
           email?: string
@@ -275,82 +278,142 @@ export type Database = {
         Row: {
           created_at: string | null
           created_by: string | null
+          current_carrier: string | null
           daily_entry_id: string | null
-          full_name: string
           id: string
+          is_bundle: boolean | null
           items_sold: number | null
+          lead_id: string | null
           lead_source_id: string | null
+          lines_quoted: number | null
           notes: string | null
           opted_into_hearsay: boolean | null
-          phone_number: string
-          policies_quoted: number
+          product_lines: string[]
+          qcn: string | null
           quick_action_status: string
+          quoted_premium: number
+          zip_code: string
         }
         Insert: {
           created_at?: string | null
           created_by?: string | null
+          current_carrier?: string | null
           daily_entry_id?: string | null
-          full_name: string
           id?: string
+          is_bundle?: boolean | null
           items_sold?: number | null
+          lead_id?: string | null
           lead_source_id?: string | null
+          lines_quoted?: number | null
           notes?: string | null
           opted_into_hearsay?: boolean | null
-          phone_number: string
-          policies_quoted: number
+          product_lines: string[]
+          qcn?: string | null
           quick_action_status: string
+          quoted_premium: number
+          zip_code: string
         }
         Update: {
           created_at?: string | null
           created_by?: string | null
+          current_carrier?: string | null
           daily_entry_id?: string | null
-          full_name?: string
           id?: string
+          is_bundle?: boolean | null
           items_sold?: number | null
+          lead_id?: string | null
           lead_source_id?: string | null
+          lines_quoted?: number | null
           notes?: string | null
           opted_into_hearsay?: boolean | null
-          phone_number?: string
-          policies_quoted?: number
+          product_lines?: string[]
+          qcn?: string | null
           quick_action_status?: string
+          quoted_premium?: number
+          zip_code?: string
         }
         Relationships: [
           {
-            foreignKeyName: "quoted_households_created_by_fkey"
+            foreignKeyName: "quoted_households_new_created_by_fkey"
             columns: ["created_by"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "quoted_households_daily_entry_id_fkey"
+            foreignKeyName: "quoted_households_new_daily_entry_id_fkey"
             columns: ["daily_entry_id"]
             isOneToOne: false
             referencedRelation: "daily_entries"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "quoted_households_daily_entry_id_fkey"
+            foreignKeyName: "quoted_households_new_daily_entry_id_fkey"
             columns: ["daily_entry_id"]
             isOneToOne: false
             referencedRelation: "entry_status"
             referencedColumns: ["entry_id"]
           },
           {
-            foreignKeyName: "quoted_households_daily_entry_id_fkey"
+            foreignKeyName: "quoted_households_new_daily_entry_id_fkey"
             columns: ["daily_entry_id"]
             isOneToOne: false
             referencedRelation: "yesterday_status"
             referencedColumns: ["entry_id"]
           },
           {
-            foreignKeyName: "quoted_households_lead_source_id_fkey"
+            foreignKeyName: "quoted_households_new_lead_source_id_fkey"
             columns: ["lead_source_id"]
             isOneToOne: false
             referencedRelation: "sources"
             referencedColumns: ["id"]
           },
         ]
+      }
+      quoted_households_backup_20251013: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          daily_entry_id: string | null
+          full_name: string | null
+          id: string | null
+          items_sold: number | null
+          lead_source_id: string | null
+          notes: string | null
+          opted_into_hearsay: boolean | null
+          phone_number: string | null
+          policies_quoted: number | null
+          quick_action_status: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          daily_entry_id?: string | null
+          full_name?: string | null
+          id?: string | null
+          items_sold?: number | null
+          lead_source_id?: string | null
+          notes?: string | null
+          opted_into_hearsay?: boolean | null
+          phone_number?: string | null
+          policies_quoted?: number | null
+          quick_action_status?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          daily_entry_id?: string | null
+          full_name?: string | null
+          id?: string | null
+          items_sold?: number | null
+          lead_source_id?: string | null
+          notes?: string | null
+          opted_into_hearsay?: boolean | null
+          phone_number?: string | null
+          policies_quoted?: number | null
+          quick_action_status?: string | null
+        }
+        Relationships: []
       }
       reviews: {
         Row: {
@@ -585,17 +648,22 @@ export type Database = {
         Returns: string
       }
       get_qhh_details_for_review: {
-        Args: { p_daily_entry_id: string }
+        Args: Record<PropertyKey, never> | { p_daily_entry_id: string }
         Returns: {
-          full_name: string
+          current_carrier: string
           id: string
+          is_bundle: boolean
+          lead_id: string
           lead_source_id: string
+          lines_quoted: number
           notes: string
           opted_into_hearsay: boolean
-          phone_number: string
-          policies_quoted: number
+          product_lines: string[]
+          qcn: string
           quick_action_status: string
+          quoted_premium: number
           source_name: string
+          zip_code: string
         }[]
       }
       has_role: {
