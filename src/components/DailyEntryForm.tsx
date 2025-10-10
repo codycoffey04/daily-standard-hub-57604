@@ -204,7 +204,7 @@ export const DailyEntryForm: React.FC<DailyEntryFormProps> = ({
           zip_code: qhh.zip_code,
           product_lines: qhh.product_lines,
           lines_quoted: qhh.lines_quoted,
-          is_bundle: qhh.is_bundle,
+          is_bundle: qhh.product_lines.length >= 2,
           quoted_premium: qhh.quoted_premium,
           lead_source_id: qhh.lead_source_id,
           current_carrier: qhh.current_carrier || null,

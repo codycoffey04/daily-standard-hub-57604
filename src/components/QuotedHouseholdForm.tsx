@@ -38,15 +38,15 @@ const QUICK_ACTION_OPTIONS = [
 ]
 
 const PRODUCT_LINE_OPTIONS = [
-  'Auto',
+  'Standard Auto',
   'Home',
-  'Life',
-  'Health',
-  'Umbrella',
-  'Boat',
-  'RV',
+  'Landlords',
+  'Renters',
   'Motorcycle',
-  'Other'
+  'Manufactured Home',
+  'Boat',
+  'Umbrella',
+  'Condominium'
 ]
 
 const getStatusColor = (status: string): string => {
@@ -85,7 +85,7 @@ export const QuotedHouseholdForm: React.FC<QuotedHouseholdFormProps> = ({
     zip_code: '',
     product_lines: [],
     lines_quoted: 1,
-    is_bundle: false,
+    is_bundle: false, // Calculated, not user input
     quoted_premium: 0,
     lead_source_id: '',
     current_carrier: '',
@@ -103,7 +103,7 @@ export const QuotedHouseholdForm: React.FC<QuotedHouseholdFormProps> = ({
       zip_code: '',
       product_lines: [],
       lines_quoted: 1,
-      is_bundle: false,
+      is_bundle: false, // Calculated, not user input
       quoted_premium: 0,
       lead_source_id: '',
       current_carrier: '',
@@ -323,18 +323,13 @@ export const QuotedHouseholdForm: React.FC<QuotedHouseholdFormProps> = ({
                     </div>
                   ))}
                 </div>
+                {formData.product_lines.length > 0 && (
+                  <div className="text-sm font-medium text-muted-foreground mt-2">
+                    Lines: {formData.product_lines.length} 
+                    {formData.product_lines.length === 1 ? ' (Monoline)' : ' (Bundle)'}
+                  </div>
+                )}
                 {errors.product_lines && <p className="text-sm text-destructive">{errors.product_lines}</p>}
-              </div>
-
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="is-bundle"
-                  checked={formData.is_bundle}
-                  onCheckedChange={(checked) => 
-                    setFormData(prev => ({ ...prev, is_bundle: checked as boolean }))
-                  }
-                />
-                <Label htmlFor="is-bundle">Is Bundle</Label>
               </div>
 
               <div className="space-y-2">
