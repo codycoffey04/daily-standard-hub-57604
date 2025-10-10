@@ -107,7 +107,7 @@ export const ProducerPerformanceCard: React.FC<ProducerPerformanceCardProps> = (
                       </div>
                     </Badge>
                   </div>
-                  <span className="text-xs text-muted-foreground">
+                  <span className="text-xs text-muted-foreground dark:text-slate-200">
                     {alert.conversion_rate.toFixed(1)}% conversion
                   </span>
                 </div>

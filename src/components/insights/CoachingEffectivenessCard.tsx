@@ -113,7 +113,7 @@ export const CoachingEffectivenessCard: React.FC<CoachingEffectivenessCardProps>
               </Badge>
             </div>
             <Progress value={effectiveness.resolution_rate} className="h-3" />
-            <div className="flex justify-between text-xs text-muted-foreground">
+            <div className="flex justify-between text-xs text-muted-foreground dark:text-slate-200">
               <span>{effectiveness.resolution_rate.toFixed(1)}% of issues resolved</span>
               <span>{effectiveness.resolved_issues} of {effectiveness.total_issues} issues</span>
             </div>

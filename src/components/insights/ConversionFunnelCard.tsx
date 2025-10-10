@@ -74,7 +74,7 @@ export const ConversionFunnelCard: React.FC<ConversionFunnelCardProps> = ({ date
               </div>
             </div>
             <Progress value={Math.min(funnelData.current.qhhToItems, 100)} className="h-2" />
-            <div className="flex justify-between text-xs text-muted-foreground">
+            <div className="flex justify-between text-xs text-muted-foreground dark:text-slate-200">
               <span>{funnelData.current.qhhToItems.toFixed(1)}% conversion rate</span>
               <span>{funnelData.current.totalQhh} QHH → {funnelData.current.totalItems} Items</span>
             </div>
@@ -97,7 +97,7 @@ export const ConversionFunnelCard: React.FC<ConversionFunnelCardProps> = ({ date
               </div>
             </div>
             <Progress value={Math.min(funnelData.current.itemsToSales, 100)} className="h-2" />
-            <div className="flex justify-between text-xs text-muted-foreground">
+            <div className="flex justify-between text-xs text-muted-foreground dark:text-slate-200">
               <span>{funnelData.current.itemsToSales.toFixed(1)}% conversion rate</span>
               <span>{funnelData.current.totalItems} Items → {funnelData.current.totalSales} Sales</span>
             </div>
