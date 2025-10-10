@@ -49,6 +49,35 @@ const PRODUCT_LINE_OPTIONS = [
   'Condominium'
 ]
 
+const CURRENT_CARRIER_OPTIONS = [
+  // National Carriers
+  'State Farm',
+  'Geico',
+  'Progressive',
+  'Allstate',
+  'Liberty Mutual',
+  'Farmers',
+  'Nationwide',
+  'Travelers',
+  'American Family',
+  'USAA',
+  // Regional (AL/GA)
+  'Auto-Owners',
+  'Southern Farm Bureau',
+  'Georgia Farm Bureau',
+  'Alabama Farm Bureau',
+  'Alfa Insurance',
+  'Mercury',
+  'National General',
+  'Safeco',
+  'The General',
+  'Kemper',
+  // Other
+  'Other Regional Carrier',
+  'No Prior Insurance',
+  'Unknown/Not Disclosed'
+]
+
 const getStatusColor = (status: string): string => {
   switch (status) {
     case 'SOLD': return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300'
@@ -145,6 +174,11 @@ export const QuotedHouseholdForm: React.FC<QuotedHouseholdFormProps> = ({
     // Validate lead_source_id
     if (!formData.lead_source_id) {
       newErrors.lead_source_id = 'Lead source is required'
+    }
+    
+    // Validate current_carrier
+    if (!formData.current_carrier) {
+      newErrors.current_carrier = 'Current carrier is required'
     }
     
     // Validate quick_action_status
@@ -279,13 +313,21 @@ export const QuotedHouseholdForm: React.FC<QuotedHouseholdFormProps> = ({
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="current-carrier">Current Carrier</Label>
-                  <Input
-                    id="current-carrier"
-                    value={formData.current_carrier || ''}
-                    onChange={(e) => setFormData(prev => ({ ...prev, current_carrier: e.target.value }))}
-                    placeholder="Enter current carrier"
-                  />
+                  <Label>Current Carrier *</Label>
+                  <Select 
+                    value={formData.current_carrier || ''} 
+                    onValueChange={(value) => setFormData(prev => ({ ...prev, current_carrier: value }))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select current carrier" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {CURRENT_CARRIER_OPTIONS.map(carrier => (
+                        <SelectItem key={carrier} value={carrier}>{carrier}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {errors.current_carrier && <p className="text-sm text-destructive">{errors.current_carrier}</p>}
                 </div>
 
                 <div className="space-y-2">
