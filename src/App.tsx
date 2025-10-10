@@ -8,6 +8,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { AppLayout } from "@/components/AppLayout";
 import { getRedirectPath } from "@/lib/auth";
+import { ThemeProvider } from "next-themes";
 
 // Pages
 import LoginPage from "./pages/LoginPage";
@@ -30,8 +31,9 @@ const RootRedirect = () => {
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <AuthProvider>
+    <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+      <TooltipProvider>
+        <AuthProvider>
         <Toaster />
         <Sonner />
         <BrowserRouter>
@@ -120,7 +122,8 @@ const App = () => (
         </BrowserRouter>
       </AuthProvider>
     </TooltipProvider>
-  </QueryClientProvider>
+  </ThemeProvider>
+</QueryClientProvider>
 );
 
 export default App;

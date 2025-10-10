@@ -2,6 +2,7 @@ import React from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { Button } from '@/components/ui/button'
 import { LogOut } from 'lucide-react'
+import { ThemeToggle } from './ThemeToggle'
 
 interface AppHeaderProps {
   sidebarCollapsed: boolean
@@ -11,8 +12,9 @@ export const AppHeader: React.FC<AppHeaderProps> = ({ sidebarCollapsed }) => {
   const { profile, signOut } = useAuth()
 
   return (
-    <header className="h-16 bg-card border-b border-border shadow-sm flex items-center justify-end px-6">
+    <header className="h-16 bg-card border-b border-border shadow-sm flex items-center justify-end px-6 dark:bg-slate-800 dark:border-slate-700">
       <div className="flex items-center space-x-4">
+        <ThemeToggle />
         <div className="text-right">
           <div className="text-sm font-medium text-foreground">
             {profile?.display_name}
