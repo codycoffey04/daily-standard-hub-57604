@@ -12,14 +12,19 @@ import { type Source } from '@/hooks/useSourcesForSelection'
 
 export interface QuotedHousehold {
   id?: string
-  full_name: string
-  phone_number: string
-  policies_quoted: number
+  zip_code: string
+  product_lines: string[]
+  lines_quoted: number
+  is_bundle: boolean
+  quoted_premium: number
   lead_source_id: string
-  notes: string
+  current_carrier?: string | null
+  lead_id?: string | null
+  qcn?: string | null
+  notes?: string | null
   quick_action_status: string
   opted_into_hearsay: boolean
-  items_sold?: number
+  items_sold?: number | null
 }
 
 const QUICK_ACTION_OPTIONS = [
@@ -32,19 +37,17 @@ const QUICK_ACTION_OPTIONS = [
   'SOLD'
 ]
 
-const POLICIES_OPTIONS = Array.from({ length: 10 }, (_, i) => i + 1)
-
-const formatPhoneNumber = (value: string): string => {
-  const cleaned = value.replace(/\D/g, '')
-  if (cleaned.length <= 3) return cleaned
-  if (cleaned.length <= 6) return `(${cleaned.slice(0, 3)}) ${cleaned.slice(3)}`
-  return `(${cleaned.slice(0, 3)}) ${cleaned.slice(3, 6)}-${cleaned.slice(6, 10)}`
-}
-
-const validatePhoneNumber = (phone: string): boolean => {
-  const phoneRegex = /^\(\d{3}\) \d{3}-\d{4}$/
-  return phoneRegex.test(phone)
-}
+const PRODUCT_LINE_OPTIONS = [
+  'Auto',
+  'Home',
+  'Life',
+  'Health',
+  'Umbrella',
+  'Boat',
+  'RV',
+  'Motorcycle',
+  'Other'
+]
 
 const getStatusColor = (status: string): string => {
   switch (status) {
@@ -79,22 +82,33 @@ export const QuotedHouseholdForm: React.FC<QuotedHouseholdFormProps> = ({
   const [showForm, setShowForm] = useState(false)
   const [editingIndex, setEditingIndex] = useState<number | null>(null)
   const [formData, setFormData] = useState<QuotedHousehold>({
-    full_name: '',
-    phone_number: '',
-    policies_quoted: 1,
+    zip_code: '',
+    product_lines: [],
+    lines_quoted: 1,
+    is_bundle: false,
+    quoted_premium: 0,
     lead_source_id: '',
+    current_carrier: '',
+    lead_id: '',
+    qcn: '',
     notes: '',
     quick_action_status: '',
-    opted_into_hearsay: false
+    opted_into_hearsay: false,
+    items_sold: undefined
   })
   const [errors, setErrors] = useState<Record<string, string>>({})
 
   const resetForm = () => {
     setFormData({
-      full_name: '',
-      phone_number: '',
-      policies_quoted: 1,
+      zip_code: '',
+      product_lines: [],
+      lines_quoted: 1,
+      is_bundle: false,
+      quoted_premium: 0,
       lead_source_id: '',
+      current_carrier: '',
+      lead_id: '',
+      qcn: '',
       notes: '',
       quick_action_status: '',
       opted_into_hearsay: false,
@@ -108,13 +122,35 @@ export const QuotedHouseholdForm: React.FC<QuotedHouseholdFormProps> = ({
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {}
     
-    if (!formData.full_name.trim()) newErrors.full_name = 'Full name is required'
-    if (!formData.phone_number.trim()) newErrors.phone_number = 'Phone number is required'
-    else if (!validatePhoneNumber(formData.phone_number)) {
-      newErrors.phone_number = 'Phone number must be in format (XXX) XXX-XXXX'
+    // Validate zip_code (5 digits)
+    if (!formData.zip_code || !/^\d{5}$/.test(formData.zip_code)) {
+      newErrors.zip_code = 'Valid 5-digit zip code is required'
     }
-    if (!formData.lead_source_id) newErrors.lead_source_id = 'Lead source is required'
-    if (!formData.quick_action_status) newErrors.quick_action_status = 'Quick action status is required'
+    
+    // Validate product_lines
+    if (formData.product_lines.length === 0) {
+      newErrors.product_lines = 'At least one product line is required'
+    }
+    
+    // Validate lines_quoted (must be positive)
+    if (formData.lines_quoted < 1) {
+      newErrors.lines_quoted = 'Lines quoted must be at least 1'
+    }
+    
+    // Validate quoted_premium (must be non-negative)
+    if (formData.quoted_premium < 0) {
+      newErrors.quoted_premium = 'Quoted premium cannot be negative'
+    }
+    
+    // Validate lead_source_id
+    if (!formData.lead_source_id) {
+      newErrors.lead_source_id = 'Lead source is required'
+    }
+    
+    // Validate quick_action_status
+    if (!formData.quick_action_status) {
+      newErrors.quick_action_status = 'Quick action status is required'
+    }
     
     // Validate items_sold when status is SOLD
     if ((formData.quick_action_status ?? '').toUpperCase() === 'SOLD') {
@@ -144,9 +180,13 @@ export const QuotedHouseholdForm: React.FC<QuotedHouseholdFormProps> = ({
     setShowForm(true)
   }
 
-  const handlePhoneChange = (value: string) => {
-    const formatted = formatPhoneNumber(value)
-    setFormData(prev => ({ ...prev, phone_number: formatted }))
+  const toggleProductLine = (line: string) => {
+    setFormData(prev => ({
+      ...prev,
+      product_lines: prev.product_lines.includes(line)
+        ? prev.product_lines.filter(l => l !== line)
+        : [...prev.product_lines, line]
+    }))
   }
 
   return (
@@ -181,43 +221,43 @@ export const QuotedHouseholdForm: React.FC<QuotedHouseholdFormProps> = ({
             <div className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="full-name">Full Name *</Label>
+                  <Label htmlFor="zip-code">Zip Code *</Label>
                   <Input
-                    id="full-name"
-                    value={formData.full_name}
-                    onChange={(e) => setFormData(prev => ({ ...prev, full_name: e.target.value }))}
-                    placeholder="Enter full name"
+                    id="zip-code"
+                    value={formData.zip_code}
+                    onChange={(e) => {
+                      const value = e.target.value.replace(/\D/g, '').slice(0, 5)
+                      setFormData(prev => ({ ...prev, zip_code: value }))
+                    }}
+                    placeholder="12345"
+                    maxLength={5}
                   />
-                  {errors.full_name && <p className="text-sm text-destructive">{errors.full_name}</p>}
+                  {errors.zip_code && <p className="text-sm text-destructive">{errors.zip_code}</p>}
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="phone-number">Phone Number *</Label>
+                  <Label>Lines Quoted *</Label>
                   <Input
-                    id="phone-number"
-                    value={formData.phone_number}
-                    onChange={(e) => handlePhoneChange(e.target.value)}
-                    placeholder="(XXX) XXX-XXXX"
-                    maxLength={14}
+                    type="number"
+                    min={1}
+                    value={formData.lines_quoted}
+                    onChange={(e) => setFormData(prev => ({ ...prev, lines_quoted: parseInt(e.target.value) || 1 }))}
                   />
-                  {errors.phone_number && <p className="text-sm text-destructive">{errors.phone_number}</p>}
+                  {errors.lines_quoted && <p className="text-sm text-destructive">{errors.lines_quoted}</p>}
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Policies Quoted *</Label>
-                  <Select 
-                    value={formData.policies_quoted.toString()} 
-                    onValueChange={(value) => setFormData(prev => ({ ...prev, policies_quoted: parseInt(value) }))}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {POLICIES_OPTIONS.map(num => (
-                        <SelectItem key={num} value={num.toString()}>{num}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <Label htmlFor="quoted-premium">Quoted Premium *</Label>
+                  <Input
+                    id="quoted-premium"
+                    type="number"
+                    step="0.01"
+                    min={0}
+                    value={formData.quoted_premium}
+                    onChange={(e) => setFormData(prev => ({ ...prev, quoted_premium: parseFloat(e.target.value) || 0 }))}
+                    placeholder="0.00"
+                  />
+                  {errors.quoted_premium && <p className="text-sm text-destructive">{errors.quoted_premium}</p>}
                 </div>
 
                 <div className="space-y-2">
@@ -237,6 +277,64 @@ export const QuotedHouseholdForm: React.FC<QuotedHouseholdFormProps> = ({
                   </Select>
                   {errors.lead_source_id && <p className="text-sm text-destructive">{errors.lead_source_id}</p>}
                 </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="current-carrier">Current Carrier</Label>
+                  <Input
+                    id="current-carrier"
+                    value={formData.current_carrier || ''}
+                    onChange={(e) => setFormData(prev => ({ ...prev, current_carrier: e.target.value }))}
+                    placeholder="Enter current carrier"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="lead-id">Lead ID</Label>
+                  <Input
+                    id="lead-id"
+                    value={formData.lead_id || ''}
+                    onChange={(e) => setFormData(prev => ({ ...prev, lead_id: e.target.value }))}
+                    placeholder="Enter lead ID"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="qcn">QCN</Label>
+                  <Input
+                    id="qcn"
+                    value={formData.qcn || ''}
+                    onChange={(e) => setFormData(prev => ({ ...prev, qcn: e.target.value }))}
+                    placeholder="Enter QCN"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Product Lines * <span className="text-xs text-muted-foreground">(Select all that apply)</span></Label>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-2 p-3 border rounded-md">
+                  {PRODUCT_LINE_OPTIONS.map(line => (
+                    <div key={line} className="flex items-center space-x-2">
+                      <Checkbox
+                        id={`product-${line}`}
+                        checked={formData.product_lines.includes(line)}
+                        onCheckedChange={() => toggleProductLine(line)}
+                      />
+                      <Label htmlFor={`product-${line}`} className="cursor-pointer">{line}</Label>
+                    </div>
+                  ))}
+                </div>
+                {errors.product_lines && <p className="text-sm text-destructive">{errors.product_lines}</p>}
+              </div>
+
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="is-bundle"
+                  checked={formData.is_bundle}
+                  onCheckedChange={(checked) => 
+                    setFormData(prev => ({ ...prev, is_bundle: checked as boolean }))
+                  }
+                />
+                <Label htmlFor="is-bundle">Is Bundle</Label>
               </div>
 
               <div className="space-y-2">
@@ -285,8 +383,8 @@ export const QuotedHouseholdForm: React.FC<QuotedHouseholdFormProps> = ({
                 <Label htmlFor="notes">Specific Notes on Call</Label>
                 <Textarea
                   id="notes"
-                  value={formData.notes}
-                  onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
+                  value={formData.notes || ''}
+                  onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value || null }))}
                   placeholder="Enter any specific notes about the call..."
                   rows={3}
                 />
@@ -327,21 +425,29 @@ export const QuotedHouseholdForm: React.FC<QuotedHouseholdFormProps> = ({
                 <div className="flex items-start justify-between">
                   <div className="space-y-2 flex-1">
                     <div className="flex items-center space-x-3">
-                      <h4 className="font-medium">{qhh.full_name}</h4>
+                      <h4 className="font-medium">Zip: {qhh.zip_code}</h4>
                       <Badge className={getStatusColor(qhh.quick_action_status)}>
                         {qhh.quick_action_status}
                       </Badge>
+                      {qhh.is_bundle && (
+                        <Badge variant="outline">Bundle</Badge>
+                      )}
                     </div>
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm text-muted-foreground">
                       <div>
-                        <span className="font-medium">Phone:</span> {qhh.phone_number}
+                        <span className="font-medium">Lines:</span> {qhh.lines_quoted}
                       </div>
                       <div>
-                        <span className="font-medium">Policies:</span> {qhh.policies_quoted}
+                        <span className="font-medium">Premium:</span> ${qhh.quoted_premium.toFixed(2)}
                       </div>
                       <div>
                         <span className="font-medium">Source:</span> {source?.name || 'Unknown'}
                       </div>
+                      {qhh.current_carrier && (
+                        <div>
+                          <span className="font-medium">Carrier:</span> {qhh.current_carrier}
+                        </div>
+                      )}
                       {(qhh.quick_action_status ?? '').toUpperCase() === 'SOLD' && qhh.items_sold && (
                         <div>
                           <span className="font-medium">Items Sold:</span> {qhh.items_sold}
@@ -350,6 +456,9 @@ export const QuotedHouseholdForm: React.FC<QuotedHouseholdFormProps> = ({
                       <div>
                         <span className="font-medium">Hearsay:</span> {qhh.opted_into_hearsay ? 'Yes' : 'No'}
                       </div>
+                    </div>
+                    <div className="text-sm">
+                      <span className="font-medium text-muted-foreground">Products:</span> {qhh.product_lines.join(', ')}
                     </div>
                     {qhh.notes && (
                       <div className="text-sm">

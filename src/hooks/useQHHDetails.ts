@@ -3,10 +3,15 @@ import { supabase } from '@/integrations/supabase/client'
 
 export interface QHHDetail {
   id: string
-  full_name: string
-  phone_number: string
-  policies_quoted: number
-  lead_source_id: string
+  zip_code: string
+  product_lines: string[]
+  lines_quoted: number
+  is_bundle: boolean
+  quoted_premium: number
+  lead_source_id: string | null
+  current_carrier: string | null
+  lead_id: string | null
+  qcn: string | null
   notes: string | null
   quick_action_status: string
   opted_into_hearsay: boolean

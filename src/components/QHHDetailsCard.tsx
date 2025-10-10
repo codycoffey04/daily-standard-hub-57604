@@ -61,8 +61,8 @@ export const QHHDetailsCard: React.FC<QHHDetailsCardProps> = ({
     setExpandedRows(newExpanded)
   }
 
-  const formatPhone = (phone: string) => {
-    return phone.replace(/(\d{3})(\d{3})(\d{4})/, '($1) $2-$3')
+  const formatCurrency = (value: number) => {
+    return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(value)
   }
 
   const countMatches = analytics.totalCount === reportedTotal
@@ -187,11 +187,14 @@ export const QHHDetailsCard: React.FC<QHHDetailsCardProps> = ({
                           <div className="flex items-center gap-3 flex-1">
                             <div className="flex items-center gap-2">
                               {getStatusIcon(qhh.quick_action_status)}
-                              <span className="font-medium">{qhh.full_name}</span>
+                              <span className="font-medium">Zip: {qhh.zip_code}</span>
                             </div>
                             <Badge className={getStatusColor(qhh.quick_action_status)}>
                               {qhh.quick_action_status}
                             </Badge>
+                            {qhh.is_bundle && (
+                              <Badge variant="outline">Bundle</Badge>
+                            )}
                           </div>
                           
                           <div className="flex items-center gap-2">
@@ -207,16 +210,20 @@ export const QHHDetailsCard: React.FC<QHHDetailsCardProps> = ({
 
                         {/* Summary Info */}
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm text-muted-foreground">
-                          <div className="flex items-center gap-1">
-                            <Phone className="h-3 w-3" />
-                            <span>{formatPhone(qhh.phone_number.replace(/\D/g, ''))}</span>
+                          <div>
+                            <span className="font-medium">Lines Quoted:</span> {qhh.lines_quoted}
                           </div>
                           <div>
-                            <span className="font-medium">Policies:</span> {qhh.policies_quoted}
+                            <span className="font-medium">Premium:</span> {formatCurrency(qhh.quoted_premium)}
                           </div>
                           <div>
                             <span className="font-medium">Source:</span> {qhh.source_name}
                           </div>
+                          {qhh.current_carrier && (
+                            <div>
+                              <span className="font-medium">Carrier:</span> {qhh.current_carrier}
+                            </div>
+                          )}
                           <div className="flex items-center gap-1">
                             {qhh.opted_into_hearsay ? (
                               <CheckCircle className="h-3 w-3 text-success" />
@@ -225,6 +232,11 @@ export const QHHDetailsCard: React.FC<QHHDetailsCardProps> = ({
                             )}
                             <span>Hearsay</span>
                           </div>
+                        </div>
+
+                        {/* Product Lines */}
+                        <div className="text-sm">
+                          <span className="font-medium text-muted-foreground">Products:</span> {qhh.product_lines.join(', ')}
                         </div>
 
                         {/* Expanded Details */}

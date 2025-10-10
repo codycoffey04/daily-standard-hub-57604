@@ -91,15 +91,6 @@ export const DailyEntryForm: React.FC<DailyEntryFormProps> = ({
       return false
     }
 
-    // Validate phone numbers in QHH entries
-    const phoneRegex = /^\(\d{3}\) \d{3}-\d{4}$/
-    for (const qhh of quotedHouseholds) {
-      if (!phoneRegex.test(qhh.phone_number)) {
-        setValidationError(`Invalid phone number format: ${qhh.phone_number}`)
-        return false
-      }
-    }
-
     setValidationError('')
     return true
   }
@@ -162,7 +153,7 @@ export const DailyEntryForm: React.FC<DailyEntryFormProps> = ({
       quotedHouseholds.forEach(qhh => {
         if (qhh.lead_source_id && sourceBreakdown[qhh.lead_source_id]) {
           sourceBreakdown[qhh.lead_source_id].qhh += 1
-          sourceBreakdown[qhh.lead_source_id].quotes += qhh.policies_quoted
+          sourceBreakdown[qhh.lead_source_id].quotes += qhh.lines_quoted
         }
       })
 
@@ -210,10 +201,15 @@ export const DailyEntryForm: React.FC<DailyEntryFormProps> = ({
         // Insert new QHH entries
         const qhhEntries = quotedHouseholds.map(qhh => ({
           daily_entry_id: entryId,
-          full_name: qhh.full_name,
-          phone_number: qhh.phone_number,
-          policies_quoted: qhh.policies_quoted,
+          zip_code: qhh.zip_code,
+          product_lines: qhh.product_lines,
+          lines_quoted: qhh.lines_quoted,
+          is_bundle: qhh.is_bundle,
+          quoted_premium: qhh.quoted_premium,
           lead_source_id: qhh.lead_source_id,
+          current_carrier: qhh.current_carrier || null,
+          lead_id: qhh.lead_id || null,
+          qcn: qhh.qcn || null,
           notes: qhh.notes || null,
           quick_action_status: qhh.quick_action_status,
           opted_into_hearsay: qhh.opted_into_hearsay,
