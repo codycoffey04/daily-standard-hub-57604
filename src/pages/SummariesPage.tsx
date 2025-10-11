@@ -5,6 +5,7 @@ import { ReportHeader } from '@/components/reports/ReportHeader'
 import { QHHBySourceReport } from '@/components/reports/QHHBySourceReport'
 import { QuotesBySourceReport } from '@/components/reports/QuotesBySourceReport'
 import { ItemsByProducerReport } from '@/components/reports/ItemsByProducerReport'
+import { ItemsBySourceReport } from '@/components/reports/ItemsBySourceReport'
 import { ProducerSourceMatrixReport } from '@/components/reports/ProducerSourceMatrixReport'
 import { QHHByProducerReport } from '@/components/reports/QHHByProducerReport'
 import { QuotesByProducerReport } from '@/components/reports/QuotesByProducerReport'
@@ -54,6 +55,8 @@ const ReportContent: React.FC<ReportContentProps> = ({
       return <ProducerSourceMatrixQuotesReport selectedYear={selectedYear} selectedMonth={selectedMonth} />
     case 'items-by-producer':
       return <ItemsByProducerReport selectedYear={selectedYear} selectedMonth={selectedMonth} />
+    case 'items-by-source':
+      return <ItemsBySourceReport selectedYear={selectedYear} selectedMonth={selectedMonth} />
     case 'producer-source-matrix':
       return <ProducerSourceMatrixReport selectedYear={selectedYear} selectedMonth={selectedMonth} />
     default:

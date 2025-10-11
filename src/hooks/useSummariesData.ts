@@ -22,8 +22,18 @@ export interface ItemsByProducerData {
 }
 
 export interface ItemsBySourceData {
+  source_id: string
   source_name: string
+  qhh: number
+  quotes: number
   items: number
+  items_per_qhh: number | null
+  items_per_quote: number | null
+  qhh_rows_detail: number
+  detail_coverage_pct: number | null
+  bundle_rate: number | null
+  avg_quoted_premium: number | null
+  avg_sold_quote_premium: number | null
 }
 
 export interface ProducerSourceMatrixData {
@@ -229,29 +239,17 @@ export function useItemsBySource(year: number, month: number | null) {
     queryFn: async (): Promise<ItemsBySourceData[]> => {
       const { startDate, endDate } = getDateRange(year, month)
       
-      // Use direct approach - sum items from daily_entry_sources
-      const { data, error } = await supabase
-        .from('daily_entry_sources')
-        .select(`
-          items,
-          sources!inner(name),
-          daily_entries!inner(entry_date)
-        `)
-        .gte('daily_entries.entry_date', startDate)
-        .lte('daily_entries.entry_date', endDate)
+      const { data, error } = await supabase.rpc(
+        'get_items_by_source' as any,
+        {
+          from_date: startDate,
+          to_date: endDate
+        }
+      )
       
       if (error) throw error
       
-      // Group by source and sum items (direct from source-level data)
-      const grouped = data.reduce((acc: Record<string, number>, item: any) => {
-        const sourceName = item.sources.name
-        acc[sourceName] = (acc[sourceName] || 0) + item.items
-        return acc
-      }, {})
-      
-      return Object.entries(grouped)
-        .map(([source_name, items]) => ({ source_name, items }))
-        .sort((a, b) => b.items - a.items)
+      return (data as ItemsBySourceData[]) || []
     }
   })
 }
