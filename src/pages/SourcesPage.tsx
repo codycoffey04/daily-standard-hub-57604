@@ -23,7 +23,8 @@ const SourcesPage: React.FC = () => {
       const { data, error } = await supabase
         .from('sources')
         .select('*')
-        .order('sort_order')
+        .order('sort_order', { ascending: true })
+        .order('name', { ascending: true })
 
       if (error) {
         console.error('Error loading sources:', error)

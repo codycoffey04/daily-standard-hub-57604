@@ -8,7 +8,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import { toast } from '@/hooks/use-toast'
 import { Upload, FileText, CheckCircle, AlertTriangle, Download } from 'lucide-react'
-import { useSourcesForSelection, sortSourcesWithOtherLast, type Source } from '@/hooks/useSourcesForSelection'
+import { useSourcesForSelection, type Source } from '@/hooks/useSourcesForSelection'
 
 // Source interface now imported from hook
 
