@@ -12,7 +12,7 @@ interface SalesByProducerReportProps {
   selectedMonth: number | null
 }
 
-type SortField = 'producer_name' | 'days_worked' | 'framework_compliance_pct' | 'avg_daily_qhh' | 'avg_daily_items' | 'total_items' | 'total_premium' | 'total_commission'
+type SortField = 'producer_name' | 'days_worked' | 'framework_compliance_pct' | 'avg_daily_qhh' | 'avg_daily_items' | 'total_items' | 'total_sold_premium'
 type SortDirection = 'asc' | 'desc'
 
 const TrendArrow: React.FC<{ current?: number; previous?: number }> = ({ current, previous }) => {
@@ -90,13 +90,13 @@ export const SalesByProducerReport: React.FC<SalesByProducerReportProps> = ({
   const summaryMetrics = useMemo(() => {
     if (!producersData) return null
     
-    const activeProducers = producersData.filter(p => p.days_worked > 0).length
-    const avgCompliance = producersData.reduce((sum, p) => sum + p.framework_compliance_pct, 0) / (producersData.length || 1)
-    const totalItems = producersData.reduce((sum, p) => sum + p.total_items, 0)
-    const totalPremium = producersData.reduce((sum, p) => sum + p.total_premium, 0)
+    const activeProducers = producersData.filter(p => (p.days_worked ?? 0) > 0).length
+    const avgCompliance = producersData.reduce((sum, p) => sum + (p.framework_compliance_pct ?? 0), 0) / (producersData.length || 1)
+    const totalItems = producersData.reduce((sum, p) => sum + (p.total_items ?? 0), 0)
+    const totalPremium = producersData.reduce((sum, p) => sum + (p.total_sold_premium ?? 0), 0)
     
-    const prevTotalItems = producersData.reduce((sum, p) => sum + (p.prev_total_items || 0), 0)
-    const prevAvgCompliance = producersData.reduce((sum, p) => sum + (p.prev_framework_compliance_pct || 0), 0) / (producersData.length || 1)
+    const prevTotalItems = producersData.reduce((sum, p) => sum + (p.prev_total_items ?? 0), 0)
+    const prevAvgCompliance = producersData.reduce((sum, p) => sum + (p.prev_framework_compliance_pct ?? 0), 0) / (producersData.length || 1)
     
     return {
       activeProducers,
@@ -112,15 +112,14 @@ export const SalesByProducerReport: React.FC<SalesByProducerReportProps> = ({
     if (!producersData) return null
     
     return {
-      days_worked: producersData.reduce((sum, p) => sum + p.days_worked, 0),
-      days_top: producersData.reduce((sum, p) => sum + p.days_top, 0),
-      days_bottom: producersData.reduce((sum, p) => sum + p.days_bottom, 0),
-      days_outside: producersData.reduce((sum, p) => sum + p.days_outside, 0),
-      total_qhh: producersData.reduce((sum, p) => sum + p.total_qhh, 0),
-      total_quotes: producersData.reduce((sum, p) => sum + p.total_quotes, 0),
-      total_items: producersData.reduce((sum, p) => sum + p.total_items, 0),
-      total_premium: producersData.reduce((sum, p) => sum + p.total_premium, 0),
-      total_commission: producersData.reduce((sum, p) => sum + p.total_commission, 0),
+      days_worked: producersData.reduce((sum, p) => sum + (p.days_worked ?? 0), 0),
+      days_top: producersData.reduce((sum, p) => sum + (p.days_top ?? 0), 0),
+      days_bottom: producersData.reduce((sum, p) => sum + (p.days_bottom ?? 0), 0),
+      days_outside: producersData.reduce((sum, p) => sum + (p.days_outside ?? 0), 0),
+      total_qhh: producersData.reduce((sum, p) => sum + (p.total_qhh ?? 0), 0),
+      total_quotes: producersData.reduce((sum, p) => sum + (p.total_quotes ?? 0), 0),
+      total_items: producersData.reduce((sum, p) => sum + (p.total_items ?? 0), 0),
+      total_sold_premium: producersData.reduce((sum, p) => sum + (p.total_sold_premium ?? 0), 0),
     }
   }, [producersData])
 
@@ -296,15 +295,9 @@ export const SalesByProducerReport: React.FC<SalesByProducerReportProps> = ({
                   </TableHead>
                   <TableHead 
                     className="cursor-pointer hover:bg-muted/50 text-right"
-                    onClick={() => handleSort('total_premium')}
+                    onClick={() => handleSort('total_sold_premium')}
                   >
-                    Total Premium {sortField === 'total_premium' && (sortDirection === 'asc' ? '↑' : '↓')}
-                  </TableHead>
-                  <TableHead 
-                    className="cursor-pointer hover:bg-muted/50 text-right"
-                    onClick={() => handleSort('total_commission')}
-                  >
-                    Total Commission {sortField === 'total_commission' && (sortDirection === 'asc' ? '↑' : '↓')}
+                    Total Premium {sortField === 'total_sold_premium' && (sortDirection === 'asc' ? '↑' : '↓')}
                   </TableHead>
                 </TableRow>
               </TableHeader>
@@ -325,10 +318,7 @@ export const SalesByProducerReport: React.FC<SalesByProducerReportProps> = ({
                       <TrendArrow current={producer.total_items} previous={producer.prev_total_items} />
                     </TableCell>
                     <TableCell className="text-right">
-                      ${(producer.total_premium ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      ${(producer.total_commission ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      ${(producer.total_sold_premium ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </TableCell>
                   </TableRow>
                 ))}
@@ -353,10 +343,7 @@ export const SalesByProducerReport: React.FC<SalesByProducerReportProps> = ({
                     <TableCell className="text-right">{(teamTotals.total_qhh ?? 0).toLocaleString()}</TableCell>
                     <TableCell className="text-right">{(teamTotals.total_items ?? 0).toLocaleString()}</TableCell>
                     <TableCell className="text-right">
-                      ${(teamTotals.total_premium ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      ${(teamTotals.total_commission ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      ${(teamTotals.total_sold_premium ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </TableCell>
                   </TableRow>
                 )}

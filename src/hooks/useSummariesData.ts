@@ -79,8 +79,8 @@ export interface SalesByProducerData {
   total_qhh: number
   total_quotes: number
   total_items: number
-  total_premium: number
-  total_commission: number
+  total_sold_premium: number
+  total_sold_items: number
   // For trend comparison
   prev_framework_compliance_pct?: number
   prev_total_items?: number
