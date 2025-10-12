@@ -21,7 +21,15 @@ import { AccountabilityReviewsPage } from "./pages/AccountabilityReviewsPage";
 import { AdminReviewsPage } from "./pages/AdminReviewsPage";
 import NotFound from "./pages/NotFound";
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      structuralSharing: false, // Force React Query to always trigger re-renders
+      staleTime: 0, // Data is always stale, refetch on queryKey change
+      refetchOnWindowFocus: false, // Don't refetch when window regains focus
+    },
+  },
+});
 
 const RootRedirect = () => {
   const { profile } = useAuth();

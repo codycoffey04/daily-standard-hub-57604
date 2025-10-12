@@ -30,6 +30,14 @@ export const SourceROICalculatorReport: React.FC<SourceROICalculatorReportProps>
     meetingVCGoal
   )
 
+  // Debugging: Log data updates
+  console.log('🔍 ROI Component Render:', {
+    meetingVCGoal,
+    dataLength: data?.length,
+    firstRowLTV: data?.[0]?.ltv_estimate,
+    crossSaleLTV: data?.find(d => d.source_name === 'Cross-Sale')?.ltv_estimate
+  })
+
   const formatCurrency = (value: number): string => `$${formatNumber(Math.round(value))}`
   
   const formatNullable = (
@@ -74,18 +82,20 @@ export const SourceROICalculatorReport: React.FC<SourceROICalculatorReportProps>
     }
   }
 
-  const sortedData = [...(data || [])].sort((a, b) => {
-    const aVal = a[sortColumn]
-    const bVal = b[sortColumn]
+  const sortedData = React.useMemo(() => {
+    return [...(data || [])].sort((a, b) => {
+      const aVal = a[sortColumn]
+      const bVal = b[sortColumn]
 
-    // Handle NULL values (always sort to bottom)
-    if (aVal === null && bVal === null) return 0
-    if (aVal === null) return 1
-    if (bVal === null) return -1
+      // Handle NULL values (always sort to bottom)
+      if (aVal === null && bVal === null) return 0
+      if (aVal === null) return 1
+      if (bVal === null) return -1
 
-    const comparison = aVal > bVal ? 1 : -1
-    return sortDirection === 'asc' ? comparison : -comparison
-  })
+      const comparison = aVal > bVal ? 1 : -1
+      return sortDirection === 'asc' ? comparison : -comparison
+    })
+  }, [data, sortColumn, sortDirection])
 
   if (isLoading) return <ChartLoading />
 
