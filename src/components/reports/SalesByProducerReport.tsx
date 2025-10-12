@@ -44,7 +44,7 @@ const FrameworkStatusCell: React.FC<{ data: SalesByProducerData }> = ({ data }) 
         <span className="font-semibold text-red-600">{days_outside} Outside</span>
       </div>
       <Badge variant={badgeVariant} className={cn("text-xs", badgeColor)}>
-        {framework_compliance_pct.toFixed(1)}% compliance
+        {(framework_compliance_pct ?? 0).toFixed(1)}% compliance
       </Badge>
     </div>
   )
@@ -194,7 +194,7 @@ export const SalesByProducerReport: React.FC<SalesByProducerReportProps> = ({
           <CardContent>
             <div className="flex items-center space-x-2">
               <div className="text-2xl font-bold">
-                {summaryMetrics?.avgCompliance.toFixed(1)}%
+                {(summaryMetrics?.avgCompliance ?? 0).toFixed(1)}%
               </div>
               <TrendArrow 
                 current={summaryMetrics?.avgCompliance} 
@@ -223,7 +223,7 @@ export const SalesByProducerReport: React.FC<SalesByProducerReportProps> = ({
           <CardContent>
             <div className="flex items-center space-x-2">
               <div className="text-2xl font-bold">
-                {summaryMetrics?.totalItems.toLocaleString() || 0}
+                {(summaryMetrics?.totalItems ?? 0).toLocaleString()}
               </div>
               <TrendArrow 
                 current={summaryMetrics?.totalItems} 
@@ -240,7 +240,7 @@ export const SalesByProducerReport: React.FC<SalesByProducerReportProps> = ({
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              ${summaryMetrics?.totalPremium.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'}
+              ${(summaryMetrics?.totalPremium ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </div>
           </CardContent>
         </Card>
@@ -317,18 +317,18 @@ export const SalesByProducerReport: React.FC<SalesByProducerReportProps> = ({
                     <TableCell>
                       <FrameworkStatusCell data={producer} />
                     </TableCell>
-                    <TableCell className="text-right">{producer.avg_daily_qhh.toFixed(2)}</TableCell>
-                    <TableCell className="text-right">{producer.avg_daily_items.toFixed(2)}</TableCell>
-                    <TableCell className="text-right">{producer.total_qhh.toLocaleString()}</TableCell>
+                    <TableCell className="text-right">{(producer.avg_daily_qhh ?? 0).toFixed(2)}</TableCell>
+                    <TableCell className="text-right">{(producer.avg_daily_items ?? 0).toFixed(2)}</TableCell>
+                    <TableCell className="text-right">{(producer.total_qhh ?? 0).toLocaleString()}</TableCell>
                     <TableCell className="text-right">
-                      {producer.total_items.toLocaleString()}
+                      {(producer.total_items ?? 0).toLocaleString()}
                       <TrendArrow current={producer.total_items} previous={producer.prev_total_items} />
                     </TableCell>
                     <TableCell className="text-right">
-                      ${producer.total_premium.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      ${(producer.total_premium ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </TableCell>
                     <TableCell className="text-right">
-                      ${producer.total_commission.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      ${(producer.total_commission ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </TableCell>
                   </TableRow>
                 ))}
@@ -350,13 +350,13 @@ export const SalesByProducerReport: React.FC<SalesByProducerReportProps> = ({
                     </TableCell>
                     <TableCell className="text-right">-</TableCell>
                     <TableCell className="text-right">-</TableCell>
-                    <TableCell className="text-right">{teamTotals.total_qhh.toLocaleString()}</TableCell>
-                    <TableCell className="text-right">{teamTotals.total_items.toLocaleString()}</TableCell>
+                    <TableCell className="text-right">{(teamTotals.total_qhh ?? 0).toLocaleString()}</TableCell>
+                    <TableCell className="text-right">{(teamTotals.total_items ?? 0).toLocaleString()}</TableCell>
                     <TableCell className="text-right">
-                      ${teamTotals.total_premium.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      ${(teamTotals.total_premium ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </TableCell>
                     <TableCell className="text-right">
-                      ${teamTotals.total_commission.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      ${(teamTotals.total_commission ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </TableCell>
                   </TableRow>
                 )}
