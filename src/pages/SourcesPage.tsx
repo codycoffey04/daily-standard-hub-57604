@@ -3,7 +3,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { supabase } from '@/integrations/supabase/client'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { SourceAdminTable } from '@/components/SourceAdminTable'
-
+import { SourceEditModal } from '@/components/SourceEditModal'
 import { Settings, Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
@@ -11,6 +11,7 @@ const SourcesPage: React.FC = () => {
   const { profile } = useAuth()
   const [loading, setLoading] = useState(true)
   const [sources, setSources] = useState<any[]>([])
+  const [editingSource, setEditingSource] = useState<any | null>(null)
 
   useEffect(() => {
     loadSources()
@@ -40,6 +41,23 @@ const SourcesPage: React.FC = () => {
   const handleSourcesChanged = () => {
     loadSources() // Refresh after changes
   }
+  
+  const handleEditSource = (source: any) => {
+    setEditingSource(source)
+  }
+  
+  const handleAddSource = () => {
+    setEditingSource({
+      id: null,
+      name: '',
+      active: true,
+      sort_order: 100
+    })
+  }
+  
+  const handleCloseModal = () => {
+    setEditingSource(null)
+  }
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -62,7 +80,19 @@ const SourcesPage: React.FC = () => {
           sources={sources}
           loading={loading}
           onSourcesChanged={handleSourcesChanged}
+          onEditSource={handleEditSource}
+          onAddSource={handleAddSource}
         />
+        
+        {/* Source Edit Modal */}
+        {editingSource && (
+          <SourceEditModal
+            source={editingSource}
+            isOpen={!!editingSource}
+            onClose={handleCloseModal}
+            onSaved={handleSourcesChanged}
+          />
+        )}
       </div>
   )
 }

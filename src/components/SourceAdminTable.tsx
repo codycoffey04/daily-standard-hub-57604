@@ -8,9 +8,17 @@ interface SourceAdminTableProps {
   sources: any[]
   loading: boolean
   onSourcesChanged: () => void
+  onEditSource: (source: any) => void
+  onAddSource: () => void
 }
 
-export const SourceAdminTable: React.FC<SourceAdminTableProps> = ({ sources, loading, onSourcesChanged }) => {
+export const SourceAdminTable: React.FC<SourceAdminTableProps> = ({ 
+  sources, 
+  loading, 
+  onSourcesChanged,
+  onEditSource,
+  onAddSource
+}) => {
   if (loading) {
     return (
       <Card>
@@ -29,10 +37,10 @@ export const SourceAdminTable: React.FC<SourceAdminTableProps> = ({ sources, loa
             <CardTitle>Lead Sources</CardTitle>
             <CardDescription>Manage active lead sources and their configuration</CardDescription>
           </div>
-          <Button size="sm">
-            <Plus className="h-4 w-4 mr-1" />
-            Add Source
-          </Button>
+            <Button size="sm" onClick={onAddSource}>
+              <Plus className="h-4 w-4 mr-1" />
+              Add Source
+            </Button>
         </div>
       </CardHeader>
       <CardContent>
@@ -58,9 +66,13 @@ export const SourceAdminTable: React.FC<SourceAdminTableProps> = ({ sources, loa
                   <td className="p-2 text-center">{source.sort_order}</td>
                   <td className="p-2 text-center">
                     <div className="flex justify-center space-x-2">
-                      <Button size="sm" variant="outline">
-                        <Edit className="h-3 w-3" />
-                      </Button>
+                  <Button 
+                    size="sm" 
+                    variant="outline"
+                    onClick={() => onEditSource(source)}
+                  >
+                    <Edit className="h-3 w-3" />
+                  </Button>
                       <Button size="sm" variant="outline">
                         <Trash className="h-3 w-3" />
                       </Button>
