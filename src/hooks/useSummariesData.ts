@@ -360,19 +360,17 @@ export function useCloseRateAnalysis(year: number, month: number | null) {
 export function useSourceROI(
   year: number, 
   month: number | null,
-  marginPct: number = 10,
-  retentionYears: number = 3.0
+  meetingVCGoal: boolean = true
 ) {
   return useQuery({
-    queryKey: ['source-roi', year, month, marginPct, retentionYears],
+    queryKey: ['source-roi', year, month, meetingVCGoal],
     queryFn: async (): Promise<SourceROIData[]> => {
       const { startDate, endDate } = getDateRange(year, month)
       
       const { data, error } = await supabase.rpc('get_source_roi' as any, {
         from_date: startDate,
         to_date: endDate,
-        margin_pct: marginPct,
-        retention_years: retentionYears
+        meeting_vc_goal: meetingVCGoal
       })
       
       if (error) throw error
