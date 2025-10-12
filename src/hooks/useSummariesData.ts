@@ -66,6 +66,26 @@ export interface SourceROIData {
   recommendation: string | null
 }
 
+export interface SalesByProducerData {
+  producer_id: string
+  producer_name: string
+  days_worked: number
+  days_top: number
+  days_bottom: number
+  days_outside: number
+  framework_compliance_pct: number
+  avg_daily_qhh: number
+  avg_daily_items: number
+  total_qhh: number
+  total_quotes: number
+  total_items: number
+  total_premium: number
+  total_commission: number
+  // For trend comparison
+  prev_framework_compliance_pct?: number
+  prev_total_items?: number
+}
+
 function getDateRange(year: number, month: number | null) {
   if (month === null) {
     // Full year
@@ -376,6 +396,69 @@ export function useSourceROI(
       if (error) throw error
       
       return (data as SourceROIData[]) || []
+    }
+  })
+}
+
+function getPreviousPeriodDates(year: number, month: number | null) {
+  if (month === null) {
+    // Previous year
+    return {
+      startDate: `${year - 1}-01-01`,
+      endDate: `${year - 1}-12-31`
+    }
+  } else {
+    // Previous month
+    const prevMonth = month === 1 ? 12 : month - 1
+    const prevYear = month === 1 ? year - 1 : year
+    const startDate = `${prevYear}-${prevMonth.toString().padStart(2, '0')}-01`
+    const endDate = new Date(prevYear, prevMonth, 0).toISOString().split('T')[0]
+    return { startDate, endDate }
+  }
+}
+
+export function useSalesByProducer(year: number, month: number | null) {
+  return useQuery({
+    queryKey: ['sales-by-producer', year, month],
+    queryFn: async (): Promise<SalesByProducerData[]> => {
+      const { startDate, endDate } = getDateRange(year, month)
+      
+      // Current period data
+      const { data: currentData, error: currentError } = await supabase.rpc(
+        'get_producer_comparison' as any,
+        {
+          from_date: startDate,
+          to_date: endDate
+        }
+      )
+      
+      if (currentError) throw currentError
+      
+      // Previous period data for trends
+      const prevDates = getPreviousPeriodDates(year, month)
+      const { data: prevData, error: prevError } = await supabase.rpc(
+        'get_producer_comparison' as any,
+        {
+          from_date: prevDates.startDate,
+          to_date: prevDates.endDate
+        }
+      )
+      
+      if (prevError) throw prevError
+      
+      // Merge current and previous data
+      const prevMap = new Map(
+        (prevData || []).map((p: any) => [p.producer_id, p])
+      )
+      
+      return (currentData || []).map((current: any) => {
+        const prev = prevMap.get(current.producer_id) as any
+        return {
+          ...current,
+          prev_framework_compliance_pct: prev?.framework_compliance_pct,
+          prev_total_items: prev?.total_items
+        }
+      })
     }
   })
 }

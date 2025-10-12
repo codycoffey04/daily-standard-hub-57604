@@ -12,6 +12,7 @@ import { QuotesByProducerReport } from '@/components/reports/QuotesByProducerRep
 import { ProducerSourceMatrixQHHReport } from '@/components/reports/ProducerSourceMatrixQHHReport'
 import { ProducerSourceMatrixQuotesReport } from '@/components/reports/ProducerSourceMatrixQuotesReport'
 import { SourceROICalculatorReport } from '@/components/reports/SourceROICalculatorReport'
+import { SalesByProducerReport } from '@/components/reports/SalesByProducerReport'
 import { reportCategories, getReportById } from '@/config/reportConfig'
 import { useIsMobile } from '@/hooks/use-mobile'
 import { cn } from '@/lib/utils'
@@ -62,6 +63,8 @@ const ReportContent: React.FC<ReportContentProps> = ({
       return <ProducerSourceMatrixReport selectedYear={selectedYear} selectedMonth={selectedMonth} />
     case 'source-roi-calculator':
       return <SourceROICalculatorReport selectedYear={selectedYear} selectedMonth={selectedMonth} />
+    case 'sales-by-producer':
+      return <SalesByProducerReport selectedYear={selectedYear} selectedMonth={selectedMonth} />
     default:
       const report = getReportById(reportId)
       return <PlaceholderReport reportTitle={report?.title || 'Unknown Report'} />
