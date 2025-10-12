@@ -51,6 +51,21 @@ export interface CloseRateData {
   qhh: number
 }
 
+export interface SourceROIData {
+  source_id: string
+  source_name: string
+  qhh: number
+  quotes: number
+  items: number
+  spend: number | null
+  cost_per_qhh: number | null
+  cost_per_item: number | null
+  sold_premium_total: number | null
+  ltv_estimate: number | null
+  roi: number | null
+  recommendation: string | null
+}
+
 function getDateRange(year: number, month: number | null) {
   if (month === null) {
     // Full year
@@ -338,6 +353,31 @@ export function useCloseRateAnalysis(year: number, month: number | null) {
           close_rate: data.qhh > 0 ? (data.items / data.qhh) * 100 : 0
         }))
         .sort((a, b) => b.close_rate - a.close_rate)
+    }
+  })
+}
+
+export function useSourceROI(
+  year: number, 
+  month: number | null,
+  marginPct: number = 10,
+  retentionYears: number = 3.0
+) {
+  return useQuery({
+    queryKey: ['source-roi', year, month, marginPct, retentionYears],
+    queryFn: async (): Promise<SourceROIData[]> => {
+      const { startDate, endDate } = getDateRange(year, month)
+      
+      const { data, error } = await supabase.rpc('get_source_roi' as any, {
+        from_date: startDate,
+        to_date: endDate,
+        margin_pct: marginPct,
+        retention_years: retentionYears
+      })
+      
+      if (error) throw error
+      
+      return (data as SourceROIData[]) || []
     }
   })
 }
