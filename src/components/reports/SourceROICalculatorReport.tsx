@@ -9,7 +9,8 @@ import { useSourceROI, SourceROIData } from '@/hooks/useSummariesData'
 import { ChartLoading } from '@/components/ui/chart-loading'
 import { EmptyState } from '@/components/ui/empty-state'
 import { formatNumber, cn } from '@/lib/utils'
-import { AlertCircle, ArrowUpDown, DollarSign, Target, TrendingUp, FileSpreadsheet } from 'lucide-react'
+import { AlertCircle, ArrowUpDown, DollarSign, Target, TrendingUp, FileSpreadsheet, Pencil } from 'lucide-react'
+import { CostManagementModal } from '@/components/CostManagementModal'
 
 interface SourceROICalculatorReportProps {
   selectedYear: number
@@ -23,6 +24,7 @@ export const SourceROICalculatorReport: React.FC<SourceROICalculatorReportProps>
   const [meetingVCGoal, setMeetingVCGoal] = useState(true)
   const [sortColumn, setSortColumn] = useState<keyof SourceROIData>('roi')
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc')
+  const [costModalSource, setCostModalSource] = useState<{ id: string; name: string } | null>(null)
 
   const { data, isLoading, error } = useSourceROI(
     selectedYear,
@@ -278,6 +280,7 @@ export const SourceROICalculatorReport: React.FC<SourceROICalculatorReportProps>
                     </Button>
                   </TableHead>
                   <TableHead>Recommendation</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -304,6 +307,16 @@ export const SourceROICalculatorReport: React.FC<SourceROICalculatorReportProps>
                       </div>
                     </TableCell>
                     <TableCell>{getRecommendationBadge(row.recommendation)}</TableCell>
+                    <TableCell className="text-right">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setCostModalSource({ id: row.source_id, name: row.source_name })}
+                        title="Manage costs"
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -311,6 +324,18 @@ export const SourceROICalculatorReport: React.FC<SourceROICalculatorReportProps>
           </div>
         </CardContent>
       </Card>
+
+      {/* Cost Management Modal */}
+      {costModalSource && (
+        <CostManagementModal
+          sourceId={costModalSource.id}
+          sourceName={costModalSource.name}
+          isOpen={!!costModalSource}
+          onClose={() => setCostModalSource(null)}
+          currentFilterYear={selectedYear}
+          currentFilterMonth={selectedMonth}
+        />
+      )}
     </div>
   )
 }
