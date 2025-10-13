@@ -101,22 +101,24 @@ export const ProducerTrendsReport: React.FC<ProducerTrendsReportProps> = ({
           return
         }
         
-        const date = row.entry_date
+        // Ensure date is a string
+        const date = String(row.entry_date || 'unknown')
+        
         if (!dateMap.has(date)) {
           dateMap.set(date, { date })
         }
         const dayData = dateMap.get(date)!
         
-        // QHH data
-        dayData[row.producer_name] = Number(row.qhh ?? 0)
+        // QHH data - force to number with parseFloat
+        dayData[row.producer_name] = parseFloat(String(row.qhh ?? 0)) || 0
         
-        // Activity data
-        dayData[`${row.producer_name}_dials`] = Number(row.outbound_dials ?? 0)
-        dayData[`${row.producer_name}_talk`] = Number(row.talk_minutes ?? 0)
+        // Activity data - force to number with parseInt
+        dayData[`${row.producer_name}_dials`] = parseInt(String(row.outbound_dials ?? 0)) || 0
+        dayData[`${row.producer_name}_talk`] = parseInt(String(row.talk_minutes ?? 0)) || 0
         
-        // Sales data - CONVERT STRING TO NUMBER
-        dayData[`${row.producer_name}_premium`] = Number(row.sold_premium ?? 0)
-        dayData[`${row.producer_name}_items`] = Number(row.sold_items ?? 0)
+        // Sales data - FORCE STRING TO NUMBER with parseFloat
+        dayData[`${row.producer_name}_premium`] = parseFloat(String(row.sold_premium ?? 0)) || 0
+        dayData[`${row.producer_name}_items`] = parseInt(String(row.sold_items ?? 0)) || 0
       })
 
       const qhhData = Array.from(dateMap.values())
@@ -287,8 +289,28 @@ export const ProducerTrendsReport: React.FC<ProducerTrendsReportProps> = ({
     )
   }
 
-  return (
-    <div className="space-y-6">
+  // Validate chart data before rendering
+  React.useEffect(() => {
+    if (chartData) {
+      console.log('=== CHART DATA VALIDATION ===')
+      console.log('qhhData sample:', chartData.qhhData[0])
+      console.log('frameworkData sample:', chartData.frameworkData[0])
+      
+      // Check for objects in data
+      const firstRow = chartData.qhhData[0]
+      if (firstRow) {
+        Object.entries(firstRow).forEach(([key, value]) => {
+          if (typeof value === 'object' && value !== null) {
+            console.error(`FOUND OBJECT in qhhData.${key}:`, value)
+          }
+        })
+      }
+    }
+  }, [chartData])
+
+  try {
+    return (
+      <div className="space-y-6">
       {/* Filters */}
       <Card>
         <CardHeader>
@@ -413,7 +435,9 @@ export const ProducerTrendsReport: React.FC<ProducerTrendsReportProps> = ({
                   <TableCell className="text-right">{stats.avg_daily_dials}</TableCell>
                   <TableCell className="text-right">{stats.avg_daily_talk}</TableCell>
                   <TableCell className="text-right">
-                    ${stats.total_premium.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    ${typeof stats.total_premium === 'number' 
+                      ? stats.total_premium.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+                      : '0.00'}
                   </TableCell>
                   <TableCell className="text-right">{stats.framework_compliance}%</TableCell>
                 </TableRow>
@@ -423,5 +447,9 @@ export const ProducerTrendsReport: React.FC<ProducerTrendsReportProps> = ({
         </CardContent>
       </Card>
     </div>
-  )
+    )
+  } catch (err) {
+    console.error('Render error:', err)
+    return <div className="text-destructive p-4">Render error: {String(err)}</div>
+  }
 }

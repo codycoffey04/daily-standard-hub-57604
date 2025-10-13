@@ -27,7 +27,15 @@ export const FrameworkTrendChart: React.FC<FrameworkTrendChartProps> = ({ data }
           <XAxis 
             dataKey="date" 
             className="text-xs"
-            tickFormatter={(value) => format(new Date(value), 'M/d')}
+            tickFormatter={(value) => {
+              try {
+                const dateObj = value instanceof Date ? value : new Date(value)
+                if (isNaN(dateObj.getTime())) return String(value)
+                return format(dateObj, 'M/d')
+              } catch {
+                return String(value)
+              }
+            }}
           />
           <YAxis className="text-xs" />
           <ChartTooltip content={<ChartTooltipContent />} />

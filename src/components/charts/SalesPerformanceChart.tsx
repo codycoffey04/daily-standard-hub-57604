@@ -31,7 +31,15 @@ export const SalesPerformanceChart: React.FC<SalesPerformanceChartProps> = ({
           <XAxis 
             dataKey="date" 
             className="text-xs"
-            tickFormatter={(value) => format(new Date(value), 'M/d')}
+            tickFormatter={(value) => {
+              try {
+                const dateObj = value instanceof Date ? value : new Date(value)
+                if (isNaN(dateObj.getTime())) return String(value)
+                return format(dateObj, 'M/d')
+              } catch {
+                return String(value)
+              }
+            }}
           />
           <YAxis yAxisId="left" className="text-xs" />
           <YAxis yAxisId="right" orientation="right" className="text-xs" />
