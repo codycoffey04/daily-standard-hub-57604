@@ -12,7 +12,7 @@ interface SalesByProducerReportProps {
   selectedMonth: number | null
 }
 
-type SortField = 'producer_name' | 'days_worked' | 'framework_compliance_pct' | 'avg_daily_qhh' | 'avg_daily_items' | 'total_items' | 'total_sold_premium'
+type SortField = 'producer_name' | 'days_worked' | 'framework_compliance_pct' | 'avg_daily_qhh' | 'avg_daily_items' | 'total_sold_items' | 'total_sold_premium'
 type SortDirection = 'asc' | 'desc'
 
 const TrendArrow: React.FC<{ current?: number; previous?: number }> = ({ current, previous }) => {
@@ -92,10 +92,10 @@ export const SalesByProducerReport: React.FC<SalesByProducerReportProps> = ({
     
     const activeProducers = producersData.length
     const avgCompliance = producersData.reduce((sum, p) => sum + (p.framework_compliance_pct ?? 0), 0) / (producersData.length || 1)
-    const totalItems = producersData.reduce((sum, p) => sum + (p.total_items ?? 0), 0)
+    const totalItems = producersData.reduce((sum, p) => sum + (p.total_sold_items ?? 0), 0)
     const totalPremium = producersData.reduce((sum, p) => sum + (p.total_sold_premium ?? 0), 0)
     
-    const prevTotalItems = producersData.reduce((sum, p) => sum + (p.prev_total_items ?? 0), 0)
+    const prevTotalItems = producersData.reduce((sum, p) => sum + (p.prev_total_sold_items ?? 0), 0)
     const prevAvgCompliance = producersData.reduce((sum, p) => sum + (p.prev_framework_compliance_pct ?? 0), 0) / (producersData.length || 1)
     
     return {
@@ -118,7 +118,7 @@ export const SalesByProducerReport: React.FC<SalesByProducerReportProps> = ({
       days_outside: producersData.reduce((sum, p) => sum + (p.days_outside ?? 0), 0),
       total_qhh: producersData.reduce((sum, p) => sum + (p.total_qhh ?? 0), 0),
       total_quotes: producersData.reduce((sum, p) => sum + (p.total_quotes ?? 0), 0),
-      total_items: producersData.reduce((sum, p) => sum + (p.total_items ?? 0), 0),
+      total_sold_items: producersData.reduce((sum, p) => sum + (p.total_sold_items ?? 0), 0),
       total_sold_premium: producersData.reduce((sum, p) => sum + (p.total_sold_premium ?? 0), 0),
     }
   }, [producersData])
@@ -289,9 +289,9 @@ export const SalesByProducerReport: React.FC<SalesByProducerReportProps> = ({
                   <TableHead className="text-right">Total QHH</TableHead>
                   <TableHead 
                     className="cursor-pointer hover:bg-muted/50 text-right"
-                    onClick={() => handleSort('total_items')}
+                    onClick={() => handleSort('total_sold_items')}
                   >
-                    Total Items {sortField === 'total_items' && (sortDirection === 'asc' ? '↑' : '↓')}
+                    Total Items {sortField === 'total_sold_items' && (sortDirection === 'asc' ? '↑' : '↓')}
                   </TableHead>
                   <TableHead 
                     className="cursor-pointer hover:bg-muted/50 text-right"
@@ -314,8 +314,8 @@ export const SalesByProducerReport: React.FC<SalesByProducerReportProps> = ({
                     <TableCell className="text-right">{(producer.avg_daily_items ?? 0).toFixed(2)}</TableCell>
                     <TableCell className="text-right">{(producer.total_qhh ?? 0).toLocaleString()}</TableCell>
                     <TableCell className="text-right">
-                      {(producer.total_items ?? 0).toLocaleString()}
-                      <TrendArrow current={producer.total_items} previous={producer.prev_total_items} />
+                      {(producer.total_sold_items ?? 0).toLocaleString()}
+                      <TrendArrow current={producer.total_sold_items} previous={producer.prev_total_sold_items} />
                     </TableCell>
                     <TableCell className="text-right">
                       ${(producer.total_sold_premium ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
@@ -341,7 +341,7 @@ export const SalesByProducerReport: React.FC<SalesByProducerReportProps> = ({
                     <TableCell className="text-right">-</TableCell>
                     <TableCell className="text-right">-</TableCell>
                     <TableCell className="text-right">{(teamTotals.total_qhh ?? 0).toLocaleString()}</TableCell>
-                    <TableCell className="text-right">{(teamTotals.total_items ?? 0).toLocaleString()}</TableCell>
+                    <TableCell className="text-right">{(teamTotals.total_sold_items ?? 0).toLocaleString()}</TableCell>
                     <TableCell className="text-right">
                       ${(teamTotals.total_sold_premium ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </TableCell>

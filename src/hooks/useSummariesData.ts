@@ -84,6 +84,7 @@ export interface SalesByProducerData {
   // For trend comparison
   prev_framework_compliance_pct?: number
   prev_total_items?: number
+  prev_total_sold_items?: number
 }
 
 function getDateRange(year: number, month: number | null) {
