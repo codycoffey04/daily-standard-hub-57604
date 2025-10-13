@@ -64,17 +64,7 @@ export const ProducerTrendsReport: React.FC<ProducerTrendsReportProps> = ({
     selectedMonth
   )
 
-  // Debug logging
-  React.useEffect(() => {
-    if (trendsData) {
-      console.log('Trends Data:', trendsData)
-      console.log('First row:', trendsData[0])
-      console.log('Data count:', trendsData.length)
-    }
-    if (trendsError) {
-      console.error('Trends Error:', trendsError)
-    }
-  }, [trendsData, trendsError])
+  // Debug logging removed for cleaner code
 
   // Early return for invalid data
   if (!producers && !loadingProducers) {
@@ -85,95 +75,75 @@ export const ProducerTrendsReport: React.FC<ProducerTrendsReportProps> = ({
   // Process data for charts
   const chartData = useMemo(() => {
     if (!trendsData || !producers) {
-      console.log('No trendsData or producers:', { trendsData, producers })
       return null
     }
-
-    console.log('Processing chart data with trendsData:', trendsData.length, 'rows')
 
     // Group by date
     const dateMap = new Map<string, any>()
     
-    try {
-      trendsData.forEach(row => {
-        if (!row || !row.entry_date || !row.producer_name) {
-          console.warn('Invalid row data:', row)
-          return
-        }
-        
-        // Ensure date is a string
-        const date = String(row.entry_date || 'unknown')
-        
-        if (!dateMap.has(date)) {
-          dateMap.set(date, { date })
-        }
-        const dayData = dateMap.get(date)!
-        
-        // QHH data - force to number with parseFloat
-        dayData[row.producer_name] = parseFloat(String(row.qhh ?? 0)) || 0
-        
-        // Activity data - force to number with parseInt
-        dayData[`${row.producer_name}_dials`] = parseInt(String(row.outbound_dials ?? 0)) || 0
-        dayData[`${row.producer_name}_talk`] = parseInt(String(row.talk_minutes ?? 0)) || 0
-        
-        // Sales data - FORCE STRING TO NUMBER with parseFloat
-        dayData[`${row.producer_name}_premium`] = parseFloat(String(row.sold_premium ?? 0)) || 0
-        dayData[`${row.producer_name}_items`] = parseInt(String(row.sold_items ?? 0)) || 0
-      })
-
-      const qhhData = Array.from(dateMap.values())
-      console.log('Processed QHH data:', qhhData.length, 'days')
-
-      // Framework status data - aggregate by date
-      const frameworkMap = new Map<string, { date: string; Top: number; Bottom: number; Outside: number }>()
-      trendsData.forEach(row => {
-        if (!row || !row.entry_date) {
-          console.warn('Invalid row for framework:', row)
-          return
-        }
-        
-        const date = row.entry_date
-        if (!frameworkMap.has(date)) {
-          frameworkMap.set(date, { date, Top: 0, Bottom: 0, Outside: 0 })
-        }
-        const dayFramework = frameworkMap.get(date)!
-        
-        // Safely handle framework_status - default to Outside if invalid
-        const status = row.framework_status
-        if (status === 'Top' || status === 'Bottom' || status === 'Outside') {
-          dayFramework[status] += 1
-        } else {
-          console.warn('Invalid framework_status:', status, 'for row:', row)
-          dayFramework['Outside'] += 1
-        }
-      })
-      const frameworkData = Array.from(frameworkMap.values())
-      console.log('Processed framework data:', frameworkData.length, 'days')
-
-      const result = {
-        qhhData,
-        frameworkData,
-        activityData: qhhData,
-        salesData: qhhData
+    trendsData.forEach(row => {
+      if (!row || !row.entry_date || !row.producer_name) {
+        return
       }
       
-      console.log('Final chart data:', result)
-      return result
-    } catch (error) {
-      console.error('Error processing chart data:', error)
-      return null
+      const date = row.entry_date
+      
+      if (!dateMap.has(date)) {
+        dateMap.set(date, { date })
+      }
+      const dayData = dateMap.get(date)!
+      
+      // QHH data
+      dayData[row.producer_name] = Number(row.qhh || 0)
+      
+      // Activity data
+      dayData[`${row.producer_name}_dials`] = Number(row.outbound_dials || 0)
+      dayData[`${row.producer_name}_talk`] = Number(row.talk_minutes || 0)
+      
+      // Sales data
+      dayData[`${row.producer_name}_premium`] = Number(row.sold_premium || 0)
+      dayData[`${row.producer_name}_items`] = Number(row.sold_items || 0)
+    })
+
+    const qhhData = Array.from(dateMap.values())
+
+    // Framework status data - aggregate by date
+    const frameworkMap = new Map<string, { date: string; Top: number; Bottom: number; Outside: number }>()
+    trendsData.forEach(row => {
+      if (!row || !row.entry_date) {
+        return
+      }
+      
+      const date = row.entry_date
+      if (!frameworkMap.has(date)) {
+        frameworkMap.set(date, { date, Top: 0, Bottom: 0, Outside: 0 })
+      }
+      const dayFramework = frameworkMap.get(date)!
+      
+      const status = row.framework_status
+      if (status === 'Top' || status === 'Bottom' || status === 'Outside') {
+        dayFramework[status] += 1
+      } else {
+        dayFramework['Outside'] += 1
+      }
+    })
+    const frameworkData = Array.from(frameworkMap.values())
+
+    return {
+      qhhData,
+      frameworkData,
+      activityData: qhhData,
+      salesData: qhhData
     }
   }, [trendsData, producers])
 
   // Calculate summary stats
   const summaryStats = useMemo(() => {
     if (!trendsData || !producers) {
-      console.log('No data for summary stats')
       return []
     }
 
-    try {
-      const producerMap = new Map<string, any>()
+    const producerMap = new Map<string, any>()
       
       trendsData.forEach(row => {
         if (!row || !row.producer_id || !row.producer_name) {
@@ -204,17 +174,13 @@ export const ProducerTrendsReport: React.FC<ProducerTrendsReportProps> = ({
         stats.total_days += 1
       })
 
-      return Array.from(producerMap.values()).map(stats => ({
-        ...stats,
-        avg_daily_qhh: stats.days_worked > 0 ? (stats.total_qhh / stats.days_worked).toFixed(2) : '0.00',
-        avg_daily_dials: stats.days_worked > 0 ? (stats.total_dials / stats.days_worked).toFixed(0) : '0',
-        avg_daily_talk: stats.days_worked > 0 ? (stats.total_talk / stats.days_worked).toFixed(0) : '0',
-        framework_compliance: stats.total_days > 0 ? ((stats.total_top / stats.total_days) * 100).toFixed(1) : '0.0'
-      }))
-    } catch (error) {
-      console.error('Error calculating summary stats:', error)
-      return []
-    }
+    return Array.from(producerMap.values()).map(stats => ({
+      ...stats,
+      avg_daily_qhh: stats.days_worked > 0 ? (stats.total_qhh / stats.days_worked).toFixed(2) : '0.00',
+      avg_daily_dials: stats.days_worked > 0 ? (stats.total_dials / stats.days_worked).toFixed(0) : '0',
+      avg_daily_talk: stats.days_worked > 0 ? (stats.total_talk / stats.days_worked).toFixed(0) : '0',
+      framework_compliance: stats.total_days > 0 ? ((stats.total_top / stats.total_days) * 100).toFixed(1) : '0.0'
+    }))
   }, [trendsData, producers])
 
   const selectedProducers = useMemo(() => {
@@ -270,7 +236,6 @@ export const ProducerTrendsReport: React.FC<ProducerTrendsReportProps> = ({
   }
 
   if (!chartData) {
-    console.log('No chartData available')
     return (
       <div className="flex items-center justify-center h-96">
         <p className="text-muted-foreground">No trend data available for selected period</p>
@@ -289,28 +254,8 @@ export const ProducerTrendsReport: React.FC<ProducerTrendsReportProps> = ({
     )
   }
 
-  // Validate chart data before rendering
-  React.useEffect(() => {
-    if (chartData) {
-      console.log('=== CHART DATA VALIDATION ===')
-      console.log('qhhData sample:', chartData.qhhData[0])
-      console.log('frameworkData sample:', chartData.frameworkData[0])
-      
-      // Check for objects in data
-      const firstRow = chartData.qhhData[0]
-      if (firstRow) {
-        Object.entries(firstRow).forEach(([key, value]) => {
-          if (typeof value === 'object' && value !== null) {
-            console.error(`FOUND OBJECT in qhhData.${key}:`, value)
-          }
-        })
-      }
-    }
-  }, [chartData])
-
-  try {
-    return (
-      <div className="space-y-6">
+  return (
+    <div className="space-y-6">
       {/* Filters */}
       <Card>
         <CardHeader>
@@ -435,9 +380,7 @@ export const ProducerTrendsReport: React.FC<ProducerTrendsReportProps> = ({
                   <TableCell className="text-right">{stats.avg_daily_dials}</TableCell>
                   <TableCell className="text-right">{stats.avg_daily_talk}</TableCell>
                   <TableCell className="text-right">
-                    ${typeof stats.total_premium === 'number' 
-                      ? stats.total_premium.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-                      : '0.00'}
+                    ${stats.total_premium.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </TableCell>
                   <TableCell className="text-right">{stats.framework_compliance}%</TableCell>
                 </TableRow>
@@ -447,9 +390,5 @@ export const ProducerTrendsReport: React.FC<ProducerTrendsReportProps> = ({
         </CardContent>
       </Card>
     </div>
-    )
-  } catch (err) {
-    console.error('Render error:', err)
-    return <div className="text-destructive p-4">Render error: {String(err)}</div>
-  }
+  )
 }
