@@ -47,20 +47,31 @@ export const ProducerTrendsReport: React.FC<ProducerTrendsReportProps> = ({
   // State for selected producers (default: all selected)
   const [selectedProducerIds, setSelectedProducerIds] = useState<string[]>([])
   const [compareMode, setCompareMode] = useState(true)
+  const initialized = React.useRef(false)
 
   // Initialize selected producers when data loads
   React.useEffect(() => {
-    if (producers && selectedProducerIds.length === 0) {
+    if (producers && !initialized.current && selectedProducerIds.length === 0) {
       setSelectedProducerIds(producers.map(p => p.id))
+      initialized.current = true
     }
-  }, [producers])
+  }, [producers, selectedProducerIds])
 
   // Fetch trend data
-  const { data: trendsData, isLoading: loadingTrends } = useProducerTrends(
+  const { data: trendsData, isLoading: loadingTrends, error: trendsError } = useProducerTrends(
     selectedProducerIds.length > 0 ? selectedProducerIds : null,
     selectedYear,
     selectedMonth
   )
+
+  // Debug logging
+  React.useEffect(() => {
+    if (trendsData) {
+      console.log('Trends Data:', trendsData)
+      console.log('First row:', trendsData[0])
+      console.log('Data count:', trendsData.length)
+    }
+  }, [trendsData])
 
   // Process data for charts
   const chartData = useMemo(() => {
@@ -166,6 +177,20 @@ export const ProducerTrendsReport: React.FC<ProducerTrendsReportProps> = ({
 
   if (loadingProducers || loadingTrends) {
     return <Skeleton className="h-96 w-full" />
+  }
+
+  if (trendsError) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <div className="text-center space-y-2">
+          <p className="text-destructive text-lg">Error loading trend data</p>
+          <p className="text-sm text-muted-foreground">{trendsError.message}</p>
+          <p className="text-sm text-muted-foreground">
+            Make sure the database migration has been applied.
+          </p>
+        </div>
+      </div>
+    )
   }
 
   // Check if there's any actual activity data

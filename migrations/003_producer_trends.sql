@@ -35,21 +35,31 @@ BEGIN
     e.talk_minutes,
     e.qhh_total as qhh,
     e.items_total as items,
-    COALESCE((SELECT SUM(des.quotes) FROM daily_entry_sources des WHERE des.daily_entry_id = e.id), 0)::integer as quotes,
-    COALESCE((SELECT SUM(CASE WHEN qh.quick_action_status = 'SOLD' THEN qh.items_sold ELSE 0 END) FROM quoted_households qh WHERE qh.daily_entry_id = e.id), 0)::integer as sold_items,
-    COALESCE((SELECT SUM(CASE WHEN qh.quick_action_status = 'SOLD' THEN qh.quoted_premium ELSE 0 END) FROM quoted_households qh WHERE qh.daily_entry_id = e.id), 0) as sold_premium,
-    COALESCE(es.framework_status, 'Outside') as framework_status,
-    CASE WHEN es.framework_status = 'Top' THEN 1 ELSE 0 END as days_top,
-    CASE WHEN es.framework_status = 'Bottom' THEN 1 ELSE 0 END as days_bottom,
-    CASE WHEN es.framework_status = 'Outside' OR es.framework_status IS NULL THEN 1 ELSE 0 END as days_outside
+    COALESCE(SUM(des.quotes), 0)::integer as quotes,
+    COALESCE(SUM(CASE WHEN qh.quick_action_status = 'SOLD' THEN qh.items_sold ELSE 0 END), 0)::integer as sold_items,
+    COALESCE(SUM(CASE WHEN qh.quick_action_status = 'SOLD' THEN qh.quoted_premium ELSE 0 END), 0) as sold_premium,
+    COALESCE(MAX(es.framework_status), 'Outside') as framework_status,
+    CASE WHEN MAX(es.framework_status) = 'Top' THEN 1 ELSE 0 END as days_top,
+    CASE WHEN MAX(es.framework_status) = 'Bottom' THEN 1 ELSE 0 END as days_bottom,
+    CASE WHEN COALESCE(MAX(es.framework_status), 'Outside') = 'Outside' THEN 1 ELSE 0 END as days_outside
   FROM public.producers p
   INNER JOIN public.daily_entries e ON e.producer_id = p.id
   LEFT JOIN public.entry_status es ON es.entry_id = e.id
+  LEFT JOIN public.daily_entry_sources des ON des.daily_entry_id = e.id
+  LEFT JOIN public.quoted_households qh ON qh.daily_entry_id = e.id
   WHERE 
     e.entry_date >= from_date 
     AND e.entry_date <= to_date
     AND (producer_ids IS NULL OR p.id = ANY(producer_ids))
     AND p.active = true
+  GROUP BY 
+    e.entry_date,
+    p.id,
+    p.display_name,
+    e.outbound_dials,
+    e.talk_minutes,
+    e.qhh_total,
+    e.items_total
   ORDER BY e.entry_date, p.display_name;
 END;
 $$;
