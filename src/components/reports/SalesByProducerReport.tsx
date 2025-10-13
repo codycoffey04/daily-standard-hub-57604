@@ -90,7 +90,7 @@ export const SalesByProducerReport: React.FC<SalesByProducerReportProps> = ({
   const summaryMetrics = useMemo(() => {
     if (!producersData) return null
     
-    const activeProducers = producersData.filter(p => (p.days_worked ?? 0) > 0).length
+    const activeProducers = producersData.length
     const avgCompliance = producersData.reduce((sum, p) => sum + (p.framework_compliance_pct ?? 0), 0) / (producersData.length || 1)
     const totalItems = producersData.reduce((sum, p) => sum + (p.total_items ?? 0), 0)
     const totalPremium = producersData.reduce((sum, p) => sum + (p.total_sold_premium ?? 0), 0)
