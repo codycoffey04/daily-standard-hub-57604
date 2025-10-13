@@ -44,6 +44,7 @@ export const QHHTrendChart: React.FC<QHHTrendChartProps> = ({
               strokeWidth={2}
               dot={{ r: 3 }}
               activeDot={{ r: 5 }}
+              connectNulls={true}
             />
           ))}
         </LineChart>

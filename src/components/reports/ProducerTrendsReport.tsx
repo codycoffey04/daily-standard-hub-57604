@@ -77,15 +77,15 @@ export const ProducerTrendsReport: React.FC<ProducerTrendsReportProps> = ({
       const dayData = dateMap.get(date)!
       
       // QHH data
-      dayData[row.producer_name] = row.qhh
+      dayData[row.producer_name] = row.qhh ?? 0
       
       // Activity data
-      dayData[`${row.producer_name}_dials`] = row.outbound_dials
-      dayData[`${row.producer_name}_talk`] = row.talk_minutes
+      dayData[`${row.producer_name}_dials`] = row.outbound_dials ?? 0
+      dayData[`${row.producer_name}_talk`] = row.talk_minutes ?? 0
       
       // Sales data
-      dayData[`${row.producer_name}_premium`] = row.sold_premium
-      dayData[`${row.producer_name}_items`] = row.sold_items
+      dayData[`${row.producer_name}_premium`] = row.sold_premium ?? 0
+      dayData[`${row.producer_name}_items`] = row.sold_items ?? 0
     })
 
     const qhhData = Array.from(dateMap.values())
@@ -132,20 +132,20 @@ export const ProducerTrendsReport: React.FC<ProducerTrendsReportProps> = ({
       }
       const stats = producerMap.get(id)!
       stats.days_worked += 1
-      stats.total_qhh += row.qhh
-      stats.total_dials += row.outbound_dials
-      stats.total_talk += row.talk_minutes
-      stats.total_premium += Number(row.sold_premium)
+      stats.total_qhh += (row.qhh ?? 0)
+      stats.total_dials += (row.outbound_dials ?? 0)
+      stats.total_talk += (row.talk_minutes ?? 0)
+      stats.total_premium += Number(row.sold_premium ?? 0)
       stats.total_top += row.days_top
       stats.total_days += 1
     })
 
     return Array.from(producerMap.values()).map(stats => ({
       ...stats,
-      avg_daily_qhh: (stats.total_qhh / stats.days_worked).toFixed(2),
-      avg_daily_dials: (stats.total_dials / stats.days_worked).toFixed(0),
-      avg_daily_talk: (stats.total_talk / stats.days_worked).toFixed(0),
-      framework_compliance: ((stats.total_top / stats.total_days) * 100).toFixed(1)
+      avg_daily_qhh: stats.days_worked > 0 ? (stats.total_qhh / stats.days_worked).toFixed(2) : '0.00',
+      avg_daily_dials: stats.days_worked > 0 ? (stats.total_dials / stats.days_worked).toFixed(0) : '0',
+      avg_daily_talk: stats.days_worked > 0 ? (stats.total_talk / stats.days_worked).toFixed(0) : '0',
+      framework_compliance: stats.total_days > 0 ? ((stats.total_top / stats.total_days) * 100).toFixed(1) : '0.0'
     }))
   }, [trendsData, producers])
 
@@ -168,10 +168,32 @@ export const ProducerTrendsReport: React.FC<ProducerTrendsReportProps> = ({
     return <Skeleton className="h-96 w-full" />
   }
 
+  // Check if there's any actual activity data
+  const hasData = useMemo(() => {
+    if (!trendsData || trendsData.length === 0) return false
+    
+    return trendsData.some(row => 
+      (row.qhh ?? 0) > 0 || 
+      (row.sold_items ?? 0) > 0 || 
+      (row.sold_premium ?? 0) > 0
+    )
+  }, [trendsData])
+
   if (!chartData || selectedProducerIds.length === 0) {
     return (
       <div className="flex items-center justify-center h-96">
         <p className="text-muted-foreground">No trend data available for selected period</p>
+      </div>
+    )
+  }
+
+  if (!hasData) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <div className="text-center space-y-2">
+          <p className="text-muted-foreground text-lg">No activity recorded for this period</p>
+          <p className="text-sm text-muted-foreground">Try selecting a different date range</p>
+        </div>
       </div>
     )
   }
@@ -246,21 +268,7 @@ export const ProducerTrendsReport: React.FC<ProducerTrendsReportProps> = ({
           </CardContent>
         </Card>
 
-        {/* Chart 3: Activity Metrics */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Activity Metrics</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ActivityMetricsChart
-              data={chartData.activityData}
-              producerColors={PRODUCER_COLORS}
-              selectedProducers={selectedProducers}
-            />
-          </CardContent>
-        </Card>
-
-        {/* Chart 4: Sales Performance */}
+        {/* Chart 3: Sales Performance */}
         <Card>
           <CardHeader>
             <CardTitle>Sales Performance</CardTitle>
@@ -268,6 +276,20 @@ export const ProducerTrendsReport: React.FC<ProducerTrendsReportProps> = ({
           <CardContent>
             <SalesPerformanceChart
               data={chartData.salesData}
+              producerColors={PRODUCER_COLORS}
+              selectedProducers={selectedProducers}
+            />
+          </CardContent>
+        </Card>
+
+        {/* Chart 4: Activity Metrics */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Activity Metrics</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ActivityMetricsChart
+              data={chartData.activityData}
               producerColors={PRODUCER_COLORS}
               selectedProducers={selectedProducers}
             />

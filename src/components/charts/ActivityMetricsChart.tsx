@@ -66,6 +66,7 @@ export const ActivityMetricsChart: React.FC<ActivityMetricsChartProps> = ({
                 stroke={producerColors[producer]}
                 strokeWidth={2}
                 dot={{ r: 2 }}
+                connectNulls={true}
               />
             ))}
             {showTalkMinutes && selectedProducers.map((producer) => (
@@ -77,6 +78,7 @@ export const ActivityMetricsChart: React.FC<ActivityMetricsChartProps> = ({
                 strokeWidth={2}
                 strokeDasharray="5 5"
                 dot={{ r: 2 }}
+                connectNulls={true}
               />
             ))}
           </LineChart>

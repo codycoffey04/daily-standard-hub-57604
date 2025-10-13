@@ -52,6 +52,7 @@ export const SalesPerformanceChart: React.FC<SalesPerformanceChartProps> = ({
                 stroke={producerColors[producer]}
                 strokeWidth={2}
                 dot={{ r: 3 }}
+                connectNulls={true}
               />
             </React.Fragment>
           ))}
