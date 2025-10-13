@@ -32,7 +32,6 @@ const FrameworkStatusCell: React.FC<{ data: SalesByProducerData }> = ({ data }) 
   const { days_top, days_bottom, days_outside, framework_compliance_pct } = data
   
   const badgeVariant = framework_compliance_pct >= 80 ? 'default' : framework_compliance_pct >= 50 ? 'secondary' : 'destructive'
-  const badgeColor = framework_compliance_pct >= 80 ? 'text-green-600' : framework_compliance_pct >= 50 ? 'text-yellow-600' : 'text-red-600'
   
   return (
     <div className="space-y-1">
@@ -43,7 +42,7 @@ const FrameworkStatusCell: React.FC<{ data: SalesByProducerData }> = ({ data }) 
         {' / '}
         <span className="font-semibold text-red-600">{days_outside} Outside</span>
       </div>
-      <Badge variant={badgeVariant} className={cn("text-xs", badgeColor)}>
+      <Badge variant={badgeVariant} className="text-xs">
         {(framework_compliance_pct ?? 0).toFixed(1)}% compliance
       </Badge>
     </div>
