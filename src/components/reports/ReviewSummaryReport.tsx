@@ -58,7 +58,7 @@ export const ReviewSummaryReport: React.FC<ReviewSummaryReportProps> = ({
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-2xl font-bold text-foreground">Review Summary</h2>
+        <h2 className="text-2xl font-bold text-foreground">Manager Review Summary</h2>
         <p className="text-sm text-muted-foreground mt-1">
           {reviews.length} review{reviews.length !== 1 ? 's' : ''} found
         </p>
@@ -71,12 +71,12 @@ export const ReviewSummaryReport: React.FC<ReviewSummaryReportProps> = ({
               <TableHead>Date</TableHead>
               <TableHead>Producer</TableHead>
               <TableHead>Reviewer</TableHead>
-              <TableHead className="text-center">Metrics</TableHead>
-              <TableHead className="text-center">Weak Steps</TableHead>
-              <TableHead className="text-right">QHH</TableHead>
-              <TableHead className="text-right">Items</TableHead>
-              <TableHead className="text-right">Sales</TableHead>
-              <TableHead>Comments</TableHead>
+              <TableHead>Call Reviewed</TableHead>
+              <TableHead className="text-center">Sales Gaps</TableHead>
+              <TableHead>Coaching Notes</TableHead>
+              <TableHead>Strengths</TableHead>
+              <TableHead>Action Items</TableHead>
+              <TableHead className="text-center">Follow-up</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -84,60 +84,71 @@ export const ReviewSummaryReport: React.FC<ReviewSummaryReportProps> = ({
               <TableRow
                 key={review.id}
                 className={
-                  review.metrics_achieved === false
-                    ? 'bg-destructive/5 hover:bg-destructive/10'
+                  review.follow_up_required
+                    ? 'bg-warning/5 hover:bg-warning/10'
                     : ''
                 }
               >
                 <TableCell className="font-medium">
-                  {format(new Date(review.entry_date), 'MMM dd, yyyy')}
+                  {format(new Date(review.review_date), 'MMM dd, yyyy')}
                 </TableCell>
                 <TableCell>{review.producer_name}</TableCell>
                 <TableCell className="text-muted-foreground">
                   {review.reviewer_name}
                 </TableCell>
-                <TableCell className="text-center">
-                  {review.metrics_achieved === null ? (
-                    <Badge variant="outline" className="bg-muted">
-                      N/A
-                    </Badge>
-                  ) : review.metrics_achieved ? (
-                    <Badge variant="default" className="bg-success text-success-foreground">
-                      Yes
-                    </Badge>
+                <TableCell className="max-w-xs">
+                  {review.call_reviewed ? (
+                    <span className="text-sm">{review.call_reviewed}</span>
                   ) : (
-                    <Badge variant="destructive">
-                      No
-                    </Badge>
+                    <span className="text-muted-foreground text-sm">-</span>
                   )}
                 </TableCell>
                 <TableCell className="text-center">
-                  {review.weak_steps.length > 0 ? (
-                    <Badge variant="outline">
-                      {review.weak_steps.length}
+                  {review.sales_process_gaps.length > 0 ? (
+                    <Badge variant="destructive">
+                      {review.sales_process_gaps.length}
                     </Badge>
                   ) : (
                     <span className="text-muted-foreground">-</span>
                   )}
                 </TableCell>
-                <TableCell className="text-right font-mono">
-                  {review.qhh_total.toFixed(1)}
-                </TableCell>
-                <TableCell className="text-right font-mono">
-                  {review.items_total}
-                </TableCell>
-                <TableCell className="text-right font-mono">
-                  ${review.sales_total.toLocaleString()}
-                </TableCell>
                 <TableCell className="max-w-xs">
-                  {review.activity_comments ? (
+                  {review.coaching_notes ? (
                     <span className="text-sm line-clamp-2">
-                      {review.activity_comments}
+                      {review.coaching_notes}
                     </span>
                   ) : (
-                    <span className="text-muted-foreground text-sm">
-                      No comments
+                    <span className="text-muted-foreground text-sm">-</span>
+                  )}
+                </TableCell>
+                <TableCell className="max-w-xs">
+                  {review.strengths_noted ? (
+                    <span className="text-sm line-clamp-2">
+                      {review.strengths_noted}
                     </span>
+                  ) : (
+                    <span className="text-muted-foreground text-sm">-</span>
+                  )}
+                </TableCell>
+                <TableCell className="max-w-xs">
+                  {review.action_items ? (
+                    <span className="text-sm line-clamp-2">
+                      {review.action_items}
+                    </span>
+                  ) : (
+                    <span className="text-muted-foreground text-sm">-</span>
+                  )}
+                </TableCell>
+                <TableCell className="text-center">
+                  {review.follow_up_required ? (
+                    <Badge variant="outline" className="bg-warning/10 text-warning-foreground">
+                      {review.follow_up_date 
+                        ? format(new Date(review.follow_up_date), 'MMM dd')
+                        : 'Required'
+                      }
+                    </Badge>
+                  ) : (
+                    <span className="text-muted-foreground">-</span>
                   )}
                 </TableCell>
               </TableRow>
