@@ -31,7 +31,7 @@ export function useReviewSummary(
         ? new Date(year, month, 0).toISOString().split('T')[0]
         : `${year}-12-31`
 
-      // Fetch manager reviews with related data
+      // Query 1: Fetch manager reviews without joins
       const { data: reviews, error } = await supabase
         .from('manager_reviews' as any)
         .select(`
@@ -46,54 +46,57 @@ export function useReviewSummary(
           follow_up_required,
           follow_up_date,
           reviewer_id,
-          producers!inner (
-            id,
-            display_name
-          )
+          producer_id
         `)
         .gte('review_date', startDate)
         .lte('review_date', endDate)
-        .order('review_date', { ascending: false }) as any
+        .order('review_date', { ascending: false })
 
       if (error) throw error
 
-      // Get unique reviewer IDs
-      const reviewerIds = [...new Set((reviews || []).map((r: any) => r.reviewer_id).filter((id): id is string => !!id))] as string[]
+      // Extract unique IDs
+      const producerIds = [...new Set((reviews || []).map((r: any) => r.producer_id).filter((id): id is string => !!id))]
+      const reviewerIds = [...new Set((reviews || []).map((r: any) => r.reviewer_id).filter((id): id is string => !!id))]
       
-      // Fetch reviewer profiles
-      const { data: profiles, error: profilesError } = await (supabase
+      // Query 2: Fetch producer profiles (by producer_id)
+      const { data: producerProfiles, error: producerError } = await supabase
+        .from('profiles')
+        .select('producer_id, display_name')
+        .in('producer_id', producerIds)
+
+      if (producerError) throw producerError
+
+      // Query 3: Fetch reviewer profiles (by id)
+      const { data: reviewerProfiles, error: reviewerError } = await supabase
         .from('profiles')
         .select('id, display_name')
-        .in('id', reviewerIds) as any)
+        .in('id', reviewerIds)
 
-      if (profilesError) throw profilesError
+      if (reviewerError) throw reviewerError
 
-      // Create a map for quick lookup
-      const profilesMap = new Map(
-        profiles?.map(p => [p.id, p.display_name]) || []
+      // Create lookup maps
+      const producerMap = new Map(
+        producerProfiles?.map(p => [p.producer_id, p.display_name]) || []
+      )
+      const reviewerMap = new Map(
+        reviewerProfiles?.map(p => [p.id, p.display_name]) || []
       )
 
-      // Transform the data
-      const transformed: ReviewSummaryData[] = (reviews || []).map(review => {
-        const producer = Array.isArray(review.producers)
-          ? review.producers[0]
-          : review.producers
-
-        return {
-          id: review.id,
-          created_at: review.created_at,
-          review_date: review.review_date,
-          producer_name: producer.display_name,
-          reviewer_name: profilesMap.get(review.reviewer_id) || 'Unknown',
-          call_reviewed: review.call_reviewed,
-          sales_process_gaps: Array.isArray(review.sales_process_gaps) ? review.sales_process_gaps : [],
-          coaching_notes: review.coaching_notes,
-          strengths_noted: review.strengths_noted,
-          action_items: review.action_items,
-          follow_up_required: review.follow_up_required,
-          follow_up_date: review.follow_up_date
-        }
-      })
+      // Transform and merge the data
+      const transformed: ReviewSummaryData[] = (reviews || []).map((review: any) => ({
+        id: review.id,
+        created_at: review.created_at,
+        review_date: review.review_date,
+        producer_name: producerMap.get(review.producer_id) || 'Unknown Producer',
+        reviewer_name: reviewerMap.get(review.reviewer_id) || 'Unknown Reviewer',
+        call_reviewed: review.call_reviewed,
+        sales_process_gaps: Array.isArray(review.sales_process_gaps) ? review.sales_process_gaps : [],
+        coaching_notes: review.coaching_notes,
+        strengths_noted: review.strengths_noted,
+        action_items: review.action_items,
+        follow_up_required: review.follow_up_required,
+        follow_up_date: review.follow_up_date
+      }))
 
       return transformed
     },
