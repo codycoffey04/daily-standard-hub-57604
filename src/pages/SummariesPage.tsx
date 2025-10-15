@@ -15,6 +15,7 @@ import { SourceROICalculatorReport } from '@/components/reports/SourceROICalcula
 import { SalesByProducerReport } from '@/components/reports/SalesByProducerReport'
 import { ProducerTrendsReport } from '@/components/reports/ProducerTrendsReport'
 import { ReviewSummaryReport } from '@/components/reports/ReviewSummaryReport'
+import CommonWeakPointsReport from '@/components/reports/CommonWeakPointsReport'
 import { reportCategories, getReportById } from '@/config/reportConfig'
 import { useIsMobile } from '@/hooks/use-mobile'
 import { cn } from '@/lib/utils'
@@ -71,6 +72,8 @@ const ReportContent: React.FC<ReportContentProps> = ({
       return <ProducerTrendsReport selectedYear={selectedYear} selectedMonth={selectedMonth} />
     case 'review-summary':
       return <ReviewSummaryReport selectedYear={selectedYear} selectedMonth={selectedMonth} />
+    case 'common-weak-points':
+      return <CommonWeakPointsReport selectedYear={selectedYear} selectedMonth={selectedMonth} />
     default:
       const report = getReportById(reportId)
       return <PlaceholderReport reportTitle={report?.title || 'Unknown Report'} />
