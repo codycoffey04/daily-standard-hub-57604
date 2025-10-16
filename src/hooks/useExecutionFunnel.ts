@@ -57,8 +57,6 @@ export const useExecutionFunnel = (
   return useQuery({
     queryKey: ['execution-funnel', fromDate, toDate, producerId, sourceId],
     queryFn: async (): Promise<ExecutionFunnelStage[]> => {
-      console.log('📊 Fetching execution funnel:', { fromDate, toDate, producerId, sourceId })
-
       const { data, error } = await supabase.rpc('get_execution_funnel' as any, {
         from_date: fromDate,
         to_date: toDate,
@@ -71,7 +69,6 @@ export const useExecutionFunnel = (
         throw error
       }
 
-      console.log('✅ Execution funnel data:', data)
       return (data as unknown as ExecutionFunnelStage[]) || []
     },
     enabled: !!fromDate && !!toDate
@@ -90,8 +87,6 @@ export const useExecutionBenchmarks = (
   return useQuery({
     queryKey: ['execution-benchmarks', fromDate, toDate, minPairQHH, minPairSHH, minPairDials],
     queryFn: async (): Promise<ExecutionBenchmark[]> => {
-      console.log('📈 Fetching execution benchmarks')
-
       const { data, error } = await supabase.rpc('get_execution_benchmarks_by_source' as any, {
         from_date: fromDate,
         to_date: toDate,
@@ -105,7 +100,6 @@ export const useExecutionBenchmarks = (
         throw error
       }
 
-      console.log('✅ Benchmarks data:', data)
       return (data as unknown as ExecutionBenchmark[]) || []
     },
     enabled: !!fromDate && !!toDate
@@ -124,8 +118,6 @@ export const useExecutionEfficiency = (
   return useQuery({
     queryKey: ['execution-efficiency', fromDate, toDate, producerId, sourceId, commissionPct],
     queryFn: async (): Promise<ExecutionEfficiency[]> => {
-      console.log('💰 Fetching execution efficiency')
-
       const { data, error } = await supabase.rpc('get_execution_efficiency_metrics' as any, {
         from_date: fromDate,
         to_date: toDate,
@@ -139,7 +131,6 @@ export const useExecutionEfficiency = (
         throw error
       }
 
-      console.log('✅ Efficiency data:', data)
       return (data as unknown as ExecutionEfficiency[]) || []
     },
     enabled: !!fromDate && !!toDate
@@ -152,15 +143,13 @@ export const useProducerLeaderboard = (
   fromDate: string,
   toDate: string,
   sourceId: string | null = null,
-  minDials: number = 50,
-  minQHH: number = 5,
-  minSHH: number = 2
+  minDials: number = 200,
+  minQHH: number = 30,
+  minSHH: number = 10
 ) => {
   return useQuery({
     queryKey: ['producer-leaderboard', fromDate, toDate, sourceId, minDials, minQHH, minSHH],
     queryFn: async (): Promise<ProducerLeaderboard[]> => {
-      console.log('🏆 Fetching producer leaderboard')
-
       const { data, error } = await supabase.rpc('get_producer_execution_leaderboard' as any, {
         from_date: fromDate,
         to_date: toDate,
@@ -168,9 +157,9 @@ export const useProducerLeaderboard = (
         min_dials: minDials,
         min_qhh: minQHH,
         min_shh: minSHH,
-        min_pair_qhh: 10,
-        min_pair_shh: 5,
-        min_pair_dials: 100
+        min_pair_qhh: 30,
+        min_pair_shh: 10,
+        min_pair_dials: 200
       })
 
       if (error) {
@@ -178,7 +167,6 @@ export const useProducerLeaderboard = (
         throw error
       }
 
-      console.log('✅ Leaderboard data:', data)
       return (data as unknown as ProducerLeaderboard[]) || []
     },
     enabled: !!fromDate && !!toDate

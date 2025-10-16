@@ -52,9 +52,6 @@ export const ExecutionFunnelReport: React.FC<ExecutionFunnelReportProps> = () =>
   const { data: producers, isLoading: isProducersLoading } = useProducersForExecution()
   const { data: sources, isLoading: isSourcesLoading } = useSourcesForSelection()
 
-  // Debug logging
-  console.log('🔍 Leaderboard data received:', leaderboard)
-
   // Guidance badge helper
   const getGuidanceBadge = (guidance: string) => {
     const variants: Record<string, { variant: 'default' | 'secondary' | 'destructive' | 'outline'; label: string; className: string }> = {
