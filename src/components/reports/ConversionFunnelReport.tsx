@@ -42,14 +42,13 @@ export const ConversionFunnelReport: React.FC<ConversionFunnelReportProps> = ({
     const dials = funnelData[0]?.stage_value || 0
     const conversations = funnelData[1]?.stage_value || 0
     const qhh = funnelData[2]?.stage_value || 0
-    const hhWithQuotes = funnelData[3]?.stage_value || 0
-    const sales = funnelData[4]?.stage_value || 0
+    const sales = funnelData[3]?.stage_value || 0
 
     return {
       overallConversion: dials > 0 ? (sales / dials) * 100 : 0,
       engagementRate: dials > 0 ? (conversations / dials) * 100 : 0,
-      quoteEfficiency: qhh > 0 ? (hhWithQuotes / qhh) * 100 : 0,
-      closeRate: hhWithQuotes > 0 ? (sales / hhWithQuotes) * 100 : 0
+      quoteToSaleRate: qhh > 0 ? (sales / qhh) * 100 : 0,
+      conversationCloseRate: conversations > 0 ? (sales / conversations) * 100 : 0
     }
   }, [funnelData])
 
@@ -187,30 +186,30 @@ export const ConversionFunnelReport: React.FC<ConversionFunnelReportProps> = ({
 
         <Card>
           <CardHeader className="pb-2">
-            <CardDescription>Quote Efficiency</CardDescription>
+            <CardDescription>Quote to Sale Rate</CardDescription>
             <CardTitle className="text-3xl">
-              {isLoading ? <Skeleton className="h-9 w-20" /> : `${metrics.quoteEfficiency.toFixed(2)}%`}
+              {isLoading ? <Skeleton className="h-9 w-20" /> : `${metrics.quoteToSaleRate.toFixed(2)}%`}
             </CardTitle>
           </CardHeader>
           <CardContent>
             <p className="text-sm text-muted-foreground flex items-center gap-1">
               <TrendingUp className="h-4 w-4" />
-              QHH to quotes delivered
+              QHH to closed sales
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="pb-2">
-            <CardDescription>Close Rate</CardDescription>
+            <CardDescription>Conversation Close Rate</CardDescription>
             <CardTitle className="text-3xl">
-              {isLoading ? <Skeleton className="h-9 w-20" /> : `${metrics.closeRate.toFixed(2)}%`}
+              {isLoading ? <Skeleton className="h-9 w-20" /> : `${metrics.conversationCloseRate.toFixed(2)}%`}
             </CardTitle>
           </CardHeader>
           <CardContent>
             <p className="text-sm text-muted-foreground flex items-center gap-1">
               <TrendingUp className="h-4 w-4" />
-              Quotes to sales
+              Conversations to sales
             </p>
           </CardContent>
         </Card>
