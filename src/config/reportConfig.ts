@@ -50,10 +50,10 @@ export const reportCategories: ReportCategory[] = [
       },
       {
         id: 'conversion-funnel',
-        title: 'Conversion Funnel Analysis',
+        title: 'Execution Funnel Dashboard',
         icon: TrendingUp,
-        description: 'Analyze conversion rates through the sales funnel',
-        component: 'ConversionFunnelReport',
+        description: 'Analyze sales execution with benchmarks and efficiency metrics',
+        component: 'ExecutionFunnelReport',
         category: 'performance-metrics'
       },
       {
