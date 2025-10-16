@@ -11,9 +11,9 @@ import {
   useExecutionFunnel, 
   useExecutionBenchmarks, 
   useExecutionEfficiency, 
-  useProducerLeaderboard,
   useProducersForExecution
 } from '@/hooks/useExecutionFunnel'
+import { useProducerExecutionLeaderboard } from '@/hooks/useProducerExecutionLeaderboard'
 import { useSourcesForSelection } from '@/hooks/useSourcesForSelection'
 import { DollarSign, Clock, Target, ArrowUpDown } from 'lucide-react'
 
@@ -48,7 +48,7 @@ export const ExecutionFunnelReport: React.FC<ExecutionFunnelReportProps> = () =>
   const { data: funnelData, isLoading: isFunnelLoading } = useExecutionFunnel(fromDateStr, toDateStr, producerId, sourceId)
   const { data: benchmarks, isLoading: isBenchmarksLoading } = useExecutionBenchmarks(fromDateStr, toDateStr)
   const { data: efficiency, isLoading: isEfficiencyLoading } = useExecutionEfficiency(fromDateStr, toDateStr, producerId, sourceId)
-  const { data: leaderboard, isLoading: isLeaderboardLoading } = useProducerLeaderboard(fromDateStr, toDateStr, sourceId)
+  const { data: leaderboard, isLoading: isLeaderboardLoading } = useProducerExecutionLeaderboard(fromDateStr, toDateStr, sourceId)
   const { data: producers, isLoading: isProducersLoading } = useProducersForExecution()
   const { data: sources, isLoading: isSourcesLoading } = useSourcesForSelection()
 
