@@ -16,6 +16,7 @@ import { SalesByProducerReport } from '@/components/reports/SalesByProducerRepor
 import { ProducerTrendsReport } from '@/components/reports/ProducerTrendsReport'
 import { ReviewSummaryReport } from '@/components/reports/ReviewSummaryReport'
 import CommonWeakPointsReport from '@/components/reports/CommonWeakPointsReport'
+import MonthlySummaryReport from '@/components/reports/MonthlySummaryReport'
 import { reportCategories, getReportById } from '@/config/reportConfig'
 import { useIsMobile } from '@/hooks/use-mobile'
 import { cn } from '@/lib/utils'
@@ -46,6 +47,8 @@ const ReportContent: React.FC<ReportContentProps> = ({
   selectedMonth
 }) => {
   switch (reportId) {
+    case 'monthly-summary':
+      return <MonthlySummaryReport selectedYear={selectedYear} selectedMonth={selectedMonth} />
     case 'qhh-by-source':
       return <QHHBySourceReport selectedYear={selectedYear} selectedMonth={selectedMonth} />
     case 'quotes-by-source':
