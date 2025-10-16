@@ -24,6 +24,14 @@ const MonthlySummaryReport: React.FC<MonthlySummaryReportProps> = ({ selectedYea
 
   const { data: summaryData, isLoading, error } = useMonthlySummary(selectedYear, selectedMonth)
 
+  React.useEffect(() => {
+    if (summaryData) {
+      console.log('🎯 Component received summaryData:', summaryData)
+      console.log('🎯 Length:', summaryData.length)
+      console.log('🎯 Month keys:', summaryData.map(d => d.month_key))
+    }
+  }, [summaryData])
+
   // Get most recent month for top sources
   const mostRecentMonth = useMemo(() => {
     if (!summaryData || summaryData.length === 0) return null
@@ -106,6 +114,11 @@ const MonthlySummaryReport: React.FC<MonthlySummaryReportProps> = ({ selectedYea
         return aVal < bVal ? 1 : -1
       }
     })
+    
+    console.log('🔄 Sorted data:', sorted.map(s => ({ 
+      month_key: s.month_key, 
+      qhh: s.qhh_total 
+    })))
     
     return sorted
   }, [summaryData, sortField, sortDirection])

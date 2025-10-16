@@ -32,16 +32,21 @@ export const useMonthlySummary = (year: number, month: number | null) => {
         const lastDay = new Date(year, month, 0).getDate()
         toDate = `${year}-${String(month).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`
       } else {
-        // Entire year - show last 6 months by default
-        const sixMonthsAgo = dayjs().subtract(6, 'months').startOf('month')
-        fromDate = sixMonthsAgo.format('YYYY-MM-DD')
-        toDate = dayjs().format('YYYY-MM-DD')
+        // Entire year - show full year when no month selected
+        fromDate = `${year}-01-01`
+        toDate = `${year}-12-31`
       }
 
       const { data, error } = await supabase.rpc('get_monthly_summary' as any, {
         from_date: fromDate,
         to_date: toDate
       }) as { data: MonthlySummaryData[] | null, error: any }
+
+      console.log('📅 Date range being queried:', { fromDate, toDate })
+      console.log('📊 Monthly summary data received:', data)
+      console.log('📊 Number of months:', data?.length)
+      console.log('📊 First row:', data?.[0])
+      console.log('📊 All month_key values:', data?.map(d => d.month_key))
 
       if (error) throw error
       return data || []
