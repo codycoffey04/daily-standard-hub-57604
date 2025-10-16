@@ -17,6 +17,15 @@ import {
 import { useSourcesForSelection } from '@/hooks/useSourcesForSelection'
 import { DollarSign, Clock, Target, ArrowUpDown } from 'lucide-react'
 
+// Helper functions for safe formatting
+const safeToLocaleString = (value: number | null | undefined): string => {
+  return value != null ? value.toLocaleString() : 'N/A'
+}
+
+const safeToFixed = (value: number | null | undefined, decimals: number = 2): string => {
+  return value != null ? value.toFixed(decimals) : 'N/A'
+}
+
 interface ExecutionFunnelReportProps {
   selectedYear: number
   selectedMonth: number | null
@@ -147,7 +156,7 @@ export const ExecutionFunnelReport: React.FC<ExecutionFunnelReportProps> = () =>
                 <CardDescription>{metric.metric_name}</CardDescription>
                 <CardTitle className="text-3xl">
                   {metric.metric_unit === '$' && '$'}
-                  {metric.metric_value.toLocaleString()}
+                  {safeToLocaleString(metric.metric_value)}
                   {metric.metric_unit !== '$' && metric.metric_unit !== 'rate' && ` ${metric.metric_unit}`}
                 </CardTitle>
               </CardHeader>
@@ -204,20 +213,20 @@ export const ExecutionFunnelReport: React.FC<ExecutionFunnelReportProps> = () =>
                         <div className="font-semibold text-sm mb-1">{stage.stage_name}</div>
                         <div className="text-3xl font-bold mb-1">
                           {stage.stage_number === 5 
-                            ? `$${stage.stage_value.toLocaleString()}` 
-                            : stage.stage_value.toLocaleString()}
+                            ? `$${safeToLocaleString(stage.stage_value)}` 
+                            : safeToLocaleString(stage.stage_value)}
                         </div>
-                        {index > 0 && stage.stage_number < 5 && (
+                        {index > 0 && stage.stage_number < 5 && stage.conversion_rate != null && (
                           <div className="text-sm opacity-90">{stage.conversion_rate.toFixed(1)}% converted</div>
                         )}
-                        {stage.stage_number === 5 && (
+                        {stage.stage_number === 5 && stage.conversion_rate != null && (
                           <div className="text-sm opacity-90">Avg: ${stage.conversion_rate.toFixed(0)} per policy</div>
                         )}
                       </div>
                       
-                      {index > 0 && stage.stage_number < 5 && (
+                      {index > 0 && stage.stage_number < 5 && stage.drop_off_count != null && stage.drop_off_rate != null && (
                         <div className="absolute -bottom-8 left-1/2 transform -translate-x-1/2 bg-popover text-popover-foreground px-3 py-1 rounded shadow-lg text-xs opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
-                          Drop-off: {stage.drop_off_count.toLocaleString()} ({stage.drop_off_rate.toFixed(1)}%)
+                          Drop-off: {safeToLocaleString(stage.drop_off_count)} ({safeToFixed(stage.drop_off_rate, 1)}%)
                         </div>
                       )}
                     </div>
@@ -276,30 +285,30 @@ export const ExecutionFunnelReport: React.FC<ExecutionFunnelReportProps> = () =>
                   {sortedLeaderboard.map((producer) => (
                     <TableRow key={producer.producer_id}>
                       <TableCell className="font-medium">{producer.producer_name}</TableCell>
-                      <TableCell className="text-right">{producer.total_dials.toLocaleString()}</TableCell>
-                      <TableCell className="text-right">{producer.total_qhh.toLocaleString()}</TableCell>
+                      <TableCell className="text-right">{safeToLocaleString(producer.total_dials)}</TableCell>
+                      <TableCell className="text-right">{safeToLocaleString(producer.total_qhh)}</TableCell>
                       <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-2">
-                          {producer.quote_rate.toFixed(2)}%
+                          {safeToFixed(producer.quote_rate, 2)}%
                           {getGuidanceBadge(producer.quote_guidance)}
                         </div>
                       </TableCell>
-                      <TableCell className="text-right">{producer.total_shh.toLocaleString()}</TableCell>
+                      <TableCell className="text-right">{safeToLocaleString(producer.total_shh)}</TableCell>
                       <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-2">
-                          {producer.close_rate.toFixed(2)}%
+                          {safeToFixed(producer.close_rate, 2)}%
                           {getGuidanceBadge(producer.close_guidance)}
                         </div>
                       </TableCell>
-                      <TableCell className="text-right">{producer.total_items.toLocaleString()}</TableCell>
+                      <TableCell className="text-right">{safeToLocaleString(producer.total_items)}</TableCell>
                       <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-2">
-                          {producer.attach_rate.toFixed(2)}
+                          {safeToFixed(producer.attach_rate, 2)}
                           {getGuidanceBadge(producer.attach_guidance)}
                         </div>
                       </TableCell>
                       <TableCell className="text-right font-semibold">
-                        ${producer.total_premium.toLocaleString()}
+                        ${safeToLocaleString(producer.total_premium)}
                       </TableCell>
                     </TableRow>
                   ))}
@@ -340,17 +349,17 @@ export const ExecutionFunnelReport: React.FC<ExecutionFunnelReportProps> = () =>
                   <TableRow key={benchmark.source_id}>
                     <TableCell className="font-medium">{benchmark.source_name}</TableCell>
                     <TableCell className="text-center">{benchmark.total_pairs}</TableCell>
-                    <TableCell className="text-right">{benchmark.quote_rate_normal.toFixed(2)}%</TableCell>
+                    <TableCell className="text-right">{safeToFixed(benchmark.quote_rate_normal, 2)}%</TableCell>
                     <TableCell className="text-right text-green-600 dark:text-green-400 font-semibold">
-                      {benchmark.quote_rate_excellent.toFixed(2)}%
+                      {safeToFixed(benchmark.quote_rate_excellent, 2)}%
                     </TableCell>
-                    <TableCell className="text-right">{benchmark.close_rate_normal.toFixed(2)}%</TableCell>
+                    <TableCell className="text-right">{safeToFixed(benchmark.close_rate_normal, 2)}%</TableCell>
                     <TableCell className="text-right text-green-600 dark:text-green-400 font-semibold">
-                      {benchmark.close_rate_excellent.toFixed(2)}%
+                      {safeToFixed(benchmark.close_rate_excellent, 2)}%
                     </TableCell>
-                    <TableCell className="text-right">{benchmark.attach_rate_normal.toFixed(2)}</TableCell>
+                    <TableCell className="text-right">{safeToFixed(benchmark.attach_rate_normal, 2)}</TableCell>
                     <TableCell className="text-right text-green-600 dark:text-green-400 font-semibold">
-                      {benchmark.attach_rate_excellent.toFixed(2)}
+                      {safeToFixed(benchmark.attach_rate_excellent, 2)}
                     </TableCell>
                   </TableRow>
                 ))}
