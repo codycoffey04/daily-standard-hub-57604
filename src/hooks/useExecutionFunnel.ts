@@ -33,17 +33,17 @@ export interface ExecutionEfficiency {
 export interface ProducerLeaderboard {
   producer_id: string
   producer_name: string
-  total_dials: number
-  total_qhh: number
-  quote_rate: number
+  total_dials: number | null
+  total_qhh: number | null
+  quote_rate: number | null
   quote_guidance: 'above_excellent' | 'normal_range' | 'needs_attention' | 'insufficient_volume' | 'no_benchmark'
-  total_shh: number
-  close_rate: number
+  total_shh: number | null
+  close_rate: number | null
   close_guidance: 'above_excellent' | 'normal_range' | 'needs_attention' | 'insufficient_volume' | 'no_benchmark'
-  total_items: number
-  attach_rate: number
+  total_items: number | null
+  attach_rate: number | null
   attach_guidance: 'above_excellent' | 'normal_range' | 'needs_attention' | 'insufficient_volume' | 'no_benchmark'
-  total_premium: number
+  total_premium: number | null
 }
 
 // ===== Hook 1: Execution Funnel =====

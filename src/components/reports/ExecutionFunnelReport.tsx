@@ -52,14 +52,17 @@ export const ExecutionFunnelReport: React.FC<ExecutionFunnelReportProps> = () =>
   const { data: producers, isLoading: isProducersLoading } = useProducersForExecution()
   const { data: sources, isLoading: isSourcesLoading } = useSourcesForSelection()
 
+  // Debug logging
+  console.log('🔍 Leaderboard data received:', leaderboard)
+
   // Guidance badge helper
   const getGuidanceBadge = (guidance: string) => {
     const variants: Record<string, { variant: 'default' | 'secondary' | 'destructive' | 'outline'; label: string; className: string }> = {
       above_excellent: { variant: 'default', label: 'Excellent', className: 'bg-green-600 hover:bg-green-700' },
       normal_range: { variant: 'secondary', label: 'Normal', className: 'bg-yellow-600 hover:bg-yellow-700 text-white' },
       needs_attention: { variant: 'destructive', label: 'Needs Attention', className: '' },
-      insufficient_volume: { variant: 'outline', label: 'Low Volume', className: '' },
-      no_benchmark: { variant: 'outline', label: 'No Benchmark', className: '' }
+      insufficient_volume: { variant: 'outline', label: 'Insufficient Data', className: 'text-gray-500' },
+      no_benchmark: { variant: 'outline', label: 'Insufficient Data', className: 'text-gray-500' }
     }
 
     const config = variants[guidance] || variants.no_benchmark
@@ -157,7 +160,7 @@ export const ExecutionFunnelReport: React.FC<ExecutionFunnelReportProps> = () =>
                 <CardTitle className="text-3xl">
                   {metric.metric_unit === '$' && '$'}
                   {safeToLocaleString(metric.metric_value)}
-                  {metric.metric_unit !== '$' && metric.metric_unit !== 'rate' && ` ${metric.metric_unit}`}
+                  {metric.metric_unit && metric.metric_unit !== '$' && metric.metric_unit !== 'rate' && ` ${metric.metric_unit}`}
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -308,7 +311,7 @@ export const ExecutionFunnelReport: React.FC<ExecutionFunnelReportProps> = () =>
                         </div>
                       </TableCell>
                       <TableCell className="text-right font-semibold">
-                        ${safeToLocaleString(producer.total_premium)}
+                        {producer.total_premium != null ? `$${safeToLocaleString(producer.total_premium)}` : 'N/A'}
                       </TableCell>
                     </TableRow>
                   ))}
