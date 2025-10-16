@@ -46,11 +46,11 @@ const MonthlySummaryReport: React.FC<MonthlySummaryReportProps> = ({ selectedYea
       }
     }
 
-    const totalQHH = summaryData.reduce((sum, m) => sum + m.qhh_total, 0)
-    const totalQuotes = summaryData.reduce((sum, m) => sum + m.quotes_total, 0)
-    const avgFramework = summaryData.reduce((sum, m) => sum + m.framework_compliance_pct, 0) / summaryData.length
-    const totalDials = summaryData.reduce((sum, m) => sum + m.dials_total, 0)
-    const totalTalkMins = summaryData.reduce((sum, m) => sum + m.talk_minutes_total, 0)
+    const totalQHH = summaryData.reduce((sum, m) => sum + (m?.qhh_total ?? 0), 0)
+    const totalQuotes = summaryData.reduce((sum, m) => sum + (m?.quotes_total ?? 0), 0)
+    const avgFramework = summaryData.reduce((sum, m) => sum + (m?.framework_compliance_pct ?? 0), 0) / summaryData.length
+    const totalDials = summaryData.reduce((sum, m) => sum + (m?.dials_total ?? 0), 0)
+    const totalTalkMins = summaryData.reduce((sum, m) => sum + (m?.talk_minutes_total ?? 0), 0)
     const totalTalkTimeHrs = Math.round(totalTalkMins / 60)
     const avgQuotesPerHH = totalQHH > 0 ? (totalQuotes / totalQHH) : 0
 
@@ -115,8 +115,8 @@ const MonthlySummaryReport: React.FC<MonthlySummaryReportProps> = ({ selectedYea
     return sortedData.map((month, index) => {
       const previousMonth = sortedData[index + 1]
       
-      const calculateChange = (current: number, previous: number | undefined) => {
-        if (!previous || previous === 0) return { value: '—', color: 'text-muted-foreground', icon: null }
+      const calculateChange = (current: number | undefined, previous: number | undefined) => {
+        if (current == null || previous == null || previous === 0) return { value: '—', color: 'text-muted-foreground', icon: null }
         
         const percentChange = ((current - previous) / previous) * 100
         const formattedValue = `${percentChange >= 0 ? '+' : ''}${percentChange.toFixed(1)}%`
@@ -151,10 +151,10 @@ const MonthlySummaryReport: React.FC<MonthlySummaryReportProps> = ({ selectedYea
   const chartData = useMemo(() => {
     if (!summaryData) return []
     return [...summaryData].reverse().map(month => ({
-      month: dayjs(month.month_key).format('MMM'),
-      qhh: month.qhh_total,
-      quotes: month.quotes_total,
-      framework: month.framework_compliance_pct
+      month: dayjs(month?.month_key).format('MMM'),
+      qhh: month?.qhh_total ?? 0,
+      quotes: month?.quotes_total ?? 0,
+      framework: month?.framework_compliance_pct ?? 0
     }))
   }, [summaryData])
 
@@ -319,16 +319,16 @@ const MonthlySummaryReport: React.FC<MonthlySummaryReportProps> = ({ selectedYea
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {dataWithChanges.map((month) => (
+                {(dataWithChanges ?? []).map((month) => (
                   <TableRow key={month.month_key}>
                     <TableCell className="font-medium">
-                      {dayjs(month.month_key).format('MMM YYYY')}
+                      {dayjs(month?.month_key).format('MMM YYYY')}
                     </TableCell>
-                    <TableCell className="text-right">{month.qhh_total.toLocaleString()}</TableCell>
-                    <TableCell className="text-right">{month.quotes_total.toLocaleString()}</TableCell>
-                    <TableCell className="text-right">{month.dials_total.toLocaleString()}</TableCell>
-                    <TableCell className="text-right">{Math.round(month.talk_minutes_total / 60)} hrs</TableCell>
-                    <TableCell className="text-right">{month.framework_compliance_pct.toFixed(1)}%</TableCell>
+                    <TableCell className="text-right">{(month?.qhh_total ?? 0).toLocaleString()}</TableCell>
+                    <TableCell className="text-right">{(month?.quotes_total ?? 0).toLocaleString()}</TableCell>
+                    <TableCell className="text-right">{(month?.dials_total ?? 0).toLocaleString()}</TableCell>
+                    <TableCell className="text-right">{Math.round((month?.talk_minutes_total ?? 0) / 60)} hrs</TableCell>
+                    <TableCell className="text-right">{(month?.framework_compliance_pct ?? 0).toFixed(1)}%</TableCell>
                     <TableCell className="text-right">
                       <span className={month.qhhChange.color}>
                         {month.qhhChange.icon} {month.qhhChange.value}
@@ -361,9 +361,9 @@ const MonthlySummaryReport: React.FC<MonthlySummaryReportProps> = ({ selectedYea
                       <span className="font-medium">{source.source_name}</span>
                     </div>
                     <div className="text-right">
-                      <span className="font-semibold">{source.metric_value}</span>
+                      <span className="font-semibold">{source?.metric_value ?? 0}</span>
                       <span className="text-sm text-muted-foreground ml-2">
-                        {source.percentage.toFixed(1)}%
+                        {(source?.percentage ?? 0).toFixed(1)}%
                       </span>
                     </div>
                   </div>
@@ -392,9 +392,9 @@ const MonthlySummaryReport: React.FC<MonthlySummaryReportProps> = ({ selectedYea
                       <span className="font-medium">{source.source_name}</span>
                     </div>
                     <div className="text-right">
-                      <span className="font-semibold">{source.metric_value}</span>
+                      <span className="font-semibold">{source?.metric_value ?? 0}</span>
                       <span className="text-sm text-muted-foreground ml-2">
-                        {source.percentage.toFixed(1)}%
+                        {(source?.percentage ?? 0).toFixed(1)}%
                       </span>
                     </div>
                   </div>
