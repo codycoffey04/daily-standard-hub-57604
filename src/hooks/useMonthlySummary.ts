@@ -3,7 +3,8 @@ import { supabase } from '@/integrations/supabase/client'
 import dayjs from 'dayjs'
 
 export interface MonthlySummaryData {
-  month_key: string
+  month_date: string
+  month_name: string
   qhh_total: number
   quotes_total: number
   dials_total: number
@@ -46,7 +47,7 @@ export const useMonthlySummary = (year: number, month: number | null) => {
       console.log('📊 Monthly summary data received:', data)
       console.log('📊 Number of months:', data?.length)
       console.log('📊 First row:', data?.[0])
-      console.log('📊 All month_key values:', data?.map(d => d.month_key))
+      console.log('📊 All month_date values:', data?.map(d => d.month_date))
 
       if (error) throw error
       return data || []

@@ -28,14 +28,14 @@ const MonthlySummaryReport: React.FC<MonthlySummaryReportProps> = ({ selectedYea
     if (summaryData) {
       console.log('🎯 Component received summaryData:', summaryData)
       console.log('🎯 Length:', summaryData.length)
-      console.log('🎯 Month keys:', summaryData.map(d => d.month_key))
+      console.log('🎯 Month dates:', summaryData.map(d => d.month_date))
     }
   }, [summaryData])
 
   // Get most recent month for top sources
   const mostRecentMonth = useMemo(() => {
     if (!summaryData || summaryData.length === 0) return null
-    return summaryData[0].month_key
+    return summaryData[0].month_date
   }, [summaryData])
 
   const { data: topQuoteSources } = useTopSourcesByMonth(mostRecentMonth, 'quotes')
@@ -81,8 +81,8 @@ const MonthlySummaryReport: React.FC<MonthlySummaryReportProps> = ({ selectedYea
       
       switch (sortField) {
         case 'month':
-          aVal = a.month_key
-          bVal = b.month_key
+          aVal = a.month_date
+          bVal = b.month_date
           break
         case 'qhh':
           aVal = a.qhh_total
@@ -116,7 +116,7 @@ const MonthlySummaryReport: React.FC<MonthlySummaryReportProps> = ({ selectedYea
     })
     
     console.log('🔄 Sorted data:', sorted.map(s => ({ 
-      month_key: s.month_key, 
+      month_date: s.month_date, 
       qhh: s.qhh_total 
     })))
     
@@ -164,7 +164,7 @@ const MonthlySummaryReport: React.FC<MonthlySummaryReportProps> = ({ selectedYea
   const chartData = useMemo(() => {
     if (!summaryData) return []
     return [...summaryData].reverse().map(month => ({
-      month: dayjs(month?.month_key).format('MMM'),
+      month: dayjs(month?.month_date).format('MMM'),
       qhh: month?.qhh_total ?? 0,
       quotes: month?.quotes_total ?? 0,
       framework: month?.framework_compliance_pct ?? 0
@@ -333,9 +333,9 @@ const MonthlySummaryReport: React.FC<MonthlySummaryReportProps> = ({ selectedYea
               </TableHeader>
               <TableBody>
                 {(dataWithChanges ?? []).map((month) => (
-                  <TableRow key={month.month_key}>
+                  <TableRow key={month.month_date}>
                     <TableCell className="font-medium">
-                      {dayjs(month?.month_key).format('MMM YYYY')}
+                      {dayjs(month?.month_date).format('MMM YYYY')}
                     </TableCell>
                     <TableCell className="text-right">{(month?.qhh_total ?? 0).toLocaleString()}</TableCell>
                     <TableCell className="text-right">{(month?.quotes_total ?? 0).toLocaleString()}</TableCell>
