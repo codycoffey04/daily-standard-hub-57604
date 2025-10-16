@@ -5,10 +5,10 @@ import dayjs from 'dayjs'
 export interface MonthlySummaryData {
   month_date: string
   month_name: string
-  qhh_total: number
-  quotes_total: number
-  dials_total: number
-  talk_minutes_total: number
+  total_qhh: number
+  total_quotes: number
+  total_dials: number
+  total_talk_minutes: number
   framework_compliance_pct: number
   avg_qhh_per_producer: number
   avg_quotes_per_producer: number

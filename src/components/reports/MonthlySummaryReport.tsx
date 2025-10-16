@@ -54,11 +54,11 @@ const MonthlySummaryReport: React.FC<MonthlySummaryReportProps> = ({ selectedYea
       }
     }
 
-    const totalQHH = summaryData.reduce((sum, m) => sum + (m?.qhh_total ?? 0), 0)
-    const totalQuotes = summaryData.reduce((sum, m) => sum + (m?.quotes_total ?? 0), 0)
+    const totalQHH = summaryData.reduce((sum, m) => sum + (m?.total_qhh ?? 0), 0)
+    const totalQuotes = summaryData.reduce((sum, m) => sum + (m?.total_quotes ?? 0), 0)
     const avgFramework = summaryData.reduce((sum, m) => sum + (m?.framework_compliance_pct ?? 0), 0) / summaryData.length
-    const totalDials = summaryData.reduce((sum, m) => sum + (m?.dials_total ?? 0), 0)
-    const totalTalkMins = summaryData.reduce((sum, m) => sum + (m?.talk_minutes_total ?? 0), 0)
+    const totalDials = summaryData.reduce((sum, m) => sum + (m?.total_dials ?? 0), 0)
+    const totalTalkMins = summaryData.reduce((sum, m) => sum + (m?.total_talk_minutes ?? 0), 0)
     const totalTalkTimeHrs = Math.round(totalTalkMins / 60)
     const avgQuotesPerHH = totalQHH > 0 ? (totalQuotes / totalQHH) : 0
 
@@ -85,20 +85,20 @@ const MonthlySummaryReport: React.FC<MonthlySummaryReportProps> = ({ selectedYea
           bVal = b.month_date
           break
         case 'qhh':
-          aVal = a.qhh_total
-          bVal = b.qhh_total
+          aVal = a.total_qhh
+          bVal = b.total_qhh
           break
         case 'quotes':
-          aVal = a.quotes_total
-          bVal = b.quotes_total
+          aVal = a.total_quotes
+          bVal = b.total_quotes
           break
         case 'dials':
-          aVal = a.dials_total
-          bVal = b.dials_total
+          aVal = a.total_dials
+          bVal = b.total_dials
           break
         case 'talk_time':
-          aVal = a.talk_minutes_total
-          bVal = b.talk_minutes_total
+          aVal = a.total_talk_minutes
+          bVal = b.total_talk_minutes
           break
         case 'framework':
           aVal = a.framework_compliance_pct
@@ -117,7 +117,7 @@ const MonthlySummaryReport: React.FC<MonthlySummaryReportProps> = ({ selectedYea
     
     console.log('🔄 Sorted data:', sorted.map(s => ({ 
       month_date: s.month_date, 
-      qhh: s.qhh_total 
+      qhh: s.total_qhh 
     })))
     
     return sorted
@@ -152,9 +152,9 @@ const MonthlySummaryReport: React.FC<MonthlySummaryReportProps> = ({ selectedYea
       
       return {
         ...month,
-        qhhChange: calculateChange(month.qhh_total, previousMonth?.qhh_total),
-        quotesChange: calculateChange(month.quotes_total, previousMonth?.quotes_total),
-        dialsChange: calculateChange(month.dials_total, previousMonth?.dials_total),
+        qhhChange: calculateChange(month.total_qhh, previousMonth?.total_qhh),
+        quotesChange: calculateChange(month.total_quotes, previousMonth?.total_quotes),
+        dialsChange: calculateChange(month.total_dials, previousMonth?.total_dials),
         frameworkChange: calculateChange(month.framework_compliance_pct, previousMonth?.framework_compliance_pct)
       }
     })
@@ -165,8 +165,8 @@ const MonthlySummaryReport: React.FC<MonthlySummaryReportProps> = ({ selectedYea
     if (!summaryData) return []
     return [...summaryData].reverse().map(month => ({
       month: dayjs(month?.month_date).format('MMM'),
-      qhh: month?.qhh_total ?? 0,
-      quotes: month?.quotes_total ?? 0,
+      qhh: month?.total_qhh ?? 0,
+      quotes: month?.total_quotes ?? 0,
       framework: month?.framework_compliance_pct ?? 0
     }))
   }, [summaryData])
@@ -337,10 +337,10 @@ const MonthlySummaryReport: React.FC<MonthlySummaryReportProps> = ({ selectedYea
                     <TableCell className="font-medium">
                       {dayjs(month?.month_date).format('MMM YYYY')}
                     </TableCell>
-                    <TableCell className="text-right">{(month?.qhh_total ?? 0).toLocaleString()}</TableCell>
-                    <TableCell className="text-right">{(month?.quotes_total ?? 0).toLocaleString()}</TableCell>
-                    <TableCell className="text-right">{(month?.dials_total ?? 0).toLocaleString()}</TableCell>
-                    <TableCell className="text-right">{Math.round((month?.talk_minutes_total ?? 0) / 60)} hrs</TableCell>
+                    <TableCell className="text-right">{(month?.total_qhh ?? 0).toLocaleString()}</TableCell>
+                    <TableCell className="text-right">{(month?.total_quotes ?? 0).toLocaleString()}</TableCell>
+                    <TableCell className="text-right">{(month?.total_dials ?? 0).toLocaleString()}</TableCell>
+                    <TableCell className="text-right">{Math.round((month?.total_talk_minutes ?? 0) / 60)} hrs</TableCell>
                     <TableCell className="text-right">{(month?.framework_compliance_pct ?? 0).toFixed(1)}%</TableCell>
                     <TableCell className="text-right">
                       <span className={month.qhhChange.color}>
