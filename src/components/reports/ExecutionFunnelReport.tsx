@@ -150,7 +150,7 @@ export const ExecutionFunnelReport: React.FC<ExecutionFunnelReportProps> = () =>
       {/* Efficiency Metrics Cards */}
       {!isEfficiencyLoading && efficiency && efficiency.length > 0 && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-          {efficiency.map((metric) => (
+          {efficiency.filter(m => m.metric_value != null).map((metric) => (
             <Card key={metric.metric_name}>
               <CardHeader className="pb-2">
                 <CardDescription>{metric.metric_name}</CardDescription>

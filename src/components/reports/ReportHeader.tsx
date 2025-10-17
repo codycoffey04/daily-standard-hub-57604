@@ -38,7 +38,7 @@ export const ReportHeader: React.FC<ReportHeaderProps> = ({
     <div className="bg-card border-b border-border p-6">
       {/* Top row: Date filters on left, action buttons on right */}
       <div className="flex items-center justify-between mb-6">
-        {report.id !== 'execution-funnel' && (
+        {report.id !== 'conversion-funnel' && (
           <MonthYearPickers
             selectedYear={selectedYear}
             selectedMonth={selectedMonth}
@@ -46,7 +46,7 @@ export const ReportHeader: React.FC<ReportHeaderProps> = ({
             onMonthChange={onMonthChange}
           />
         )}
-        {report.id === 'execution-funnel' && <div />}
+        {report.id === 'conversion-funnel' && <div />}
 
         <div className="flex items-center space-x-2">
           {onRefresh && (
