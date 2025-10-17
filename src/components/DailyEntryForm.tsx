@@ -367,7 +367,7 @@ export const DailyEntryForm: React.FC<DailyEntryFormProps> = ({
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="sales-made">Sales Made</Label>
+                <Label htmlFor="sales-made">Policies Sold</Label>
                 <Input
                   id="sales-made"
                   type="number"

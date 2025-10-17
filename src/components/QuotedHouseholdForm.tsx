@@ -158,11 +158,11 @@ export const QuotedHouseholdForm: React.FC<QuotedHouseholdFormProps> = ({
       newErrors.lead_id = 'Lead ID must be alphanumeric (letters and numbers only)'
     }
     
-    // Validate qcn (required, alphanumeric)
+    // Validate qcn (required, max 100 characters)
     if (!formData.qcn || !formData.qcn.trim()) {
       newErrors.qcn = 'QCN is required'
-    } else if (!/^[a-zA-Z0-9]+$/.test(formData.qcn.trim())) {
-      newErrors.qcn = 'QCN must be alphanumeric (letters and numbers only)'
+    } else if (formData.qcn.trim().length > 100) {
+      newErrors.qcn = 'QCN must be 100 characters or less'
     }
     
     // Validate zip_code (5 digits)
