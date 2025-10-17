@@ -22,7 +22,18 @@ export const useProducerExecutionLeaderboard = (
       });
       
       if (error) throw error;
-      return data || [];
+      
+      // Map SQL field names to frontend expected names
+      const mappedData = (data || []).map(row => ({
+        ...row,
+        total_dials: row.dials,
+        total_qhh: row.qhh,
+        total_shh: row.shh,
+        total_items: row.items,
+        total_premium: row.written_premium,
+      }));
+      
+      return mappedData;
     },
     enabled: !!fromDate && !!toDate
   });
