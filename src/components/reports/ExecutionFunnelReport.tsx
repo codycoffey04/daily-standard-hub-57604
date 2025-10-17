@@ -102,13 +102,15 @@ export const ExecutionFunnelReport: React.FC<ExecutionFunnelReportProps> = () =>
           <CardDescription>Analyze sales execution with benchmarks and efficiency metrics</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <DateRangePicker
-              fromDate={fromDate}
-              toDate={toDate}
-              onFromDateChange={setFromDate}
-              onToDateChange={setToDate}
-            />
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+            <div className="col-span-1 md:col-span-2">
+              <DateRangePicker
+                fromDate={fromDate}
+                toDate={toDate}
+                onFromDateChange={setFromDate}
+                onToDateChange={setToDate}
+              />
+            </div>
             
             <div className="space-y-2">
               <label className="text-sm font-medium">Producer</label>
