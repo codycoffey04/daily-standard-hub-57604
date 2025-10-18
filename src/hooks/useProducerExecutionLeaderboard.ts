@@ -33,18 +33,10 @@ export const useProducerExecutionLeaderboard = (
       // Choose table based on source filter
       const tableName = sourceId ? 'producer_day_source_rollup' : 'producer_day_rollup';
       
+      // Fetch rollup data without join
       let query = supabase
         .from(tableName as any)
-        .select(`
-          producer_id,
-          dials,
-          qhh,
-          shh,
-          items,
-          policies_sold,
-          written_premium,
-          producers!inner(display_name)
-        `)
+        .select('producer_id, dials, qhh, shh, items, policies_sold, written_premium')
         .gte('entry_date', fromDate)
         .lte('entry_date', toDate);
 
@@ -52,23 +44,37 @@ export const useProducerExecutionLeaderboard = (
         query = query.eq('source_id', sourceId);
       }
 
-      const { data, error } = await query;
+      const { data: rollupData, error: rollupError } = await query;
 
-      if (error) {
-        console.error('❌ Error fetching producer leaderboard:', error);
-        throw error;
+      if (rollupError) {
+        console.error('❌ Error fetching producer leaderboard rollup:', rollupError);
+        throw rollupError;
       }
 
-      if (!data || data.length === 0) return [];
+      if (!rollupData || rollupData.length === 0) return [];
+
+      // Fetch producers separately
+      const { data: producers, error: producersError } = await supabase
+        .from('producers')
+        .select('id, display_name');
+
+      if (producersError) {
+        console.error('❌ Error fetching producers:', producersError);
+      }
+
+      // Create lookup map for fast joins
+      const producerMap = new Map(
+        producers?.map(p => [p.id, p.display_name]) || []
+      );
 
       // Aggregate by producer_id
-      const aggregated = data.reduce((acc: any, row: any) => {
+      const aggregated = rollupData.reduce((acc: any, row: any) => {
         const producerId = row.producer_id;
         
         if (!acc[producerId]) {
           acc[producerId] = {
             producer_id: producerId,
-            producer_name: row.producers?.display_name || 'Unknown',
+            producer_name: producerMap.get(producerId) || 'Unknown',
             total_dials: 0,
             total_qhh: 0,
             total_shh: 0,

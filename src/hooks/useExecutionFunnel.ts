@@ -157,32 +157,38 @@ export const useExecutionBenchmarks = (
   return useQuery({
     queryKey: ['execution-benchmarks', fromDate, toDate, minPairQHH, minPairSHH, minPairDials],
     queryFn: async (): Promise<ExecutionBenchmark[]> => {
-      const { data, error } = await supabase
+      // Fetch rollup data without join
+      const { data: rollupData, error: rollupError } = await supabase
         .from('producer_day_source_rollup' as any)
-        .select(`
-          source_id,
-          producer_id,
-          qhh,
-          shh,
-          items,
-          policies_sold,
-          written_premium,
-          sources!inner(name)
-        `)
+        .select('source_id, producer_id, qhh, shh, items, policies_sold, written_premium')
         .gte('entry_date', fromDate)
         .lte('entry_date', toDate);
 
-      if (error) {
-        console.error('❌ Error fetching benchmarks:', error);
-        throw error;
+      if (rollupError) {
+        console.error('❌ Error fetching benchmarks rollup:', rollupError);
+        throw rollupError;
       }
 
-      if (!data || data.length === 0) return [];
+      if (!rollupData || rollupData.length === 0) return [];
+
+      // Fetch sources separately
+      const { data: sources, error: sourcesError } = await supabase
+        .from('sources')
+        .select('id, name');
+
+      if (sourcesError) {
+        console.error('❌ Error fetching sources:', sourcesError);
+      }
+
+      // Create lookup map for fast joins
+      const sourceMap = new Map(
+        sources?.map(s => [s.id, s.name]) || []
+      );
 
       // Group by source_id
       const sourceGroups: Record<string, any[]> = {};
       
-      data.forEach((row: any) => {
+      rollupData.forEach((row: any) => {
         const sourceId = row.source_id;
         if (!sourceGroups[sourceId]) {
           sourceGroups[sourceId] = [];
@@ -250,7 +256,7 @@ export const useExecutionBenchmarks = (
 
         benchmarks.push({
           source_id: sourceId,
-          source_name: rows[0]?.sources?.name || 'Unknown',
+          source_name: sourceMap.get(sourceId) || 'Unknown',
           total_pairs: Object.keys(producerTotals).length,
           quote_rate_normal: calculatePercentile(quoteRates, 50),
           quote_rate_excellent: calculatePercentile(quoteRates, 75),
