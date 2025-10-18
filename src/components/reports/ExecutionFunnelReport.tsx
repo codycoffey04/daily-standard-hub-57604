@@ -157,9 +157,8 @@ export const ExecutionFunnelReport: React.FC<ExecutionFunnelReportProps> = () =>
               <CardHeader className="pb-2">
                 <CardDescription>{metric.metric_name}</CardDescription>
                 <CardTitle className="text-3xl">
-                  {metric.metric_unit === '$' && '$'}
+                  {(metric.metric_unit === '$' || metric.metric_unit === 'dollars' || metric.metric_unit?.startsWith('$/')) && '$'}
                   {safeToLocaleString(metric.metric_value)}
-                  {metric.metric_unit && metric.metric_unit !== '$' && metric.metric_unit !== 'rate' && ` ${metric.metric_unit}`}
                 </CardTitle>
               </CardHeader>
               <CardContent>
