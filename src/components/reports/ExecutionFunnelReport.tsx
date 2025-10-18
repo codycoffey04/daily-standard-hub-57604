@@ -308,19 +308,19 @@ export const ExecutionFunnelReport: React.FC<ExecutionFunnelReportProps> = () =>
                     <TableHead className="text-right cursor-pointer" onClick={() => toggleSort('total_qhh')}>
                       QHH <ArrowUpDown className="inline h-3 w-3 ml-1" />
                     </TableHead>
-                    <TableHead className="text-right cursor-pointer" onClick={() => toggleSort('quote_rate')}>
+                    <TableHead className="text-center cursor-pointer" onClick={() => toggleSort('quote_rate')}>
                       Quote Rate <ArrowUpDown className="inline h-3 w-3 ml-1" />
                     </TableHead>
                     <TableHead className="text-right cursor-pointer" onClick={() => toggleSort('total_shh')}>
                       SHH <ArrowUpDown className="inline h-3 w-3 ml-1" />
                     </TableHead>
-                    <TableHead className="text-right cursor-pointer" onClick={() => toggleSort('close_rate')}>
+                    <TableHead className="text-center cursor-pointer" onClick={() => toggleSort('close_rate')}>
                       Close Rate <ArrowUpDown className="inline h-3 w-3 ml-1" />
                     </TableHead>
                     <TableHead className="text-right cursor-pointer" onClick={() => toggleSort('total_items')}>
                       Items <ArrowUpDown className="inline h-3 w-3 ml-1" />
                     </TableHead>
-                    <TableHead className="text-right cursor-pointer" onClick={() => toggleSort('attach_rate')}>
+                    <TableHead className="text-center cursor-pointer" onClick={() => toggleSort('attach_rate')}>
                       Attach Rate <ArrowUpDown className="inline h-3 w-3 ml-1" />
                     </TableHead>
                     <TableHead className="text-right cursor-pointer" onClick={() => toggleSort('total_premium')}>
@@ -334,23 +334,23 @@ export const ExecutionFunnelReport: React.FC<ExecutionFunnelReportProps> = () =>
                       <TableCell className="font-medium">{producer.producer_name}</TableCell>
                       <TableCell className="text-right">{safeToLocaleString(producer.total_dials)}</TableCell>
                       <TableCell className="text-right">{safeToLocaleString(producer.total_qhh)}</TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex items-center justify-end gap-2">
-                          {safeToFixed(producer.quote_rate, 2)}%
+                      <TableCell className="text-center">
+                        <div className="flex flex-col items-center gap-1">
+                          <div className="font-medium">{safeToFixed(producer.quote_rate, 2)}%</div>
                           {getGuidanceBadge(producer.quote_guidance)}
                         </div>
                       </TableCell>
                       <TableCell className="text-right">{safeToLocaleString(producer.total_shh)}</TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex items-center justify-end gap-2">
-                          {safeToFixed(producer.close_rate, 2)}%
+                      <TableCell className="text-center">
+                        <div className="flex flex-col items-center gap-1">
+                          <div className="font-medium">{safeToFixed(producer.close_rate, 2)}%</div>
                           {getGuidanceBadge(producer.close_guidance)}
                         </div>
                       </TableCell>
                       <TableCell className="text-right">{safeToLocaleString(producer.total_items)}</TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex items-center justify-end gap-2">
-                          {safeToFixed(producer.attach_rate, 2)}
+                      <TableCell className="text-center">
+                        <div className="flex flex-col items-center gap-1">
+                          <div className="font-medium">{safeToFixed(producer.attach_rate, 2)}</div>
                           {getGuidanceBadge(producer.attach_guidance)}
                         </div>
                       </TableCell>
