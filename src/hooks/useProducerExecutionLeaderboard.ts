@@ -138,6 +138,41 @@ export const useProducerExecutionLeaderboard = (
         });
       });
 
+      // Calculate overall benchmark when viewing all sources
+      let overallBenchmark: {
+        close_normal: number | null,
+        close_excellent: number | null,
+        attach_normal: number | null,
+        attach_excellent: number | null
+      } | null = null;
+
+      if (!sourceId && benchmarkMap.size > 0) {
+        // Aggregate all close rates and attach rates across all sources
+        const allCloseRates: number[] = [];
+        const allAttachRates: number[] = [];
+        
+        Object.values(sourceProducerRates).forEach(rates => {
+          allCloseRates.push(...rates.closeRates);
+          allAttachRates.push(...rates.attachRates);
+        });
+        
+        console.log('🔍 Calculating overall benchmarks from all sources');
+        console.log('📊 Total close rates collected:', allCloseRates.length);
+        console.log('📊 Total attach rates collected:', allAttachRates.length);
+        
+        overallBenchmark = {
+          close_normal: calculatePercentile(allCloseRates, 50),
+          close_excellent: calculatePercentile(allCloseRates, 75),
+          attach_normal: calculatePercentile(allAttachRates, 50),
+          attach_excellent: calculatePercentile(allAttachRates, 75),
+        };
+        
+        console.log('✅ Overall benchmarks calculated:', overallBenchmark);
+      } else if (sourceId) {
+        overallBenchmark = benchmarkMap.get(sourceId) || null;
+        console.log(`✅ Using source-specific benchmark for source ${sourceId}:`, overallBenchmark);
+      }
+
       // Aggregate by producer_id
       const aggregated = rollupData.reduce((acc: any, row: any) => {
         const producerId = row.producer_id;
@@ -179,9 +214,6 @@ export const useProducerExecutionLeaderboard = (
         return 'needs_attention';
       };
 
-      // Use overall benchmark if no specific source filter
-      const overallBenchmark = sourceId ? benchmarkMap.get(sourceId) : null;
-
       // Convert to array and calculate rates
       const results = Object.values(aggregated).map((row: any) => {
         const quoteRate = row.total_dials > 0 ? (row.total_qhh / row.total_dials) * 100 : null;
@@ -193,6 +225,31 @@ export const useProducerExecutionLeaderboard = (
         const meetsQHHThreshold = row.total_qhh >= minQHH;
         const meetsSHHThreshold = row.total_shh >= minSHH;
 
+        console.log(`\n👤 Producer: ${row.producer_name}`);
+        console.log(`   Dials: ${row.total_dials} (threshold: ${minDials}, meets: ${meetsDialThreshold})`);
+        console.log(`   QHH: ${row.total_qhh} (threshold: ${minQHH}, meets: ${meetsQHHThreshold})`);
+        console.log(`   SHH: ${row.total_shh} (threshold: ${minSHH}, meets: ${meetsSHHThreshold})`);
+        console.log(`   Close Rate: ${closeRate?.toFixed(2)}%`);
+        console.log(`   Attach Rate: ${attachRate?.toFixed(2)}`);
+        console.log(`   Benchmarks available:`, overallBenchmark);
+
+        const closeGuidance = determineGuidance(
+          closeRate,
+          overallBenchmark?.close_normal ?? null,
+          overallBenchmark?.close_excellent ?? null,
+          meetsQHHThreshold && meetsSHHThreshold
+        );
+
+        const attachGuidance = determineGuidance(
+          attachRate,
+          overallBenchmark?.attach_normal ?? null,
+          overallBenchmark?.attach_excellent ?? null,
+          meetsSHHThreshold
+        );
+
+        console.log(`   Close Guidance: ${closeGuidance}`);
+        console.log(`   Attach Guidance: ${attachGuidance}`);
+
         return {
           producer_id: row.producer_id,
           producer_name: row.producer_name,
@@ -202,24 +259,15 @@ export const useProducerExecutionLeaderboard = (
           quote_guidance: 'no_benchmark' as GuidanceType, // Quote rate benchmarks not available in this context
           total_shh: meetsSHHThreshold ? row.total_shh : null,
           close_rate: meetsQHHThreshold && meetsSHHThreshold ? closeRate : null,
-          close_guidance: determineGuidance(
-            closeRate,
-            overallBenchmark?.close_normal ?? null,
-            overallBenchmark?.close_excellent ?? null,
-            meetsQHHThreshold && meetsSHHThreshold
-          ),
+          close_guidance: closeGuidance,
           total_items: meetsSHHThreshold ? row.total_items : null,
           attach_rate: meetsSHHThreshold ? attachRate : null,
-          attach_guidance: determineGuidance(
-            attachRate,
-            overallBenchmark?.attach_normal ?? null,
-            overallBenchmark?.attach_excellent ?? null,
-            meetsSHHThreshold
-          ),
+          attach_guidance: attachGuidance,
           total_premium: row.total_premium,
         };
       });
 
+      console.log(`\n✅ Final results count: ${results.length}`);
       return results as ProducerLeaderboardRow[];
     },
     enabled: !!fromDate && !!toDate
