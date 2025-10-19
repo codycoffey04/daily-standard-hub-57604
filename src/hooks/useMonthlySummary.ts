@@ -29,7 +29,9 @@ export interface TopSourceData {
 
 export const useMonthlySummary = (year: number, month: number | null) => {
   return useQuery({
-    queryKey: ['monthly-summary', year, month],
+    queryKey: ['monthly-summary-v2', year, month],
+    staleTime: 0, // Force fresh fetch every time
+    gcTime: 0, // Don't cache results
     queryFn: async (): Promise<MonthlySummaryData[]> => {
       let fromDate: string
       let toDate: string
@@ -54,6 +56,7 @@ export const useMonthlySummary = (year: number, month: number | null) => {
       console.log('📊 Monthly summary data received:', data)
       console.log('📊 Number of months:', data?.length)
       console.log('📊 First row:', data?.[0])
+      console.log('🔢 TOTAL_QUOTES CHECK:', data?.[0]?.total_quotes)
       console.log('📊 All month_date values:', data?.map(d => d.month_date))
 
       if (error) throw error
