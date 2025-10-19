@@ -52,7 +52,7 @@ export const QHHByProducerReport: React.FC<QHHByProducerReportProps> = ({
         <div className="text-center space-y-4">
           <h3 className="text-lg font-semibold">No QHH data available</h3>
           <p className="text-sm text-muted-foreground">
-            No quality hours data found for the selected period.
+            No quoted household data found for the selected period.
           </p>
         </div>
       </div>

@@ -116,9 +116,9 @@ export const QHHBySourceReport: React.FC<QHHBySourceReportProps> = ({
 
       <Card>
         <CardHeader>
-          <CardTitle>Quality Hours by Source</CardTitle>
+          <CardTitle>Quoted Households by Source</CardTitle>
           <p className="text-sm text-muted-foreground">
-            Distribution of quality hours across all lead sources
+            Distribution of quoted households across all lead sources
           </p>
         </CardHeader>
         <CardContent>

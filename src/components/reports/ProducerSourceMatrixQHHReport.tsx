@@ -119,7 +119,7 @@ export const ProducerSourceMatrixQHHReport: React.FC<ProducerSourceMatrixQHHRepo
         <CardHeader>
           <CardTitle>Producer × Source Matrix - QHH</CardTitle>
           <p className="text-sm text-muted-foreground">
-            Quality hours breakdown by producer and source. Color intensity indicates relative performance.
+            Quoted households breakdown by producer and source. Color intensity indicates relative performance.
           </p>
         </CardHeader>
         <CardContent>

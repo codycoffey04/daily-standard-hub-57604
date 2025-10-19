@@ -66,7 +66,7 @@ export const reportCategories: ReportCategory[] = [
         id: 'qhh-by-source',
         title: 'QHH by Source',
         icon: Database,
-        description: 'Quality hours breakdown by lead source',
+        description: 'Quoted households breakdown by lead source',
         component: 'QHHBySourceReport',
         category: 'lead-source-analysis'
       },
@@ -104,7 +104,7 @@ export const reportCategories: ReportCategory[] = [
         id: 'qhh-by-producer',
         title: 'QHH by Producer by Month',
         icon: Database,
-        description: 'Quality hours breakdown by producer',
+        description: 'Quoted households breakdown by producer',
         component: 'QHHByProducerReport',
         category: 'producer-analytics'
       },
