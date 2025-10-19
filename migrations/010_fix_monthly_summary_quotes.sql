@@ -1,7 +1,7 @@
 -- Drop the existing function to ensure clean recreation
 DROP FUNCTION IF EXISTS get_monthly_summary(date, date);
 
--- Recreate get_monthly_summary function with correct quotes calculation
+-- Recreate get_monthly_summary function with correct quotes calculation using CTE
 CREATE OR REPLACE FUNCTION get_monthly_summary(
   from_date date,
   to_date date
@@ -29,23 +29,23 @@ STABLE
 AS $$
 BEGIN
   RETURN QUERY
+  WITH quotes_by_month AS (
+    SELECT 
+      DATE_TRUNC('month', de.entry_date)::date as month_date,
+      COUNT(*)::integer as quote_count
+    FROM quoted_households qh
+    JOIN daily_entries de ON de.id = qh.daily_entry_id
+    WHERE de.entry_date >= from_date 
+      AND de.entry_date <= to_date
+    GROUP BY DATE_TRUNC('month', de.entry_date)
+  )
   SELECT 
     DATE_TRUNC('month', de.entry_date)::date as month_date,
     TO_CHAR(DATE_TRUNC('month', de.entry_date), 'FMMonth YYYY') as month_name,
     
     -- Totals
     COALESCE(SUM(de.qhh_total), 0)::integer as total_qhh,
-    
-    -- FIX #1: Count actual quotes from quoted_households table
-    (
-      SELECT COUNT(*)::integer
-      FROM quoted_households qh
-      JOIN daily_entries de2 ON de2.id = qh.daily_entry_id
-      WHERE DATE_TRUNC('month', de2.entry_date) = DATE_TRUNC('month', de.entry_date)
-        AND de2.entry_date >= from_date 
-        AND de2.entry_date <= to_date
-    ) as total_quotes,
-    
+    COALESCE(qbm.quote_count, 0)::integer as total_quotes,
     COALESCE(SUM(de.outbound_dials), 0)::integer as total_dials,
     COUNT(*)::integer as total_entries,
     COALESCE(SUM(de.items_total), 0)::integer as total_items,
@@ -77,18 +77,11 @@ BEGIN
       ELSE 0 
     END as avg_qhh_per_producer,
     
-    -- FIX #2: Average quotes per producer using actual quote count
+    -- Average quotes per producer using CTE data
     CASE 
       WHEN COUNT(DISTINCT de.producer_id) > 0 
       THEN ROUND(
-        (
-          SELECT COUNT(*)::numeric
-          FROM quoted_households qh
-          JOIN daily_entries de3 ON de3.id = qh.daily_entry_id
-          WHERE DATE_TRUNC('month', de3.entry_date) = DATE_TRUNC('month', de.entry_date)
-            AND de3.entry_date >= from_date 
-            AND de3.entry_date <= to_date
-        ) / COUNT(DISTINCT de.producer_id)::numeric, 
+        COALESCE(qbm.quote_count, 0)::numeric / COUNT(DISTINCT de.producer_id)::numeric, 
         1
       )
       ELSE 0 
@@ -105,9 +98,10 @@ BEGIN
     END as qhh_to_quote_conversion
     
   FROM daily_entries de
+  LEFT JOIN quotes_by_month qbm ON DATE_TRUNC('month', de.entry_date)::date = qbm.month_date
   WHERE de.entry_date >= from_date 
     AND de.entry_date <= to_date
-  GROUP BY DATE_TRUNC('month', de.entry_date)
+  GROUP BY DATE_TRUNC('month', de.entry_date), qbm.quote_count
   ORDER BY DATE_TRUNC('month', de.entry_date);
 END;
 $$;
