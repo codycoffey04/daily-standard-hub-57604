@@ -15,7 +15,7 @@ import {
 } from '@/hooks/useExecutionFunnel'
 import { useProducerExecutionLeaderboard } from '@/hooks/useProducerExecutionLeaderboard'
 import { useSourcesForSelection } from '@/hooks/useSourcesForSelection'
-import { DollarSign, Clock, Target, ArrowUpDown, Phone, Users, Home, FileCheck } from 'lucide-react'
+import { DollarSign, Clock, Target, ArrowUpDown, Phone, Users, Home, FileCheck, ChevronRight } from 'lucide-react'
 
 // Helper functions for safe formatting
 const safeToLocaleString = (value: number | null | undefined): string => {
@@ -190,95 +190,93 @@ export const ExecutionFunnelReport: React.FC<ExecutionFunnelReportProps> = () =>
           ) : !hasData ? (
             <EmptyState message="No activity data found for this period." />
           ) : (
-            <div className="space-y-8">
-              {/* Main Funnel: Stages 1-4 */}
-              <div className="relative w-full max-w-3xl mx-auto py-8">
-                {funnelData.slice(0, 4).map((stage, index) => {
-                  const widthPercent = (stage.stage_value / funnelData[0].stage_value) * 100
+            <div className="space-y-4">
+              {/* Horizontal Funnel: All 5 Stages */}
+              <div className="flex items-center justify-center gap-1 py-6 overflow-x-auto">
+                {funnelData.map((stage, index) => {
+                  // Calculate height based on value (funnel narrows as we progress)
+                  const heightPercent = index < 4 
+                    ? ((stage.stage_value / funnelData[0].stage_value) * 100)
+                    : 100; // Premium keeps full height
+                  
+                  const minHeight = index < 4 ? 60 : 80; // Minimum heights
+                  const maxHeight = index < 4 ? 160 : 180; // Maximum heights
+                  const finalHeight = Math.max(minHeight, (heightPercent / 100) * maxHeight);
+                  
+                  // Colors for each stage
                   const colors = [
                     { hue: 220, sat: 70, light: 55 },  // Dials - Blue
                     { hue: 190, sat: 65, light: 50 },  // QHH - Cyan
                     { hue: 160, sat: 70, light: 52 },  // SHH - Teal
                     { hue: 140, sat: 65, light: 48 },  // Policies - Green
+                    { hue: 45, sat: 75, light: 50 },   // Premium - Gold
                   ];
                   const color = colors[index];
-                  const gradient = `linear-gradient(135deg, hsl(${color.hue}, ${color.sat}%, ${color.light}%), hsl(${color.hue}, ${color.sat + 5}%, ${color.light + 8}%))`;
+                  const gradient = index < 4
+                    ? `linear-gradient(135deg, hsl(${color.hue}, ${color.sat}%, ${color.light}%), hsl(${color.hue}, ${color.sat + 5}%, ${color.light + 8}%))`
+                    : `linear-gradient(135deg, hsl(${color.hue}, ${color.sat}%, ${color.light}%), hsl(${color.hue + 10}, ${color.sat}%, ${color.light + 8}%))`;
                   
+                  // Icons
                   const icons = [
-                    <Phone className="h-5 w-5 inline mr-1" />,
-                    <Users className="h-5 w-5 inline mr-1" />,
-                    <Home className="h-5 w-5 inline mr-1" />,
-                    <FileCheck className="h-5 w-5 inline mr-1" />
+                    <Phone className="h-4 w-4 inline mr-1" />,
+                    <Users className="h-4 w-4 inline mr-1" />,
+                    <Home className="h-4 w-4 inline mr-1" />,
+                    <FileCheck className="h-4 w-4 inline mr-1" />,
+                    <DollarSign className="h-4 w-4 inline mr-1" />
                   ];
                   
+                  // Trapezoid shape for horizontal funnel (narrowing right side)
+                  const clipPath = index < 4
+                    ? 'polygon(0 0, 100% 10%, 100% 90%, 0 100%)'
+                    : 'polygon(0 10%, 100% 0, 100% 100%, 0 90%)'; // Premium is special
+                  
                   return (
-                    <div key={stage.stage_number} className="mb-6 animate-fade-in" style={{ animationDelay: `${index * 100}ms` }}>
+                    <div key={stage.stage_number} className="relative group animate-fade-in" style={{ animationDelay: `${index * 100}ms` }}>
                       <div 
-                        className="relative mx-auto transition-all hover:scale-[1.02] cursor-pointer group"
+                        className="relative transition-all hover:scale-[1.05] cursor-pointer flex flex-col items-center justify-center px-4"
                         style={{
-                          width: `${Math.max(widthPercent, 20)}%`,
+                          width: index === 4 ? '220px' : '180px', // Premium wider
+                          height: `${finalHeight}px`,
                           background: gradient,
-                          clipPath: 'polygon(8% 0%, 92% 0%, 100% 100%, 0% 100%)',
-                          minHeight: '100px',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
+                          clipPath: clipPath,
                           boxShadow: '0 8px 16px -4px rgba(0, 0, 0, 0.15), 0 4px 8px -2px rgba(0, 0, 0, 0.1)'
                         }}
                       >
-                        <div className="text-white text-center z-10 px-4">
+                        <div className="text-white text-center z-10">
                           <div className="text-xs opacity-75 mb-1">Stage {stage.stage_number}</div>
-                          <div className="font-bold text-base mb-2 flex items-center justify-center">
+                          <div className="font-bold text-sm mb-1 flex items-center justify-center">
                             {icons[index]}
                             {stage.stage_name}
                           </div>
-                          <div className="text-4xl font-bold mb-2">
-                            {safeToLocaleString(stage.stage_value)}
+                          <div className={`${index === 4 ? 'text-3xl' : 'text-2xl'} font-bold mb-1`}>
+                            {index === 4 ? '$' : ''}{safeToLocaleString(stage.stage_value)}
                           </div>
                           {index > 0 && stage.conversion_rate != null && (
-                            <div className="text-sm font-semibold bg-white/20 rounded-full px-3 py-1 inline-block">
-                              {stage.conversion_rate.toFixed(1)}% conversion
+                            <div className="text-xs font-semibold bg-white/20 rounded-full px-2 py-0.5 inline-block">
+                              {index === 4 
+                                ? `$${stage.conversion_rate.toFixed(0)}/policy`
+                                : `${stage.conversion_rate.toFixed(1)}%`
+                              }
                             </div>
                           )}
                         </div>
-                        
-                        {index > 0 && stage.drop_off_count != null && stage.drop_off_rate != null && (
-                          <div className="absolute -bottom-10 left-1/2 transform -translate-x-1/2 bg-popover text-popover-foreground px-4 py-2 rounded-lg shadow-lg text-sm opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-20">
-                            Drop-off: <span className="font-semibold">{safeToLocaleString(stage.drop_off_count)}</span> ({safeToFixed(stage.drop_off_rate, 1)}%)
-                          </div>
-                        )}
                       </div>
+                      
+                      {/* Hover tooltip for drop-off */}
+                      {index > 0 && index < 4 && stage.drop_off_count != null && stage.drop_off_rate != null && (
+                        <div className="absolute -bottom-12 left-1/2 transform -translate-x-1/2 bg-popover text-popover-foreground px-3 py-1.5 rounded-lg shadow-lg text-xs opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-20">
+                          Drop-off: <span className="font-semibold">{safeToLocaleString(stage.drop_off_count)}</span> ({safeToFixed(stage.drop_off_rate, 1)}%)
+                        </div>
+                      )}
+                      
+                      {/* Arrow between stages */}
+                      {index < 4 && (
+                        <ChevronRight className="absolute -right-3 top-1/2 transform -translate-y-1/2 h-6 w-6 text-muted-foreground z-10" />
+                      )}
                     </div>
-                  )
+                  );
                 })}
               </div>
-
-              {/* Premium Summary Card (Stage 5) */}
-              {funnelData[4] && (
-                <Card className="border-2 border-yellow-500/30 bg-gradient-to-br from-yellow-50 via-amber-50 to-orange-50 dark:from-yellow-950/20 dark:via-amber-950/20 dark:to-orange-950/20 animate-fade-in">
-                  <CardContent className="pt-6">
-                    <div className="text-center">
-                      <div className="inline-flex items-center justify-center w-16 h-16 bg-yellow-500/20 rounded-full mb-4">
-                        <DollarSign className="h-10 w-10 text-yellow-600 dark:text-yellow-400" />
-                      </div>
-                      <div className="text-sm font-medium text-muted-foreground mb-2">Total Premium Written</div>
-                      <div className="text-5xl font-bold text-yellow-700 dark:text-yellow-400 mb-2">
-                        ${safeToLocaleString(funnelData[4].stage_value)}
-                      </div>
-                      {funnelData[4].conversion_rate != null && (
-                        <div className="text-lg font-semibold text-yellow-600 dark:text-yellow-300">
-                          Average: ${funnelData[4].conversion_rate.toFixed(0)} per policy
-                        </div>
-                      )}
-                      {funnelData[3] && funnelData[3].stage_value > 0 && (
-                        <div className="text-sm text-muted-foreground mt-4">
-                          From {safeToLocaleString(funnelData[3].stage_value)} policies sold
-                        </div>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
             </div>
           )}
         </CardContent>
