@@ -228,7 +228,7 @@ export const ExecutionFunnelReport: React.FC<ExecutionFunnelReportProps> = () =>
                       >
                         <div className="text-white text-center z-10 flex flex-col h-full justify-between py-3 px-3">
                           {/* Top: Stage label */}
-                          <div className="text-xs opacity-60">Stage {stage.stage_number}</div>
+                          <div className="text-sm opacity-80 font-medium">Stage {stage.stage_number}</div>
                           
                           {/* Center: Large value and stage name */}
                           <div>
@@ -237,7 +237,7 @@ export const ExecutionFunnelReport: React.FC<ExecutionFunnelReportProps> = () =>
                             </div>
                             
                             {/* Stage name with icon */}
-                            <div className="text-sm font-medium flex items-center justify-center gap-1 opacity-90">
+                            <div className="text-base font-semibold flex items-center justify-center gap-1.5">
                               {icons[index]}
                               <span>{stage.stage_name}</span>
                             </div>
@@ -245,7 +245,7 @@ export const ExecutionFunnelReport: React.FC<ExecutionFunnelReportProps> = () =>
                           
                           {/* Bottom: Conversion rate */}
                           {index > 0 && stage.conversion_rate != null && (
-                            <div className="text-xs font-semibold bg-white/25 rounded px-2 py-1">
+                            <div className="text-sm font-bold bg-white/30 rounded px-3 py-1">
                               {index === 4 
                                 ? `$${stage.conversion_rate.toFixed(0)}/policy`
                                 : `${stage.conversion_rate.toFixed(1)}%`
