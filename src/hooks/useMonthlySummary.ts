@@ -12,6 +12,13 @@ export interface MonthlySummaryData {
   framework_compliance_pct: number
   avg_qhh_per_producer: number
   avg_quotes_per_producer: number
+  total_entries?: number
+  total_items?: number
+  unique_producers?: number
+  top_framework_entries?: number
+  bottom_framework_entries?: number
+  outside_framework_entries?: number
+  qhh_to_quote_conversion?: number
 }
 
 export interface TopSourceData {
