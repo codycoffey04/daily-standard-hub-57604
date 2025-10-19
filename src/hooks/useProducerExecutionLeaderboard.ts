@@ -19,6 +19,26 @@ interface ProducerLeaderboardRow {
   total_premium: number | null;
 }
 
+const BENCHMARKS = {
+  quote_rate: {
+    needs_attention: 3,    // < 3%
+    normal_min: 3,         // 3-6%
+    excellent: 6           // > 6%
+  },
+  close_rate: {
+    needs_attention: 17,   // < 17%
+    normal_min: 18,        // 18-24%
+    normal_max: 24,
+    excellent: 25          // 25-35%
+  },
+  attach_rate: {
+    needs_attention: 1.2,  // < 1.2
+    normal_min: 1.2,       // 1.2-1.5
+    normal_max: 1.5,
+    excellent: 1.5         // > 1.5
+  }
+};
+
 export const useProducerExecutionLeaderboard = (
   fromDate: string,
   toDate: string,
@@ -67,14 +87,6 @@ export const useProducerExecutionLeaderboard = (
         producers?.map(p => [p.id, p.display_name]) || []
       );
 
-      // Helper to calculate percentiles (50th and 75th)
-      const calculatePercentile = (values: number[], percentile: number): number | null => {
-        if (values.length === 0) return null;
-        const sorted = [...values].sort((a, b) => a - b);
-        const index = Math.ceil((percentile / 100) * sorted.length) - 1;
-        return sorted[Math.max(0, index)];
-      };
-
       // Aggregate by producer_id
       const aggregated = rollupData.reduce((acc: any, row: any) => {
         const producerId = row.producer_id;
@@ -102,63 +114,30 @@ export const useProducerExecutionLeaderboard = (
         return acc;
       }, {});
 
-      // First pass: Calculate all producer rates for benchmarking
-      const producerRates: {
-        quoteRates: number[],
-        closeRates: number[],
-        attachRates: number[]
-      } = {
-        quoteRates: [],
-        closeRates: [],
-        attachRates: []
-      };
-
-      Object.values(aggregated).forEach((row: any) => {
-        const meetsDialThreshold = row.total_dials >= minDials;
-        const meetsQHHThreshold = row.total_qhh >= minQHH;
-        const meetsSHHThreshold = row.total_shh >= minSHH;
-        
-        if (meetsDialThreshold && meetsQHHThreshold) {
-          const quoteRate = (row.total_qhh / row.total_dials) * 100;
-          producerRates.quoteRates.push(quoteRate);
-        }
-        
-        if (meetsQHHThreshold && meetsSHHThreshold) {
-          const closeRate = (row.total_shh / row.total_qhh) * 100;
-          producerRates.closeRates.push(closeRate);
-        }
-        
-        if (meetsSHHThreshold) {
-          const attachRate = row.total_policies / row.total_shh; // Use policies, not items
-          producerRates.attachRates.push(attachRate);
-        }
-      });
-
-      // Calculate producer-level benchmarks
-      const producerBenchmarks = {
-        quote_normal: calculatePercentile(producerRates.quoteRates, 50),
-        quote_excellent: calculatePercentile(producerRates.quoteRates, 75),
-        close_normal: calculatePercentile(producerRates.closeRates, 50),
-        close_excellent: calculatePercentile(producerRates.closeRates, 75),
-        attach_normal: calculatePercentile(producerRates.attachRates, 50),
-        attach_excellent: calculatePercentile(producerRates.attachRates, 75),
-      };
-
-      console.log('🎯 Producer-level benchmarks calculated:', producerBenchmarks);
-      console.log(`   Based on ${producerRates.quoteRates.length} quote rates, ${producerRates.closeRates.length} close rates, ${producerRates.attachRates.length} attach rates`);
-
       // Helper to determine guidance
       const determineGuidance = (
         rate: number | null,
-        normalBenchmark: number | null,
-        excellentBenchmark: number | null,
+        metric: 'quote_rate' | 'close_rate' | 'attach_rate',
         meetsThreshold: boolean
       ): GuidanceType => {
         if (!meetsThreshold || rate === null) return 'insufficient_volume';
-        if (normalBenchmark === null || excellentBenchmark === null) return 'no_benchmark';
-        if (rate >= excellentBenchmark) return 'above_excellent';
-        if (rate >= normalBenchmark) return 'normal_range';
-        return 'needs_attention';
+        
+        const thresholds = BENCHMARKS[metric];
+        
+        if (metric === 'close_rate') {
+          // Close rate has a specific range for normal (18-24%)
+          const closeThresholds = BENCHMARKS.close_rate;
+          if (rate < closeThresholds.needs_attention) return 'needs_attention';
+          if (rate >= closeThresholds.normal_min && rate <= closeThresholds.normal_max) return 'normal_range';
+          if (rate >= closeThresholds.excellent) return 'above_excellent';
+        } else {
+          // Quote rate and attach rate use simpler logic
+          if (rate < thresholds.needs_attention) return 'needs_attention';
+          if (rate >= thresholds.normal_min && rate < thresholds.excellent) return 'normal_range';
+          if (rate >= thresholds.excellent) return 'above_excellent';
+        }
+        
+        return 'normal_range'; // fallback
       };
 
       // Convert to array and calculate rates with guidance
@@ -174,33 +153,29 @@ export const useProducerExecutionLeaderboard = (
 
         const quoteGuidance = determineGuidance(
           quoteRate,
-          producerBenchmarks.quote_normal,
-          producerBenchmarks.quote_excellent,
+          'quote_rate',
           meetsDialThreshold && meetsQHHThreshold
         );
 
         const closeGuidance = determineGuidance(
           closeRate,
-          producerBenchmarks.close_normal,
-          producerBenchmarks.close_excellent,
+          'close_rate',
           meetsQHHThreshold && meetsSHHThreshold
         );
 
         const attachGuidance = determineGuidance(
           attachRate,
-          producerBenchmarks.attach_normal,
-          producerBenchmarks.attach_excellent,
+          'attach_rate',
           meetsSHHThreshold
         );
 
         console.log(`\n👤 Producer: ${row.producer_name}`);
         console.log(`   Dials: ${row.total_dials} (meets threshold: ${meetsDialThreshold})`);
-        console.log(`   Quote Rate: ${quoteRate?.toFixed(2)}% → ${quoteGuidance}`);
+        console.log(`   Quote Rate: ${quoteRate?.toFixed(2)}% → ${quoteGuidance} (Benchmarks: <3%=attention, 3-6%=normal, >6%=excellent)`);
         console.log(`   QHH: ${row.total_qhh} (meets threshold: ${meetsQHHThreshold})`);
-        console.log(`   Close Rate: ${closeRate?.toFixed(2)}% → ${closeGuidance}`);
+        console.log(`   Close Rate: ${closeRate?.toFixed(2)}% → ${closeGuidance} (Benchmarks: <17%=attention, 18-24%=normal, ≥25%=excellent)`);
         console.log(`   SHH: ${row.total_shh} (meets threshold: ${meetsSHHThreshold})`);
-        console.log(`   Policies: ${row.total_policies}, Attach Rate: ${attachRate?.toFixed(2)} → ${attachGuidance}`);
-        console.log(`   Benchmarks: Q(${producerBenchmarks.quote_normal?.toFixed(1)}/${producerBenchmarks.quote_excellent?.toFixed(1)}) C(${producerBenchmarks.close_normal?.toFixed(1)}/${producerBenchmarks.close_excellent?.toFixed(1)}) A(${producerBenchmarks.attach_normal?.toFixed(2)}/${producerBenchmarks.attach_excellent?.toFixed(2)})`);
+        console.log(`   Policies: ${row.total_policies}, Attach Rate: ${attachRate?.toFixed(2)} → ${attachGuidance} (Benchmarks: <1.2=attention, 1.2-1.5=normal, >1.5=excellent)`);
 
         return {
           producer_id: row.producer_id,
