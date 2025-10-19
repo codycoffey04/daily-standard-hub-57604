@@ -232,29 +232,15 @@ export const ExecutionFunnelReport: React.FC<ExecutionFunnelReportProps> = () =>
                           
                           {/* Center: Large value and stage name */}
                           <div>
-                            <div className="text-4xl font-bold leading-tight mb-1 drop-shadow-md">
+                            <div className="text-4xl font-bold leading-tight mb-2 drop-shadow-md">
                               {index === 4 ? '$' : ''}{safeToLocaleString(stage.stage_value)}
                             </div>
-                            
-                            {/* Show secondary value for quotes */}
-                            {stage.secondary_value && (
-                              <div className="text-xl font-semibold text-white/95 mb-2 drop-shadow">
-                                {safeToLocaleString(stage.secondary_value)} quotes
-                              </div>
-                            )}
                             
                             {/* Stage name with icon */}
                             <div className="text-lg font-bold flex items-center justify-center gap-2 text-white drop-shadow">
                               {icons[index]}
                               <span>{stage.stage_name}</span>
                             </div>
-                            
-                            {/* Show quotes per household ratio */}
-                            {stage.secondary_value && stage.stage_value > 0 && (
-                              <div className="text-sm font-semibold text-white/90 mt-1 drop-shadow">
-                                {(stage.secondary_value / stage.stage_value).toFixed(2)} quotes/HH
-                              </div>
-                            )}
                           </div>
                           
                           {/* Bottom: Conversion rate */}
