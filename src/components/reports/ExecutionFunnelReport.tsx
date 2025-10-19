@@ -228,24 +228,38 @@ export const ExecutionFunnelReport: React.FC<ExecutionFunnelReportProps> = () =>
                       >
                         <div className="text-white text-center z-10 flex flex-col h-full justify-between py-3 px-3">
                           {/* Top: Stage label */}
-                          <div className="text-sm opacity-80 font-medium">Stage {stage.stage_number}</div>
+                          <div className="text-base font-bold text-white/95 drop-shadow">Stage {stage.stage_number}</div>
                           
                           {/* Center: Large value and stage name */}
                           <div>
-                            <div className="text-4xl font-bold leading-tight mb-2">
+                            <div className="text-4xl font-bold leading-tight mb-1 drop-shadow-md">
                               {index === 4 ? '$' : ''}{safeToLocaleString(stage.stage_value)}
                             </div>
                             
+                            {/* Show secondary value for quotes */}
+                            {stage.secondary_value && (
+                              <div className="text-xl font-semibold text-white/95 mb-2 drop-shadow">
+                                {safeToLocaleString(stage.secondary_value)} quotes
+                              </div>
+                            )}
+                            
                             {/* Stage name with icon */}
-                            <div className="text-base font-semibold flex items-center justify-center gap-1.5">
+                            <div className="text-lg font-bold flex items-center justify-center gap-2 text-white drop-shadow">
                               {icons[index]}
                               <span>{stage.stage_name}</span>
                             </div>
+                            
+                            {/* Show quotes per household ratio */}
+                            {stage.secondary_value && stage.stage_value > 0 && (
+                              <div className="text-sm font-semibold text-white/90 mt-1 drop-shadow">
+                                {(stage.secondary_value / stage.stage_value).toFixed(2)} quotes/HH
+                              </div>
+                            )}
                           </div>
                           
                           {/* Bottom: Conversion rate */}
                           {index > 0 && stage.conversion_rate != null && (
-                            <div className="text-sm font-bold bg-white/30 rounded px-3 py-1">
+                            <div className="text-base font-extrabold bg-white/40 rounded px-4 py-1.5 text-white drop-shadow-sm">
                               {index === 4 
                                 ? `$${stage.conversion_rate.toFixed(0)}/policy`
                                 : `${stage.conversion_rate.toFixed(1)}%`

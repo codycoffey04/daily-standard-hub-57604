@@ -7,6 +7,8 @@ export interface ExecutionFunnelStage {
   stage_number: number
   stage_name: string
   stage_value: number
+  secondary_value?: number
+  secondary_label?: string
   conversion_rate: number
   drop_off_count: number
   drop_off_rate: number
@@ -62,7 +64,7 @@ export const useExecutionFunnel = (
       
       let query = supabase
         .from(tableName as any)
-        .select('dials, qhh, shh, items, policies_sold, written_premium')
+        .select('dials, qhh, quotes, shh, items, policies_sold, written_premium')
         .gte('entry_date', fromDate)
         .lte('entry_date', toDate);
 
@@ -91,6 +93,7 @@ export const useExecutionFunnel = (
       // Aggregate totals
       const totalDials = (data as any[]).reduce((sum, row) => sum + (Number(row.dials) || 0), 0);
       const totalQHH = (data as any[]).reduce((sum, row) => sum + (Number(row.qhh) || 0), 0);
+      const totalQuotes = (data as any[]).reduce((sum, row) => sum + (Number(row.quotes) || 0), 0);
       const totalSHH = (data as any[]).reduce((sum, row) => sum + (Number(row.shh) || 0), 0);
       const totalPolicies = (data as any[]).reduce((sum, row) => sum + (Number(row.policies_sold) || 0), 0);
       const totalPremium = (data as any[]).reduce((sum, row) => sum + (Number(row.written_premium) || 0), 0);
@@ -109,6 +112,8 @@ export const useExecutionFunnel = (
           stage_number: 2,
           stage_name: 'QHH',
           stage_value: totalQHH,
+          secondary_value: totalQuotes,
+          secondary_label: 'Total Quotes',
           conversion_rate: totalDials > 0 ? (totalQHH / totalDials) * 100 : 0,
           drop_off_count: totalDials - totalQHH,
           drop_off_rate: totalDials > 0 ? ((totalDials - totalQHH) / totalDials) * 100 : 0
@@ -290,7 +295,7 @@ export const useExecutionEfficiency = (
       
       let query = supabase
         .from(tableName as any)
-        .select('dials, qhh, shh, items, policies_sold, written_premium')
+        .select('dials, qhh, quotes, shh, items, policies_sold, written_premium')
         .gte('entry_date', fromDate)
         .lte('entry_date', toDate);
 
@@ -319,6 +324,7 @@ export const useExecutionEfficiency = (
       // Aggregate totals
       const totalDials = (data as any[]).reduce((sum, row) => sum + (Number(row.dials) || 0), 0);
       const totalQHH = (data as any[]).reduce((sum, row) => sum + (Number(row.qhh) || 0), 0);
+      const totalQuotes = (data as any[]).reduce((sum, row) => sum + (Number(row.quotes) || 0), 0);
       const totalSHH = (data as any[]).reduce((sum, row) => sum + (Number(row.shh) || 0), 0);
       const totalPolicies = (data as any[]).reduce((sum, row) => sum + (Number(row.policies_sold) || 0), 0);
       const totalPremium = (data as any[]).reduce((sum, row) => sum + (Number(row.written_premium) || 0), 0);
@@ -330,6 +336,11 @@ export const useExecutionEfficiency = (
         { metric_name: 'Total SHH', metric_value: totalSHH, metric_unit: 'households' },
         { metric_name: 'Total Policies', metric_value: totalPolicies, metric_unit: 'policies' },
         { metric_name: 'Total Premium', metric_value: Math.round(totalPremium), metric_unit: 'dollars' },
+        { 
+          metric_name: 'Quotes per Household', 
+          metric_value: totalQHH > 0 ? Math.round((totalQuotes / totalQHH) * 100) / 100 : 0, 
+          metric_unit: 'quotes/HH' 
+        },
         { 
           metric_name: 'Premium per Dial', 
           metric_value: totalDials > 0 ? Math.round((totalPremium / totalDials) * 100) / 100 : 0, 

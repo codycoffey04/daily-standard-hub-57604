@@ -28,16 +28,16 @@ export const SummaryBarChart: React.FC<SummaryBarChartProps> = ({
   return (
     <ChartContainer config={chartConfig} className="w-full" style={{ height }}>
       <ResponsiveContainer width="100%" height="100%">
-        <BarChart data={data} margin={{ top: 50, right: 30, left: 20, bottom: 80 }}>
+        <BarChart data={data} margin={{ top: 50, right: 30, left: 20, bottom: 120 }}>
           <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
           <XAxis 
             dataKey="name" 
-            className="text-xs fill-muted-foreground"
-            angle={-45}
+            className="text-sm fill-foreground font-semibold"
+            angle={-90}
             textAnchor="end"
-            height={80}
+            height={120}
             interval={0}
-            tickFormatter={(value) => truncateText(value, 12)}
+            tick={{ fontSize: 13, fontWeight: 600 }}
           />
           <YAxis 
             className="text-xs fill-muted-foreground" 
