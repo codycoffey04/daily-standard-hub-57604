@@ -32,7 +32,14 @@ BEGIN
     
     -- Totals
     COALESCE(SUM(de.qhh_total), 0)::integer as total_qhh,
-    COALESCE(SUM(de.qhh_total), 0)::integer as total_quotes,
+    (
+      SELECT COUNT(*)::integer
+      FROM quoted_households qh
+      JOIN daily_entries de2 ON de2.id = qh.daily_entry_id
+      WHERE DATE_TRUNC('month', de2.entry_date) = DATE_TRUNC('month', de.entry_date)
+        AND de2.entry_date >= from_date 
+        AND de2.entry_date <= to_date
+    ) as total_quotes,
     COALESCE(SUM(de.outbound_dials), 0)::integer as total_dials,
     COUNT(*)::integer as total_entries,
     COALESCE(SUM(de.items_total), 0)::integer as total_items,
