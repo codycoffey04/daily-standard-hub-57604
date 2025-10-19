@@ -191,18 +191,9 @@ export const ExecutionFunnelReport: React.FC<ExecutionFunnelReportProps> = () =>
             <EmptyState message="No activity data found for this period." />
           ) : (
             <div className="space-y-4">
-              {/* Horizontal Funnel: All 5 Stages */}
-              <div className="flex items-center justify-center gap-1 py-6 overflow-x-auto">
+              {/* Horizontal Funnel: All 5 Stages - Uniform Size */}
+              <div className="flex items-center gap-2 py-6 overflow-x-auto">
                 {funnelData.map((stage, index) => {
-                  // Calculate height based on value (funnel narrows as we progress)
-                  const heightPercent = index < 4 
-                    ? ((stage.stage_value / funnelData[0].stage_value) * 100)
-                    : 100; // Premium keeps full height
-                  
-                  const minHeight = index < 4 ? 60 : 80; // Minimum heights
-                  const maxHeight = index < 4 ? 160 : 180; // Maximum heights
-                  const finalHeight = Math.max(minHeight, (heightPercent / 100) * maxHeight);
-                  
                   // Colors for each stage
                   const colors = [
                     { hue: 220, sat: 70, light: 55 },  // Dials - Blue
@@ -212,47 +203,49 @@ export const ExecutionFunnelReport: React.FC<ExecutionFunnelReportProps> = () =>
                     { hue: 45, sat: 75, light: 50 },   // Premium - Gold
                   ];
                   const color = colors[index];
-                  const gradient = index < 4
-                    ? `linear-gradient(135deg, hsl(${color.hue}, ${color.sat}%, ${color.light}%), hsl(${color.hue}, ${color.sat + 5}%, ${color.light + 8}%))`
-                    : `linear-gradient(135deg, hsl(${color.hue}, ${color.sat}%, ${color.light}%), hsl(${color.hue + 10}, ${color.sat}%, ${color.light + 8}%))`;
+                  const gradient = `linear-gradient(135deg, hsl(${color.hue}, ${color.sat}%, ${color.light}%), hsl(${color.hue}, ${color.sat + 5}%, ${color.light + 8}%))`;
                   
                   // Icons
                   const icons = [
-                    <Phone className="h-4 w-4 inline mr-1" />,
-                    <Users className="h-4 w-4 inline mr-1" />,
-                    <Home className="h-4 w-4 inline mr-1" />,
-                    <FileCheck className="h-4 w-4 inline mr-1" />,
-                    <DollarSign className="h-4 w-4 inline mr-1" />
+                    <Phone className="h-4 w-4" />,
+                    <Users className="h-4 w-4" />,
+                    <Home className="h-4 w-4" />,
+                    <FileCheck className="h-4 w-4" />,
+                    <DollarSign className="h-4 w-4" />
                   ];
-                  
-                  // Trapezoid shape for horizontal funnel (narrowing right side)
-                  const clipPath = index < 4
-                    ? 'polygon(0 0, 100% 10%, 100% 90%, 0 100%)'
-                    : 'polygon(0 10%, 100% 0, 100% 100%, 0 90%)'; // Premium is special
                   
                   return (
                     <div key={stage.stage_number} className="relative group animate-fade-in" style={{ animationDelay: `${index * 100}ms` }}>
                       <div 
-                        className="relative transition-all hover:scale-[1.05] cursor-pointer flex flex-col items-center justify-center px-4"
+                        className="relative transition-all hover:scale-[1.02] cursor-pointer"
                         style={{
-                          width: index === 4 ? '220px' : '180px', // Premium wider
-                          height: `${finalHeight}px`,
+                          width: '180px',
+                          height: '140px',
                           background: gradient,
-                          clipPath: clipPath,
+                          borderRadius: '8px',
                           boxShadow: '0 8px 16px -4px rgba(0, 0, 0, 0.15), 0 4px 8px -2px rgba(0, 0, 0, 0.1)'
                         }}
                       >
-                        <div className="text-white text-center z-10">
-                          <div className="text-xs opacity-75 mb-1">Stage {stage.stage_number}</div>
-                          <div className="font-bold text-sm mb-1 flex items-center justify-center">
-                            {icons[index]}
-                            {stage.stage_name}
+                        <div className="text-white text-center z-10 flex flex-col h-full justify-between py-3 px-3">
+                          {/* Top: Stage label */}
+                          <div className="text-xs opacity-60">Stage {stage.stage_number}</div>
+                          
+                          {/* Center: Large value and stage name */}
+                          <div>
+                            <div className="text-4xl font-bold leading-tight mb-2">
+                              {index === 4 ? '$' : ''}{safeToLocaleString(stage.stage_value)}
+                            </div>
+                            
+                            {/* Stage name with icon */}
+                            <div className="text-sm font-medium flex items-center justify-center gap-1 opacity-90">
+                              {icons[index]}
+                              <span>{stage.stage_name}</span>
+                            </div>
                           </div>
-                          <div className={`${index === 4 ? 'text-3xl' : 'text-2xl'} font-bold mb-1`}>
-                            {index === 4 ? '$' : ''}{safeToLocaleString(stage.stage_value)}
-                          </div>
+                          
+                          {/* Bottom: Conversion rate */}
                           {index > 0 && stage.conversion_rate != null && (
-                            <div className="text-xs font-semibold bg-white/20 rounded-full px-2 py-0.5 inline-block">
+                            <div className="text-xs font-semibold bg-white/25 rounded px-2 py-1">
                               {index === 4 
                                 ? `$${stage.conversion_rate.toFixed(0)}/policy`
                                 : `${stage.conversion_rate.toFixed(1)}%`
@@ -271,7 +264,7 @@ export const ExecutionFunnelReport: React.FC<ExecutionFunnelReportProps> = () =>
                       
                       {/* Arrow between stages */}
                       {index < 4 && (
-                        <ChevronRight className="absolute -right-3 top-1/2 transform -translate-y-1/2 h-6 w-6 text-muted-foreground z-10" />
+                        <ChevronRight className="absolute -right-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground z-10" />
                       )}
                     </div>
                   );

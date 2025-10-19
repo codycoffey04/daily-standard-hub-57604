@@ -41,14 +41,6 @@ export const reportCategories: ReportCategory[] = [
         category: 'performance-metrics'
       },
       {
-        id: 'producer-comparison',
-        title: 'Producer Comparison',
-        icon: Users,
-        description: 'Compare performance across producers',
-        component: 'ProducerComparisonReport',
-        category: 'performance-metrics'
-      },
-      {
         id: 'conversion-funnel',
         title: 'Execution Funnel Dashboard',
         icon: TrendingUp,
