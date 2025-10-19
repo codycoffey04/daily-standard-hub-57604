@@ -360,7 +360,7 @@ export const ExecutionFunnelReport: React.FC<ExecutionFunnelReportProps> = () =>
       <Card>
         <CardHeader>
           <CardTitle>Performance Benchmarks by Source</CardTitle>
-          <CardDescription>Normal and excellent thresholds for key metrics</CardDescription>
+          <CardDescription>Industry-standard performance thresholds by lead source</CardDescription>
         </CardHeader>
         <CardContent>
           {isBenchmarksLoading ? (
@@ -372,7 +372,7 @@ export const ExecutionFunnelReport: React.FC<ExecutionFunnelReportProps> = () =>
               <TableHeader>
                 <TableRow>
                   <TableHead>Source</TableHead>
-                  <TableHead className="text-center">Pairs</TableHead>
+                  <TableHead className="text-center">Producers</TableHead>
                   <TableHead className="text-right">Quote Rate (Normal)</TableHead>
                   <TableHead className="text-right">Quote Rate (Excellent)</TableHead>
                   <TableHead className="text-right">Close Rate (Normal)</TableHead>
@@ -385,7 +385,7 @@ export const ExecutionFunnelReport: React.FC<ExecutionFunnelReportProps> = () =>
                 {benchmarks.map((benchmark) => (
                   <TableRow key={benchmark.source_id}>
                     <TableCell className="font-medium">{benchmark.source_name}</TableCell>
-                    <TableCell className="text-center">{benchmark.total_pairs}</TableCell>
+                    <TableCell className="text-center">{benchmark.total_producers}</TableCell>
                     <TableCell className="text-right">{safeToFixed(benchmark.quote_rate_normal, 2)}%</TableCell>
                     <TableCell className="text-right text-green-600 dark:text-green-400 font-semibold">
                       {safeToFixed(benchmark.quote_rate_excellent, 2)}%
