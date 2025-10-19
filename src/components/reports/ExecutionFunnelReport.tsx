@@ -244,14 +244,14 @@ export const ExecutionFunnelReport: React.FC<ExecutionFunnelReportProps> = () =>
                           </div>
                           
                           {/* Bottom: Conversion rate */}
-                          {index > 0 && stage.conversion_rate != null && (
-                            <div className="text-base font-extrabold bg-white/40 rounded px-4 py-1.5 text-white drop-shadow-sm">
-                              {index === 4 
-                                ? `$${stage.conversion_rate.toFixed(0)}/policy`
-                                : `${stage.conversion_rate.toFixed(1)}%`
-                              }
-                            </div>
-                          )}
+                {index > 0 && stage.conversion_rate != null && (
+                  <div className="text-base font-extrabold text-white drop-shadow-md">
+                    {index === 4 
+                      ? `$${stage.conversion_rate.toFixed(0)}/policy`
+                      : `${stage.conversion_rate.toFixed(1)}%`
+                    }
+                  </div>
+                )}
                         </div>
                       </div>
                       

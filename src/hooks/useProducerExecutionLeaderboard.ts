@@ -21,21 +21,22 @@ interface ProducerLeaderboardRow {
 
 const BENCHMARKS = {
   quote_rate: {
-    needs_attention: 3,    // < 3%
-    normal_min: 3,         // 3-6%
-    excellent: 6           // > 6%
+    needs_attention: 4.5,   // < 4.5%
+    normal_min: 4.5,        // 4.5-5.0%
+    normal_max: 5.0,
+    excellent: 5.0          // > 5.0%
   },
   close_rate: {
-    needs_attention: 17,   // < 17%
-    normal_min: 18,        // 18-24%
-    normal_max: 24,
-    excellent: 25          // 25-35%
+    needs_attention: 19,    // < 19%
+    normal_min: 19,         // 19-22%
+    normal_max: 22,
+    excellent: 22           // > 22%
   },
   attach_rate: {
-    needs_attention: 1.2,  // < 1.2
-    normal_min: 1.2,       // 1.2-1.5
-    normal_max: 1.5,
-    excellent: 1.5         // > 1.5
+    needs_attention: 1.33,  // < 1.33
+    normal_min: 1.33,       // 1.33-1.38
+    normal_max: 1.38,
+    excellent: 1.38         // > 1.38
   }
 };
 
