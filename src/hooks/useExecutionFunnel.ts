@@ -157,123 +157,82 @@ export const useExecutionBenchmarks = (
   return useQuery({
     queryKey: ['execution-benchmarks', fromDate, toDate, minPairQHH, minPairSHH, minPairDials],
     queryFn: async (): Promise<ExecutionBenchmark[]> => {
-      // Fetch rollup data without join
+      // Fetch all source IDs that have data
       const { data: rollupData, error: rollupError } = await supabase
         .from('producer_day_source_rollup' as any)
-        .select('source_id, producer_id, qhh, shh, items, policies_sold, written_premium')
+        .select('source_id, producer_id')
         .gte('entry_date', fromDate)
         .lte('entry_date', toDate);
 
       if (rollupError) {
-        console.error('❌ Error fetching benchmarks rollup:', rollupError);
+        console.error('❌ Error fetching source rollup:', rollupError);
         throw rollupError;
       }
 
       if (!rollupData || rollupData.length === 0) return [];
 
-      // Fetch sources separately
+      // Fetch source names
       const { data: sources, error: sourcesError } = await supabase
         .from('sources')
         .select('id, name');
 
       if (sourcesError) {
         console.error('❌ Error fetching sources:', sourcesError);
+        throw sourcesError;
       }
 
-      // Create lookup map for fast joins
-      const sourceMap = new Map(
-        sources?.map(s => [s.id, s.name]) || []
-      );
+      const sourceMap = new Map(sources?.map(s => [s.id, s.name]) || []);
 
-      // Group by source_id
-      const sourceGroups: Record<string, any[]> = {};
-      
+      // Group by source to get unique sources with producer counts
+      const sourceGroups: Record<string, Set<string>> = {};
       rollupData.forEach((row: any) => {
-        const sourceId = row.source_id;
-        if (!sourceGroups[sourceId]) {
-          sourceGroups[sourceId] = [];
+        if (!sourceGroups[row.source_id]) {
+          sourceGroups[row.source_id] = new Set();
         }
-        sourceGroups[sourceId].push(row);
+        sourceGroups[row.source_id].add(row.producer_id);
       });
 
-      // Hardcoded realistic industry benchmarks by source type
-      const SOURCE_BENCHMARKS: Record<string, {
-        quote_rate_normal: number;
-        quote_rate_excellent: number;
-        close_rate_normal: number;
-        close_rate_excellent: number;
-        attach_rate_normal: number;
-        attach_rate_excellent: number;
-      }> = {
-        'Net Lead': {
-          quote_rate_normal: 12,
-          quote_rate_excellent: 18,
-          close_rate_normal: 25,
-          close_rate_excellent: 35,
-          attach_rate_normal: 1.3,
-          attach_rate_excellent: 1.5
-        },
-        'Digital Marketing': {
-          quote_rate_normal: 65,
-          quote_rate_excellent: 75,
-          close_rate_normal: 20,
-          close_rate_excellent: 30,
-          attach_rate_normal: 1.2,
-          attach_rate_excellent: 1.4
-        },
-        'Customer Referral': {
-          quote_rate_normal: 100,
-          quote_rate_excellent: 100,
-          close_rate_normal: 60,
-          close_rate_excellent: 75,
-          attach_rate_normal: 1.4,
-          attach_rate_excellent: 1.6
-        },
-        'Direct Mail': {
-          quote_rate_normal: 70,
-          quote_rate_excellent: 80,
-          close_rate_normal: 15,
-          close_rate_excellent: 25,
-          attach_rate_normal: 1.1,
-          attach_rate_excellent: 1.3
-        },
-        'CLICK AD': {
-          quote_rate_normal: 50,
-          quote_rate_excellent: 65,
-          close_rate_normal: 18,
-          close_rate_excellent: 28,
-          attach_rate_normal: 1.2,
-          attach_rate_excellent: 1.4
-        }
-      };
-
-      // Calculate benchmarks for each source
+      // Calculate dynamic benchmarks for each source
       const benchmarks: ExecutionBenchmark[] = [];
 
-      Object.entries(sourceGroups).forEach(([sourceId, rows]) => {
+      for (const [sourceId, producerSet] of Object.entries(sourceGroups)) {
+        // Call the database function to get dynamic percentile-based benchmarks
+        const { data: benchmarkData, error: benchmarkError } = await supabase
+          .rpc('get_execution_benchmarks_by_source' as any, {
+            from_date: fromDate,
+            to_date: toDate,
+            source_filter: sourceId,
+            min_pair_qhh: minPairQHH,
+            min_pair_shh: minPairSHH,
+            min_pair_dials: minPairDials
+          });
+
+        if (benchmarkError) {
+          console.error(`❌ Error fetching benchmarks for source ${sourceId}:`, benchmarkError);
+          continue;
+        }
+
+        // If no benchmark data (insufficient volume), skip this source
+        if (!benchmarkData || (benchmarkData as any[]).length === 0) {
+          console.log(`ℹ️ Insufficient data for source ${sourceId} (${sourceMap.get(sourceId)})`);
+          continue;
+        }
+
+        const benchmark = (benchmarkData as any[])[0];
         const sourceName = sourceMap.get(sourceId) || 'Unknown';
-        
-        // Count unique producers for this source
-        const uniqueProducers = new Set(rows.map((row: any) => row.producer_id));
-        const producerCount = uniqueProducers.size;
-        
-        // Get benchmarks for this source, or use default fallback
-        const sourceBenchmarks = SOURCE_BENCHMARKS[sourceName] || {
-          quote_rate_normal: 50,
-          quote_rate_excellent: 65,
-          close_rate_normal: 20,
-          close_rate_excellent: 30,
-          attach_rate_normal: 1.2,
-          attach_rate_excellent: 1.4
-        };
-        
+
         benchmarks.push({
           source_id: sourceId,
           source_name: sourceName,
-          total_producers: producerCount,
-          ...sourceBenchmarks
+          total_producers: producerSet.size,
+          quote_rate_normal: Number(benchmark.quote_bench_normal) || 0,
+          quote_rate_excellent: Number(benchmark.quote_bench_excellent) || 0,
+          close_rate_normal: Number(benchmark.close_bench_normal) || 0,
+          close_rate_excellent: Number(benchmark.close_bench_excellent) || 0,
+          attach_rate_normal: Number(benchmark.attach_bench_normal) || 0,
+          attach_rate_excellent: Number(benchmark.attach_bench_excellent) || 0,
         });
-      });
+      }
 
       return benchmarks;
     },
