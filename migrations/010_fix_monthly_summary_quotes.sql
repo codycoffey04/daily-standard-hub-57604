@@ -45,7 +45,7 @@ BEGIN
     
     -- Totals
     COALESCE(SUM(de.qhh_total), 0)::integer as total_qhh,
-    COALESCE(qbm.quote_count, 0)::integer as total_quotes,
+    COALESCE(MAX(qbm.quote_count), 0)::integer as total_quotes,
     COALESCE(SUM(de.outbound_dials), 0)::integer as total_dials,
     COUNT(*)::integer as total_entries,
     COALESCE(SUM(de.items_total), 0)::integer as total_items,
@@ -81,7 +81,7 @@ BEGIN
     CASE 
       WHEN COUNT(DISTINCT de.producer_id) > 0 
       THEN ROUND(
-        COALESCE(qbm.quote_count, 0)::numeric / COUNT(DISTINCT de.producer_id)::numeric, 
+        COALESCE(MAX(qbm.quote_count), 0)::numeric / COUNT(DISTINCT de.producer_id)::numeric, 
         1
       )
       ELSE 0 
@@ -101,7 +101,7 @@ BEGIN
   LEFT JOIN quotes_by_month qbm ON DATE_TRUNC('month', de.entry_date)::date = qbm.month_date
   WHERE de.entry_date >= from_date 
     AND de.entry_date <= to_date
-  GROUP BY DATE_TRUNC('month', de.entry_date), qbm.quote_count
+  GROUP BY DATE_TRUNC('month', de.entry_date)
   ORDER BY DATE_TRUNC('month', de.entry_date);
 END;
 $$;
