@@ -20,10 +20,14 @@ RETURNS TABLE (
   total_quotes integer,
   total_items integer,
   total_premium numeric,
-  total_commission numeric
+  total_commission numeric,
+  total_sold_items integer,
+  total_sold_premium numeric
 )
 LANGUAGE plpgsql
 STABLE
+SECURITY DEFINER
+SET search_path = public
 AS $$
 BEGIN
   RETURN QUERY
@@ -65,8 +69,9 @@ BEGIN
     SELECT 
       e.producer_id,
       COALESCE(SUM(qh.quoted_premium), 0) as total_premium,
-      -- Commission estimate: 10% of premium for sold items
-      COALESCE(SUM(CASE WHEN e.items_total > 0 THEN qh.quoted_premium * 0.10 ELSE 0 END), 0) as total_commission
+      COALESCE(SUM(qh.items_sold) FILTER (WHERE qh.quick_action_status = 'SOLD'), 0) as total_sold_items,
+      COALESCE(SUM(qh.quoted_premium) FILTER (WHERE qh.quick_action_status = 'SOLD'), 0) as total_sold_premium,
+      COALESCE(SUM(qh.quoted_premium) FILTER (WHERE qh.quick_action_status = 'SOLD') * 0.10, 0) as total_commission
     FROM public.daily_entries e
     LEFT JOIN public.quoted_households qh ON qh.daily_entry_id = e.id
     WHERE e.entry_date >= from_date AND e.entry_date <= to_date
@@ -100,7 +105,9 @@ BEGIN
     COALESCE(pq.total_quotes, 0)::integer,
     COALESCE(pm.total_items, 0)::integer,
     COALESCE(pp.total_premium, 0),
-    COALESCE(pp.total_commission, 0)
+    COALESCE(pp.total_commission, 0),
+    COALESCE(pp.total_sold_items, 0)::integer,
+    COALESCE(pp.total_sold_premium, 0)
   FROM public.producers p
   LEFT JOIN producer_days pd ON pd.producer_id = p.id
   LEFT JOIN producer_metrics pm ON pm.producer_id = p.id
