@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { X, Edit2, Save, Plus } from 'lucide-react'
 import { type Source } from '@/hooks/useSourcesForSelection'
+import { PRODUCT_LINES } from '@/lib/constants'
 
 const STORAGE_KEY = 'qhhFormData'
 
@@ -39,17 +40,6 @@ const QUICK_ACTION_OPTIONS = [
   'SOLD'
 ]
 
-const PRODUCT_LINE_OPTIONS = [
-  'Standard Auto',
-  'Home',
-  'Landlords',
-  'Renters',
-  'Motorcycle',
-  'Manufactured Home',
-  'Boat',
-  'Umbrella',
-  'Condominium'
-]
 
 const CURRENT_CARRIER_OPTIONS = [
   // National Carriers
@@ -440,7 +430,7 @@ export const QuotedHouseholdForm: React.FC<QuotedHouseholdFormProps> = ({
               <div className="space-y-2">
                 <Label>Product Lines * <span className="text-xs text-muted-foreground">(Select all that apply)</span></Label>
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-2 p-3 border rounded-md">
-                  {PRODUCT_LINE_OPTIONS.map(line => (
+                  {PRODUCT_LINES.map(line => (
                     <div key={line} className="flex items-center space-x-2">
                       <Checkbox
                         id={`product-${line}`}
