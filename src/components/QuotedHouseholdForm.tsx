@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -176,6 +176,65 @@ export const QuotedHouseholdForm: React.FC<QuotedHouseholdFormProps> = ({
       }
     }
   }, [formData, editingIndex, showForm])
+
+  // Save current form state to sessionStorage (for event listeners)
+  const saveToSessionStorage = useCallback(() => {
+    if (editingIndex === null && showForm) {
+      try {
+        const dataToSave = {
+          lead_id: formData.lead_id,
+          qcn: formData.qcn,
+          zip_code: formData.zip_code,
+          product_lines: formData.product_lines,
+          quoted_premium: formData.quoted_premium,
+          lead_source_id: formData.lead_source_id,
+          current_carrier: formData.current_carrier,
+          quick_action_status: formData.quick_action_status,
+          items_sold: formData.items_sold,
+          notes: formData.notes,
+          opted_into_hearsay: formData.opted_into_hearsay,
+          timestamp: new Date().toISOString()
+        }
+        sessionStorage.setItem(STORAGE_KEY, JSON.stringify(dataToSave))
+      } catch (error) {
+        console.error('Failed to save QHH form data to sessionStorage:', error)
+      }
+    }
+  }, [formData, editingIndex, showForm])
+
+  // Add event listeners to save on window blur, visibility change, and before unload
+  useEffect(() => {
+    // Only attach listeners when form is visible and not editing an existing QHH
+    if (!showForm || editingIndex !== null) {
+      return
+    }
+
+    const handleWindowBlur = () => {
+      saveToSessionStorage()
+    }
+
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        saveToSessionStorage()
+      }
+    }
+
+    const handleBeforeUnload = () => {
+      saveToSessionStorage()
+    }
+
+    // Attach event listeners
+    window.addEventListener('blur', handleWindowBlur)
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+    window.addEventListener('beforeunload', handleBeforeUnload)
+
+    // Cleanup
+    return () => {
+      window.removeEventListener('blur', handleWindowBlur)
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+      window.removeEventListener('beforeunload', handleBeforeUnload)
+    }
+  }, [saveToSessionStorage, showForm, editingIndex])
 
   const resetForm = () => {
     // Clear sessionStorage when form is reset

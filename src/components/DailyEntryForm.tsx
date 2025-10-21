@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import { supabase } from '@/integrations/supabase/client'
 import { getDefaultEntryDate, isPast6PM } from '@/lib/timezone'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -80,6 +80,56 @@ export const DailyEntryForm: React.FC<DailyEntryFormProps> = ({
       }
     }
   }, [outboundDials, talkMinutes, qhhTotal, itemsSold, salesMade, entryDate, quotedHouseholds, existingEntry])
+
+  // Save current form state to sessionStorage (for event listeners)
+  const saveToSessionStorage = useCallback(() => {
+    if (!existingEntry) {
+      try {
+        const formData = {
+          outboundDials,
+          talkMinutes,
+          qhhTotal,
+          itemsSold,
+          salesMade,
+          entryDate,
+          quotedHouseholds,
+          timestamp: new Date().toISOString()
+        }
+        sessionStorage.setItem(STORAGE_KEY, JSON.stringify(formData))
+      } catch (error) {
+        console.error('Failed to save form data to sessionStorage:', error)
+      }
+    }
+  }, [outboundDials, talkMinutes, qhhTotal, itemsSold, salesMade, entryDate, quotedHouseholds, existingEntry])
+
+  // Add event listeners to save on window blur, visibility change, and before unload
+  useEffect(() => {
+    const handleWindowBlur = () => {
+      saveToSessionStorage()
+    }
+
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        saveToSessionStorage()
+      }
+    }
+
+    const handleBeforeUnload = () => {
+      saveToSessionStorage()
+    }
+
+    // Attach event listeners
+    window.addEventListener('blur', handleWindowBlur)
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+    window.addEventListener('beforeunload', handleBeforeUnload)
+
+    // Cleanup
+    return () => {
+      window.removeEventListener('blur', handleWindowBlur)
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+      window.removeEventListener('beforeunload', handleBeforeUnload)
+    }
+  }, [saveToSessionStorage])
 
   useEffect(() => {
     if (existingEntry) {
