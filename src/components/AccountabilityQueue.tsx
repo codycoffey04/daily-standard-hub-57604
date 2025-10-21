@@ -4,10 +4,12 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { RefreshCw, Calendar, Phone, Clock, Target, DollarSign } from 'lucide-react'
 import { AccountabilityReviewForm } from './AccountabilityReviewForm'
+import { format } from 'date-fns'
 
 interface DailyEntryForReview {
   id: string
   entry_date: string
+  created_at: string
   outbound_dials: number
   talk_minutes: number
   qhh_total: number
@@ -91,13 +93,29 @@ export const AccountabilityQueue: React.FC<AccountabilityQueueProps> = ({
             <Card key={entry.id} className="hover:shadow-md transition-shadow">
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
-                  <CardTitle className="text-lg font-medium">
-                    {entry.producer.display_name}
-                  </CardTitle>
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Calendar className="h-4 w-4" />
-                    {new Date(entry.entry_date).toLocaleDateString()}
+                  <div className="space-y-1">
+                    <CardTitle className="text-lg font-medium">
+                      {entry.producer.display_name}
+                    </CardTitle>
+                    <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                        <Calendar className="h-4 w-4" />
+                        {new Date(entry.entry_date).toLocaleDateString()}
+                      </div>
+                      {new Date(entry.entry_date).toDateString() !== new Date(entry.created_at).toDateString() && (
+                        <Badge variant="outline" className="text-xs">
+                          Backdated (submitted {format(new Date(entry.created_at), 'MMM d')})
+                        </Badge>
+                      )}
+                    </div>
                   </div>
+                  <Button 
+                    variant="default" 
+                    size="sm"
+                    onClick={() => handleStartReview(entry)}
+                  >
+                    Start Review
+                  </Button>
                 </div>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -145,18 +163,10 @@ export const AccountabilityQueue: React.FC<AccountabilityQueueProps> = ({
                 </div>
 
                 {/* Status Badge */}
-                <div className="flex items-center justify-between">
+                <div className="flex items-center">
                   <Badge variant="outline" className="bg-yellow-50 border-yellow-200 text-yellow-800">
                     Needs Review
                   </Badge>
-                  
-                  <Button 
-                    variant="default" 
-                    size="sm"
-                    onClick={() => handleStartReview(entry)}
-                  >
-                    Start Review
-                  </Button>
                 </div>
               </CardContent>
             </Card>

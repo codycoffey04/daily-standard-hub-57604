@@ -9,6 +9,7 @@ import { Navigate } from 'react-router-dom'
 interface DailyEntryForReview {
   id: string
   entry_date: string
+  created_at: string
   outbound_dials: number
   talk_minutes: number
   qhh_total: number
@@ -42,15 +43,18 @@ export const AccountabilityReviewsPage = () => {
     try {
       setIsLoading(true)
       
-      // Get today's date in the database timezone
-      const today = new Date().toISOString().split('T')[0]
+      // Get today's date in the database timezone (start of day)
+      const todayStart = new Date()
+      todayStart.setHours(0, 0, 0, 0)
+      const todayStartISO = todayStart.toISOString()
       
-      // Fetch daily entries that need accountability review
+      // Fetch daily entries that need accountability review (submitted today)
       const { data: entries, error } = await supabase
         .from('daily_entries')
         .select(`
           id,
           entry_date,
+          created_at,
           outbound_dials,
           talk_minutes,
           qhh_total,
@@ -60,7 +64,7 @@ export const AccountabilityReviewsPage = () => {
             display_name
           )
         `)
-        .eq('entry_date', today)
+        .gte('created_at', todayStartISO)
         .order('created_at', { ascending: false })
 
       if (error) {
@@ -87,6 +91,7 @@ export const AccountabilityReviewsPage = () => {
         .map(entry => ({
           id: entry.id,
           entry_date: entry.entry_date,
+          created_at: entry.created_at,
           outbound_dials: entry.outbound_dials,
           talk_minutes: entry.talk_minutes,
           qhh_total: entry.qhh_total,
