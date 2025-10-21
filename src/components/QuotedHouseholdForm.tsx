@@ -208,18 +208,24 @@ export const QuotedHouseholdForm: React.FC<QuotedHouseholdFormProps> = ({
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {}
     
-    // Validate lead_id (required, alphanumeric)
-    if (!formData.lead_id || !formData.lead_id.trim()) {
-      newErrors.lead_id = 'Lead ID is required'
-    } else if (!/^[a-zA-Z0-9]+$/.test(formData.lead_id.trim())) {
-      newErrors.lead_id = 'Lead ID must be alphanumeric (letters and numbers only)'
+    const isNoPriorInsurance = formData.current_carrier === 'No Prior Insurance'
+    
+    // Validate lead_id (required unless No Prior Insurance, alphanumeric)
+    if (!isNoPriorInsurance) {
+      if (!formData.lead_id || !formData.lead_id.trim()) {
+        newErrors.lead_id = 'Lead ID is required'
+      } else if (!/^[a-zA-Z0-9]+$/.test(formData.lead_id.trim())) {
+        newErrors.lead_id = 'Lead ID must be alphanumeric (letters and numbers only)'
+      }
     }
     
-    // Validate qcn (required, max 100 characters)
-    if (!formData.qcn || !formData.qcn.trim()) {
-      newErrors.qcn = 'QCN is required'
-    } else if (formData.qcn.trim().length > 100) {
-      newErrors.qcn = 'QCN must be 100 characters or less'
+    // Validate qcn (required unless No Prior Insurance, max 100 characters)
+    if (!isNoPriorInsurance) {
+      if (!formData.qcn || !formData.qcn.trim()) {
+        newErrors.qcn = 'QCN is required'
+      } else if (formData.qcn.trim().length > 100) {
+        newErrors.qcn = 'QCN must be 100 characters or less'
+      }
     }
     
     // Validate zip_code (5 digits)
@@ -302,6 +308,8 @@ export const QuotedHouseholdForm: React.FC<QuotedHouseholdFormProps> = ({
     }))
   }
 
+  const isNoPriorInsurance = formData.current_carrier === 'No Prior Insurance'
+
   return (
     <div className="form-section">
       <div className="flex items-center justify-between mb-4">
@@ -335,7 +343,7 @@ export const QuotedHouseholdForm: React.FC<QuotedHouseholdFormProps> = ({
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {/* Lead ID - REQUIRED */}
                 <div className="space-y-2">
-                  <Label htmlFor="lead-id">Lead ID *</Label>
+                  <Label htmlFor="lead-id">Lead ID {!isNoPriorInsurance && '*'}</Label>
                   <Input
                     id="lead-id"
                     value={formData.lead_id}
@@ -347,7 +355,7 @@ export const QuotedHouseholdForm: React.FC<QuotedHouseholdFormProps> = ({
 
                 {/* QCN - REQUIRED */}
                 <div className="space-y-2">
-                  <Label htmlFor="qcn">QCN *</Label>
+                  <Label htmlFor="qcn">QCN {!isNoPriorInsurance && '*'}</Label>
                   <Input
                     id="qcn"
                     value={formData.qcn}
