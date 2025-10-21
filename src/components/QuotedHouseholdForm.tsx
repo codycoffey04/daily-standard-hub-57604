@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -9,6 +9,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { X, Edit2, Save, Plus } from 'lucide-react'
 import { type Source } from '@/hooks/useSourcesForSelection'
+
+const STORAGE_KEY = 'qhhFormData'
 
 export interface QuotedHousehold {
   id?: string
@@ -127,7 +129,71 @@ export const QuotedHouseholdForm: React.FC<QuotedHouseholdFormProps> = ({
   })
   const [errors, setErrors] = useState<Record<string, string>>({})
 
+  // Load from sessionStorage on mount (only for new quotes)
+  useEffect(() => {
+    if (editingIndex === null && !showForm) {
+      try {
+        const savedData = sessionStorage.getItem(STORAGE_KEY)
+        if (savedData) {
+          const parsed = JSON.parse(savedData)
+          
+          // Restore form data if it exists
+          if (parsed.lead_id !== undefined) setFormData(prev => ({ ...prev, lead_id: parsed.lead_id }))
+          if (parsed.qcn !== undefined) setFormData(prev => ({ ...prev, qcn: parsed.qcn }))
+          if (parsed.zip_code !== undefined) setFormData(prev => ({ ...prev, zip_code: parsed.zip_code }))
+          if (parsed.product_lines) setFormData(prev => ({ ...prev, product_lines: parsed.product_lines }))
+          if (parsed.quoted_premium !== undefined) setFormData(prev => ({ ...prev, quoted_premium: parsed.quoted_premium }))
+          if (parsed.lead_source_id) setFormData(prev => ({ ...prev, lead_source_id: parsed.lead_source_id }))
+          if (parsed.current_carrier) setFormData(prev => ({ ...prev, current_carrier: parsed.current_carrier }))
+          if (parsed.quick_action_status) setFormData(prev => ({ ...prev, quick_action_status: parsed.quick_action_status }))
+          if (parsed.items_sold !== undefined) setFormData(prev => ({ ...prev, items_sold: parsed.items_sold }))
+          if (parsed.notes) setFormData(prev => ({ ...prev, notes: parsed.notes }))
+          if (parsed.opted_into_hearsay !== undefined) setFormData(prev => ({ ...prev, opted_into_hearsay: parsed.opted_into_hearsay }))
+          
+          // Auto-open the form if there's saved data
+          if (canEdit) {
+            setShowForm(true)
+          }
+        }
+      } catch (error) {
+        console.error('Failed to load QHH form data from sessionStorage:', error)
+      }
+    }
+  }, [editingIndex, showForm, canEdit])
+
+  // Save to sessionStorage when formData changes (only for new quotes)
+  useEffect(() => {
+    if (editingIndex === null && showForm) {
+      try {
+        const dataToSave = {
+          lead_id: formData.lead_id,
+          qcn: formData.qcn,
+          zip_code: formData.zip_code,
+          product_lines: formData.product_lines,
+          quoted_premium: formData.quoted_premium,
+          lead_source_id: formData.lead_source_id,
+          current_carrier: formData.current_carrier,
+          quick_action_status: formData.quick_action_status,
+          items_sold: formData.items_sold,
+          notes: formData.notes,
+          opted_into_hearsay: formData.opted_into_hearsay,
+          timestamp: new Date().toISOString()
+        }
+        sessionStorage.setItem(STORAGE_KEY, JSON.stringify(dataToSave))
+      } catch (error) {
+        console.error('Failed to save QHH form data to sessionStorage:', error)
+      }
+    }
+  }, [formData, editingIndex, showForm])
+
   const resetForm = () => {
+    // Clear sessionStorage when form is reset
+    try {
+      sessionStorage.removeItem(STORAGE_KEY)
+    } catch (error) {
+      console.error('Failed to clear sessionStorage:', error)
+    }
+    
     setFormData({
       lead_id: '',
       qcn: '',
@@ -213,11 +279,24 @@ export const QuotedHouseholdForm: React.FC<QuotedHouseholdFormProps> = ({
       onEdit(editingIndex, formData)
     } else {
       onAdd(formData)
+      // Clear sessionStorage after successfully adding new quote
+      try {
+        sessionStorage.removeItem(STORAGE_KEY)
+      } catch (error) {
+        console.error('Failed to clear sessionStorage:', error)
+      }
     }
     resetForm()
   }
 
   const startEdit = (index: number) => {
+    // Clear any saved draft when editing an existing quote
+    try {
+      sessionStorage.removeItem(STORAGE_KEY)
+    } catch (error) {
+      console.error('Failed to clear sessionStorage:', error)
+    }
+    
     setFormData(quotedHouseholds[index])
     setEditingIndex(index)
     setShowForm(true)
