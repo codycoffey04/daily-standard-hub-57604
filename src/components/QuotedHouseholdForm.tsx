@@ -52,6 +52,7 @@ const CURRENT_CARRIER_OPTIONS = [
   'Nationwide',
   'Travelers',
   'American Family',
+  'American Modern',
   'USAA',
   // Regional (AL/GA)
   'Auto-Owners',
