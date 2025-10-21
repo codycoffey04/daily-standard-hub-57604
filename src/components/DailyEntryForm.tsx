@@ -12,6 +12,8 @@ import { Calendar, Lock, Save } from 'lucide-react'
 import { useSourcesForSelection, type Source } from '@/hooks/useSourcesForSelection'
 import { QuotedHouseholdForm, type QuotedHousehold } from './QuotedHouseholdForm'
 
+const STORAGE_KEY = 'dailyEntryFormData'
+
 interface DailyEntryFormProps {
   producerId: string
   existingEntry?: any
@@ -36,8 +38,58 @@ export const DailyEntryForm: React.FC<DailyEntryFormProps> = ({
   // Load all sources (including inactive) with proper "Other" sorting
   const { data: sources = [], isLoading: sourcesLoading } = useSourcesForSelection()
 
+  // Load from sessionStorage on mount (only for new entries)
+  useEffect(() => {
+    if (!existingEntry) {
+      try {
+        const savedData = sessionStorage.getItem(STORAGE_KEY)
+        if (savedData) {
+          const parsed = JSON.parse(savedData)
+          
+          if (parsed.outboundDials !== undefined) setOutboundDials(parsed.outboundDials)
+          if (parsed.talkMinutes !== undefined) setTalkMinutes(parsed.talkMinutes)
+          if (parsed.qhhTotal !== undefined) setQhhTotal(parsed.qhhTotal)
+          if (parsed.itemsSold !== undefined) setItemsSold(parsed.itemsSold)
+          if (parsed.salesMade !== undefined) setSalesMade(parsed.salesMade)
+          if (parsed.entryDate) setEntryDate(parsed.entryDate)
+          if (parsed.quotedHouseholds) setQuotedHouseholds(parsed.quotedHouseholds)
+        }
+      } catch (error) {
+        console.error('Failed to load form data from sessionStorage:', error)
+      }
+    }
+  }, [existingEntry])
+
+  // Save to sessionStorage when values change (only for new entries)
+  useEffect(() => {
+    if (!existingEntry) {
+      try {
+        const formData = {
+          outboundDials,
+          talkMinutes,
+          qhhTotal,
+          itemsSold,
+          salesMade,
+          entryDate,
+          quotedHouseholds,
+          timestamp: new Date().toISOString()
+        }
+        sessionStorage.setItem(STORAGE_KEY, JSON.stringify(formData))
+      } catch (error) {
+        console.error('Failed to save form data to sessionStorage:', error)
+      }
+    }
+  }, [outboundDials, talkMinutes, qhhTotal, itemsSold, salesMade, entryDate, quotedHouseholds, existingEntry])
+
   useEffect(() => {
     if (existingEntry) {
+      // Clear any saved draft when editing an existing entry
+      try {
+        sessionStorage.removeItem(STORAGE_KEY)
+      } catch (error) {
+        console.error('Failed to clear sessionStorage:', error)
+      }
+
       setEntryDate(existingEntry.entry_date)
       setOutboundDials(existingEntry.outbound_dials || 0)
       setTalkMinutes(existingEntry.talk_minutes || 0)
@@ -181,6 +233,13 @@ export const DailyEntryForm: React.FC<DailyEntryFormProps> = ({
         title: "Success",
         description: "Daily entry saved successfully"
       })
+
+      // Clear sessionStorage after successful save
+      try {
+        sessionStorage.removeItem(STORAGE_KEY)
+      } catch (error) {
+        console.error('Failed to clear sessionStorage:', error)
+      }
 
       onSubmitted()
       
