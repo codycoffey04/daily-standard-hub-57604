@@ -209,7 +209,7 @@ export const QHHDetailsCard: React.FC<QHHDetailsCardProps> = ({
                         </div>
 
                         {/* Summary Info */}
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm text-muted-foreground">
+                        <div className="grid grid-cols-2 md:grid-cols-6 gap-4 text-sm text-muted-foreground">
                           <div>
                             <span className="font-medium">Lines Quoted:</span> {qhh.lines_quoted}
                           </div>
@@ -222,6 +222,16 @@ export const QHHDetailsCard: React.FC<QHHDetailsCardProps> = ({
                           {qhh.current_carrier && (
                             <div>
                               <span className="font-medium">Carrier:</span> {qhh.current_carrier}
+                            </div>
+                          )}
+                          {qhh.lead_id && (
+                            <div>
+                              <span className="font-medium">Lead ID:</span> {qhh.lead_id}
+                            </div>
+                          )}
+                          {qhh.qcn && (
+                            <div>
+                              <span className="font-medium">QCN:</span> {qhh.qcn}
                             </div>
                           )}
                           <div className="flex items-center gap-1">
