@@ -141,55 +141,6 @@ export const DailyEntryForm: React.FC<DailyEntryFormProps> = ({
         entryId = data.id
       }
 
-      // Calculate source data from QHH entries
-      // - qhh: number of quoted households (1 per QHH record)
-      // - quotes: number of quote presentations (1 per QHH record, regardless of lines quoted)
-      // - items: reserved for future use (currently always 0)
-      const sourceBreakdown: Record<string, { qhh: number; quotes: number; items: number }> = {}
-      
-      // Initialize all sources with zero values
-      sources.forEach(source => {
-        sourceBreakdown[source.id] = { qhh: 0, quotes: 0, items: 0 }
-      })
-      
-      // Aggregate data from individual QHH entries
-      quotedHouseholds.forEach(qhh => {
-        if (qhh.lead_source_id && sourceBreakdown[qhh.lead_source_id]) {
-          sourceBreakdown[qhh.lead_source_id].qhh += 1
-          sourceBreakdown[qhh.lead_source_id].quotes += 1  // Count each QHH as one quote presentation
-        }
-      })
-
-      // Update source data in database
-      if (existingEntry) {
-        // Delete existing source entries
-        await supabase
-          .from('daily_entry_sources')
-          .delete()
-          .eq('daily_entry_id', entryId)
-      }
-
-      // Insert new source entries (only non-zero values)
-      const sourceEntries = sources
-        .filter(source => {
-          const data = sourceBreakdown[source.id]
-          return data.qhh > 0 || data.quotes > 0 || data.items > 0
-        })
-        .map(source => ({
-          daily_entry_id: entryId,
-          source_id: source.id,
-          qhh: sourceBreakdown[source.id].qhh,
-          quotes: sourceBreakdown[source.id].quotes,
-          items: sourceBreakdown[source.id].items
-        }))
-
-      if (sourceEntries.length > 0) {
-        const { error: sourceError } = await supabase
-          .from('daily_entry_sources')
-          .insert(sourceEntries)
-
-        if (sourceError) throw sourceError
-      }
 
       // Save quoted households
       if (quotedHouseholds.length > 0) {

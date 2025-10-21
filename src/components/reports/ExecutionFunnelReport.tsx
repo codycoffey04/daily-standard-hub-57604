@@ -360,7 +360,7 @@ export const ExecutionFunnelReport: React.FC<ExecutionFunnelReportProps> = () =>
       <Card>
         <CardHeader>
           <CardTitle>Performance Benchmarks by Source</CardTitle>
-          <CardDescription>Industry-standard performance thresholds by lead source</CardDescription>
+          <CardDescription>Dynamic percentile-based thresholds (50th = Normal, 75th = Excellent)</CardDescription>
         </CardHeader>
         <CardContent>
           {isBenchmarksLoading ? (
