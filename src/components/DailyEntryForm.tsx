@@ -11,6 +11,7 @@ import { toast } from '@/hooks/use-toast'
 import { Calendar, Lock, Save } from 'lucide-react'
 import { useSourcesForSelection, type Source } from '@/hooks/useSourcesForSelection'
 import { QuotedHouseholdForm, type QuotedHousehold } from './QuotedHouseholdForm'
+import { SaleFromOldQuoteForm, type SaleFromOldQuote } from './SaleFromOldQuoteForm'
 
 const STORAGE_KEY = 'dailyEntryFormData'
 
@@ -34,6 +35,7 @@ export const DailyEntryForm: React.FC<DailyEntryFormProps> = ({
   const [salesMade, setSalesMade] = useState(0)
   const [validationError, setValidationError] = useState('')
   const [quotedHouseholds, setQuotedHouseholds] = useState<QuotedHousehold[]>([])
+  const [salesFromOldQuotes, setSalesFromOldQuotes] = useState<SaleFromOldQuote[]>([])
 
   // Load all sources (including inactive) with proper "Other" sorting
   const { data: sources = [], isLoading: sourcesLoading } = useSourcesForSelection()
@@ -53,6 +55,7 @@ export const DailyEntryForm: React.FC<DailyEntryFormProps> = ({
           if (parsed.salesMade !== undefined) setSalesMade(parsed.salesMade)
           if (parsed.entryDate) setEntryDate(parsed.entryDate)
           if (parsed.quotedHouseholds) setQuotedHouseholds(parsed.quotedHouseholds)
+          if (parsed.salesFromOldQuotes) setSalesFromOldQuotes(parsed.salesFromOldQuotes)
         }
       } catch (error) {
         console.error('Failed to load form data from sessionStorage:', error)
@@ -72,6 +75,7 @@ export const DailyEntryForm: React.FC<DailyEntryFormProps> = ({
           salesMade,
           entryDate,
           quotedHouseholds,
+          salesFromOldQuotes,
           timestamp: new Date().toISOString()
         }
         sessionStorage.setItem(STORAGE_KEY, JSON.stringify(formData))
@@ -79,7 +83,7 @@ export const DailyEntryForm: React.FC<DailyEntryFormProps> = ({
         console.error('Failed to save form data to sessionStorage:', error)
       }
     }
-  }, [outboundDials, talkMinutes, qhhTotal, itemsSold, salesMade, entryDate, quotedHouseholds, existingEntry])
+  }, [outboundDials, talkMinutes, qhhTotal, itemsSold, salesMade, entryDate, quotedHouseholds, salesFromOldQuotes, existingEntry])
 
   // Save current form state to sessionStorage (for event listeners)
   const saveToSessionStorage = useCallback(() => {
@@ -93,6 +97,7 @@ export const DailyEntryForm: React.FC<DailyEntryFormProps> = ({
           salesMade,
           entryDate,
           quotedHouseholds,
+          salesFromOldQuotes,
           timestamp: new Date().toISOString()
         }
         sessionStorage.setItem(STORAGE_KEY, JSON.stringify(formData))
@@ -100,7 +105,7 @@ export const DailyEntryForm: React.FC<DailyEntryFormProps> = ({
         console.error('Failed to save form data to sessionStorage:', error)
       }
     }
-  }, [outboundDials, talkMinutes, qhhTotal, itemsSold, salesMade, entryDate, quotedHouseholds, existingEntry])
+  }, [outboundDials, talkMinutes, qhhTotal, itemsSold, salesMade, entryDate, quotedHouseholds, salesFromOldQuotes, existingEntry])
 
   // Add event listeners to save on window blur, visibility change, and before unload
   useEffect(() => {
@@ -159,6 +164,19 @@ export const DailyEntryForm: React.FC<DailyEntryFormProps> = ({
         }
       }
       loadQuotedHouseholds()
+
+      // Load existing sales from old quotes
+      const loadSalesFromOldQuotes = async () => {
+        const { data: salesData } = await (supabase as any)
+          .from('sales_from_old_quotes')
+          .select('*')
+          .eq('daily_entry_id', existingEntry.id)
+        
+        if (salesData) {
+          setSalesFromOldQuotes(salesData as SaleFromOldQuote[])
+        }
+      }
+      loadSalesFromOldQuotes()
     }
   }, [existingEntry])
 
@@ -268,6 +286,52 @@ export const DailyEntryForm: React.FC<DailyEntryFormProps> = ({
         if (qhhError) throw qhhError
       }
 
+      // Save sales from old quotes using UPSERT pattern
+      if (salesFromOldQuotes.length > 0) {
+        // First, get existing sales to determine what to delete
+        const { data: existingSales } = await (supabase as any)
+          .from('sales_from_old_quotes')
+          .select('id')
+          .eq('daily_entry_id', entryId)
+
+        const existingIds = existingSales?.map((s: any) => s.id) || []
+        const currentIds = salesFromOldQuotes.filter(s => s.id).map(s => s.id!)
+
+        // Delete removed sales
+        const idsToDelete = existingIds.filter((id: string) => !currentIds.includes(id))
+        if (idsToDelete.length > 0) {
+          await (supabase as any)
+            .from('sales_from_old_quotes')
+            .delete()
+            .in('id', idsToDelete)
+        }
+
+        // Upsert all sales (insert new, update existing)
+        const salesEntries = salesFromOldQuotes.map(sale => ({
+          ...(sale.id && { id: sale.id }), // Include id if editing
+          daily_entry_id: entryId,
+          lead_source_id: sale.lead_source_id,
+          items_sold: sale.items_sold,
+          premium: sale.premium,
+          notes: sale.notes || null,
+          created_by: user.id
+        }))
+
+        const { error: salesError } = await (supabase as any)
+          .from('sales_from_old_quotes')
+          .upsert(salesEntries, {
+            onConflict: 'id'
+          })
+
+        if (salesError) throw salesError
+      } else if (existingEntry) {
+        // If no sales in form but entry exists, delete all sales
+        await (supabase as any)
+          .from('sales_from_old_quotes')
+          .delete()
+          .eq('daily_entry_id', entryId)
+      }
+
       toast({
         title: "Success",
         description: "Daily entry saved successfully"
@@ -319,6 +383,19 @@ export const DailyEntryForm: React.FC<DailyEntryFormProps> = ({
 
   const handleDeleteQHH = (index: number) => {
     setQuotedHouseholds(prev => prev.filter((_, i) => i !== index))
+  }
+
+  // Sales from old quotes handlers
+  const handleAddSaleFromOldQuote = (sale: SaleFromOldQuote) => {
+    setSalesFromOldQuotes(prev => [...prev, sale])
+  }
+
+  const handleEditSaleFromOldQuote = (index: number, sale: SaleFromOldQuote) => {
+    setSalesFromOldQuotes(prev => prev.map((item, i) => i === index ? sale : item))
+  }
+
+  const handleDeleteSaleFromOldQuote = (index: number) => {
+    setSalesFromOldQuotes(prev => prev.filter((_, i) => i !== index))
   }
 
   return (
@@ -415,6 +492,40 @@ export const DailyEntryForm: React.FC<DailyEntryFormProps> = ({
                   disabled={!canEdit}
                 />
               </div>
+              
+              {/* Items Breakdown - shows calculation for framework */}
+              {(quotedHouseholds.length > 0 || salesFromOldQuotes.length > 0) && (
+                <div className="col-span-full">
+                  <div className="text-sm bg-muted/50 p-3 rounded-md space-y-1">
+                    <p className="font-medium">Items Breakdown for Framework:</p>
+                    <ul className="list-disc list-inside pl-2 space-y-0.5">
+                      <li>
+                        From today's QHH entries: {
+                          quotedHouseholds
+                            .filter(q => q.quick_action_status === 'SOLD')
+                            .reduce((sum, q) => sum + (q.items_sold || 0), 0)
+                        } items
+                      </li>
+                      <li>
+                        From old quotes closing today: {
+                          salesFromOldQuotes.reduce((sum, s) => sum + s.items_sold, 0)
+                        } items
+                      </li>
+                      <li className="font-medium text-primary">
+                        Total calculated for framework: {
+                          quotedHouseholds
+                            .filter(q => q.quick_action_status === 'SOLD')
+                            .reduce((sum, q) => sum + (q.items_sold || 0), 0) +
+                          salesFromOldQuotes.reduce((sum, s) => sum + s.items_sold, 0)
+                        } items
+                      </li>
+                    </ul>
+                    <p className="text-xs text-muted-foreground mt-2">
+                      Note: Framework status uses calculated_items_total (both sources combined)
+                    </p>
+                  </div>
+                </div>
+              )}
               <div className="space-y-2">
                 <Label htmlFor="sales-made">Policies Sold</Label>
                 <Input
@@ -443,6 +554,16 @@ export const DailyEntryForm: React.FC<DailyEntryFormProps> = ({
               canEdit={canEdit}
             />
           )}
+
+          {/* Sales from Old Quotes Section */}
+          <SaleFromOldQuoteForm
+            salesFromOldQuotes={salesFromOldQuotes}
+            onAdd={handleAddSaleFromOldQuote}
+            onEdit={handleEditSaleFromOldQuote}
+            onDelete={handleDeleteSaleFromOldQuote}
+            sources={sources}
+            canEdit={canEdit}
+          />
 
 
           {canEdit && (
