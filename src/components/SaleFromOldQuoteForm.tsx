@@ -292,11 +292,11 @@ export const SaleFromOldQuoteForm: React.FC<SaleFromOldQuoteFormProps> = ({
                   id="old-notes"
                   value={formData.notes || ''}
                   onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
-                  placeholder="Customer name, original quote date, or other reference info..."
+                  placeholder="Policy number, original quote date, or other reference info..."
                   rows={2}
                 />
                 <p className="text-xs text-muted-foreground">
-                  Add context like customer name or when they were originally quoted
+                  Add context like policy number or when they were originally quoted
                 </p>
               </div>
 
