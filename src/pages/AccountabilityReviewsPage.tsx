@@ -43,12 +43,7 @@ export const AccountabilityReviewsPage = () => {
     try {
       setIsLoading(true)
       
-      // Get today's date in the database timezone (start of day)
-      const todayStart = new Date()
-      todayStart.setHours(0, 0, 0, 0)
-      const todayStartISO = todayStart.toISOString()
-      
-      // Fetch daily entries that need accountability review (submitted today)
+      // Fetch all daily entries to check for accountability reviews
       const { data: entries, error } = await supabase
         .from('daily_entries')
         .select(`
@@ -64,7 +59,6 @@ export const AccountabilityReviewsPage = () => {
             display_name
           )
         `)
-        .gte('created_at', todayStartISO)
         .order('created_at', { ascending: false })
 
       if (error) {
@@ -125,7 +119,7 @@ export const AccountabilityReviewsPage = () => {
             Accountability Reviews
           </h1>
           <p className="text-muted-foreground">
-            Review today's producer entries and provide coaching feedback
+            Review pending producer entries and provide coaching feedback
           </p>
         </div>
 
