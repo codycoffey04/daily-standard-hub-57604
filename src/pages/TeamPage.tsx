@@ -21,25 +21,9 @@ const TeamPage: React.FC = () => {
   const loadTeamMetrics = async () => {
     setLoading(true)
     try {
-      console.log('🔍 Selected Month:', selectedMonth, 'Year:', selectedYear)
+      console.log('🔍 Calling mtd_producer_metrics without date parameter')
       
-      // If viewing current month, use today's date; otherwise use last day of month
-      const today = new Date()
-      const isCurrentMonth = selectedMonth === today.getMonth() + 1 && 
-                            selectedYear === today.getFullYear()
-      
-      const targetDate = isCurrentMonth 
-        ? today 
-        : new Date(selectedYear, selectedMonth, 0) // Last day of selected month
-      
-      const selectedDate = targetDate.toISOString().split('T')[0]
-      
-      console.log('🔍 Calculated date object:', targetDate)
-      console.log('🔍 Passing to RPC:', selectedDate)
-      
-      const { data, error } = await supabase.rpc('mtd_producer_metrics', { 
-        d: selectedDate 
-      })
+      const { data, error } = await supabase.rpc('mtd_producer_metrics')
       
       console.log('🔍 RPC returned data:', data)
       
@@ -68,8 +52,8 @@ const TeamPage: React.FC = () => {
           </p>
         </div>
 
-        {/* Month/Year Filters */}
-        <Card className="mb-6">
+        {/* Month/Year Filters - Temporarily hidden until RPC date parameter issue is resolved */}
+        {/* <Card className="mb-6">
           <CardHeader>
             <CardTitle className="flex items-center space-x-2">
               <Calendar className="h-5 w-5" />
@@ -105,7 +89,7 @@ const TeamPage: React.FC = () => {
               </div>
             </div>
           </CardContent>
-        </Card>
+        </Card> */}
 
         {/* Team Leaderboard */}
         <Leaderboard 
