@@ -21,13 +21,27 @@ const TeamPage: React.FC = () => {
   const loadTeamMetrics = async () => {
     setLoading(true)
     try {
-      // Get the last day of the selected month for complete month data
-      const lastDayOfMonth = new Date(selectedYear, selectedMonth, 0)
-      const selectedDate = lastDayOfMonth.toISOString().split('T')[0]
+      console.log('🔍 Selected Month:', selectedMonth, 'Year:', selectedYear)
+      
+      // If viewing current month, use today's date; otherwise use last day of month
+      const today = new Date()
+      const isCurrentMonth = selectedMonth === today.getMonth() + 1 && 
+                            selectedYear === today.getFullYear()
+      
+      const targetDate = isCurrentMonth 
+        ? today 
+        : new Date(selectedYear, selectedMonth, 0) // Last day of selected month
+      
+      const selectedDate = targetDate.toISOString().split('T')[0]
+      
+      console.log('🔍 Calculated date object:', targetDate)
+      console.log('🔍 Passing to RPC:', selectedDate)
       
       const { data, error } = await supabase.rpc('mtd_producer_metrics', { 
         d: selectedDate 
       })
+      
+      console.log('🔍 RPC returned data:', data)
       
       if (error) {
         console.error('Error loading team metrics:', error)
