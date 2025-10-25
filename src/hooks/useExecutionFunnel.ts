@@ -187,19 +187,29 @@ export const useExecutionBenchmarks = (
       }
 
       // Transform the data to match ExecutionBenchmark interface
-      const benchmarks: ExecutionBenchmark[] = (benchmarkData as any[]).map(row => ({
-        source_id: row.source_id,
-        source_name: row.source_name,
-        total_producers: Number(row.total_producers) || 0,
-        quote_rate_normal: Number(row.quote_bench_normal) || 0,
-        quote_rate_excellent: Number(row.quote_bench_excellent) || 0,
-        close_rate_normal: Number(row.close_bench_normal) || 0,
-        close_rate_excellent: Number(row.close_bench_excellent) || 0,
-        attach_rate_normal: Number(row.attach_bench_normal) || 0,
-        attach_rate_excellent: Number(row.attach_bench_excellent) || 0,
-      }));
+      const benchmarks: ExecutionBenchmark[] = (benchmarkData as any[]).map((row, index) => {
+        // Debug: log the first row to see actual field names
+        if (index === 0) {
+          console.log('🔍 First benchmark row structure:', row);
+          console.log('🔍 Available fields:', Object.keys(row));
+        }
+        
+        return {
+          source_id: row.source_id,
+          source_name: row.source_name,
+          total_producers: parseInt(row.total_producers) || 0,
+          // Try multiple possible field name patterns
+          quote_rate_normal: parseFloat(row.quote_rate_normal || row.quote_bench_normal || row.normal_quote_rate) || 0,
+          quote_rate_excellent: parseFloat(row.quote_rate_excellent || row.quote_bench_excellent || row.excellent_quote_rate) || 0,
+          close_rate_normal: parseFloat(row.close_rate_normal || row.close_bench_normal || row.normal_close_rate) || 0,
+          close_rate_excellent: parseFloat(row.close_rate_excellent || row.close_bench_excellent || row.excellent_close_rate) || 0,
+          attach_rate_normal: parseFloat(row.attach_rate_normal || row.attach_bench_normal || row.normal_attach_rate) || 0,
+          attach_rate_excellent: parseFloat(row.attach_rate_excellent || row.attach_bench_excellent || row.excellent_attach_rate) || 0,
+        };
+      });
 
       console.log('✅ Fetched benchmarks for', benchmarks.length, 'sources in ONE call');
+      console.log('📊 Sample benchmark values:', benchmarks[0]);
       console.log('Sources:', benchmarks.map(b => b.source_name).join(', '));
       
       return benchmarks;
