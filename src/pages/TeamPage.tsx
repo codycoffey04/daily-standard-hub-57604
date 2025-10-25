@@ -21,11 +21,17 @@ const TeamPage: React.FC = () => {
   const loadTeamMetrics = async () => {
     setLoading(true)
     try {
-      console.log('🔍 Calling mtd_producer_metrics without date parameter')
+      // Pass explicit date to get full month data (e.g., last day of current month)
+      const now = new Date()
+      const lastDayOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0)
+      const dateParam = lastDayOfMonth.toISOString().split('T')[0]
       
-      const { data, error } = await supabase.rpc('mtd_producer_metrics')
+      console.log('🔍 Calling mtd_producer_metrics with date:', dateParam)
+      
+      const { data, error } = await supabase.rpc('mtd_producer_metrics', { d: dateParam })
       
       console.log('🔍 RPC returned data:', data)
+      console.log('🔍 Sales totals:', data?.map(p => ({ name: p.producer_name, sales: p.sales })))
       
       if (error) {
         console.error('Error loading team metrics:', error)

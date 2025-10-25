@@ -417,7 +417,13 @@ function MultiLineChart({
   const H = 160;   // virtual height
   const P = 20;    // padding
 
+  // Handle single month case by centering the data point
   const xStep = months.length > 1 ? (W - 2 * P) / (months.length - 1) : 0;
+  const getX = (i: number) => {
+    if (months.length === 1) return W / 2; // Center for single month
+    return P + i * xStep;
+  };
+  
   const yScale = (v: number) => {
     const clamped = Math.max(0, v);
     return H - P - (clamped / max) * (H - 2 * P);
@@ -432,7 +438,7 @@ function MultiLineChart({
 
         {/* Month ticks */}
         {months.map((m, i) => {
-          const x = P + i * xStep;
+          const x = getX(i);
           return (
             <g key={m}>
               <line x1={x} y1={H - P} x2={x} y2={H - P + 4} stroke="#e5e7eb" />
@@ -444,7 +450,7 @@ function MultiLineChart({
         {/* Lines */}
         {series.map((s) => {
           const d = s.data.map((v, i) => {
-            const x = P + i * xStep;
+            const x = getX(i);
             const y = yScale(v);
             return `${i === 0 ? "M" : "L"} ${x} ${y}`;
           }).join(" ");
@@ -453,7 +459,7 @@ function MultiLineChart({
             <g key={s.label}>
               <path d={d} fill="none" stroke={s.color} strokeWidth={2} />
               {s.data.map((v, i) => {
-                const x = P + i * xStep;
+                const x = getX(i);
                 const y = yScale(v);
                 return <circle key={i} cx={x} cy={y} r={2.5} fill={s.color} />;
               })}
