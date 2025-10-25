@@ -46,21 +46,29 @@ export const useMonthlySummary = (year: number, month: number | null) => {
 
       const { data, error } = await supabase.rpc('get_monthly_summary' as any, {
         target_month: targetMonth
-      }) as { data: MonthlySummaryData | null, error: any }
+      }) as { data: MonthlySummaryData[] | null, error: any }
 
       console.log('📊 Monthly summary data received:', data)
-      console.log('  Total QHH:', data?.total_qhh)
-      console.log('  Total Quotes:', data?.total_quotes)
-      console.log('  Total Dials:', data?.total_dials)
-      console.log('  Total Talk Minutes:', data?.total_talk_minutes)
+      console.log('  Is Array:', Array.isArray(data))
+      console.log('  Array length:', data?.length)
+      console.log('  First item:', data?.[0])
 
       if (error) {
         console.error('❌ Error from get_monthly_summary:', error)
         throw error
       }
-      
-      // Return single object, not array
-      return data || {
+
+      // Access first element of the array
+      const summaryData = data && data.length > 0 ? data[0] : null
+
+      console.log('  Extracted summaryData:', summaryData)
+      console.log('  Total QHH:', summaryData?.total_qhh)
+      console.log('  Total Quotes:', summaryData?.total_quotes)
+      console.log('  Total Dials:', summaryData?.total_dials)
+      console.log('  Total Talk Minutes:', summaryData?.total_talk_minutes)
+
+      // Return single object (first element of array)
+      return summaryData || {
         month_date: targetMonth,
         month_name: '',
         total_qhh: 0,
