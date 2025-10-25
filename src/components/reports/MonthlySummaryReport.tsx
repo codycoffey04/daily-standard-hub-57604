@@ -13,8 +13,12 @@ interface MonthlySummaryReportProps {
 }
 
 const MonthlySummaryReport: React.FC<MonthlySummaryReportProps> = ({ selectedYear, selectedMonth }) => {
+  console.log('📊 === MonthlySummaryReport RENDERING ===')
+  console.log('  Props - selectedYear:', selectedYear, 'selectedMonth:', selectedMonth)
 
   const { data: summaryData, isLoading, error } = useMonthlySummary(selectedYear, selectedMonth)
+  
+  console.log('  Hook returned - isLoading:', isLoading, 'hasData:', !!summaryData, 'hasError:', !!error)
 
   React.useEffect(() => {
     if (summaryData) {

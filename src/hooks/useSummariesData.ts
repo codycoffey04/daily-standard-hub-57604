@@ -108,11 +108,14 @@ export function useQHHBySource(year: number, month: number | null) {
     queryFn: async (): Promise<QHHBySourceData[]> => {
       const { startDate } = getDateRange(year, month)
       
-      console.log('🔍 useQHHBySource called with:')
-      console.log('  Year:', year)
-      console.log('  Month:', month)
+      console.log('🔍 === QHH BY SOURCE RPC CALL ===')
+      console.log('  Input - year:', year, 'month:', month)
       console.log('  Calculated startDate:', startDate)
-      console.log('  Calling get_top_sources_by_month with target_month:', startDate)
+      console.log('  Exact RPC params:', JSON.stringify({ 
+        target_month: startDate, 
+        metric_type: 'qhh' 
+      }, null, 2))
+      console.log('  About to call: supabase.rpc("get_top_sources_by_month", {...})')
       
       const { data, error } = await supabase.rpc(
         'get_top_sources_by_month' as any,
@@ -122,7 +125,7 @@ export function useQHHBySource(year: number, month: number | null) {
         }
       )
       
-      console.log('📊 get_top_sources_by_month response:')
+      console.log('📊 === QHH BY SOURCE RPC RESPONSE ===')
       console.log('  Data:', data)
       console.log('  Error:', error)
       console.log('  Row count:', data?.length || 0)

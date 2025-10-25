@@ -38,7 +38,11 @@ export const useMonthlySummary = (year: number, month: number | null) => {
         ? `${year}-${String(month).padStart(2, '0')}-01`
         : `${year}-01-01`
 
-      console.log('📅 Calling get_monthly_summary with target_month:', targetMonth)
+      console.log('📅 === MONTHLY SUMMARY RPC CALL ===')
+      console.log('  Input - year:', year, 'month:', month)
+      console.log('  Calculated targetMonth:', targetMonth)
+      console.log('  Exact RPC params:', JSON.stringify({ target_month: targetMonth }, null, 2))
+      console.log('  About to call: supabase.rpc("get_monthly_summary", {...})')
 
       const { data, error } = await supabase.rpc('get_monthly_summary' as any, {
         target_month: targetMonth

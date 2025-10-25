@@ -16,7 +16,13 @@ export const QHHBySourceReport: React.FC<QHHBySourceReportProps> = ({
   selectedYear,
   selectedMonth
 }) => {
+  console.log('🎯 === QHHBySourceReport RENDERING ===')
+  console.log('  Props - selectedYear:', selectedYear, 'selectedMonth:', selectedMonth)
+  
   const { data, isLoading, error } = useQHHBySource(selectedYear, selectedMonth)
+  
+  console.log('  Hook returned - isLoading:', isLoading, 'hasData:', !!data, 'hasError:', !!error)
+  if (data) console.log('  Data rows:', data.length)
 
   if (isLoading) {
     return (
