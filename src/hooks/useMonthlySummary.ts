@@ -29,38 +29,44 @@ export interface TopSourceData {
 
 export const useMonthlySummary = (year: number, month: number | null) => {
   return useQuery({
-    queryKey: ['monthly-summary-v2', year, month],
-    staleTime: 0, // Force fresh fetch every time
-    gcTime: 0, // Don't cache results
-    queryFn: async (): Promise<MonthlySummaryData[]> => {
-      let fromDate: string
-      let toDate: string
+    queryKey: ['monthly-summary-v3', year, month],
+    staleTime: 0,
+    gcTime: 0,
+    queryFn: async (): Promise<MonthlySummaryData> => {
+      // Calculate the target month date (first day of month)
+      const targetMonth = month 
+        ? `${year}-${String(month).padStart(2, '0')}-01`
+        : `${year}-01-01`
 
-      if (month) {
-        // Specific month selected
-        fromDate = `${year}-${String(month).padStart(2, '0')}-01`
-        const lastDay = new Date(year, month, 0).getDate()
-        toDate = `${year}-${String(month).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`
-      } else {
-        // Entire year - show full year when no month selected
-        fromDate = `${year}-01-01`
-        toDate = `${year}-12-31`
-      }
+      console.log('📅 Calling get_monthly_summary with target_month:', targetMonth)
 
       const { data, error } = await supabase.rpc('get_monthly_summary' as any, {
-        from_date: fromDate,
-        to_date: toDate
-      }) as { data: MonthlySummaryData[] | null, error: any }
+        target_month: targetMonth
+      }) as { data: MonthlySummaryData | null, error: any }
 
-      console.log('📅 Date range being queried:', { fromDate, toDate })
       console.log('📊 Monthly summary data received:', data)
-      console.log('📊 Number of months:', data?.length)
-      console.log('📊 First row:', data?.[0])
-      console.log('🔢 TOTAL_QUOTES CHECK:', data?.[0]?.total_quotes)
-      console.log('📊 All month_date values:', data?.map(d => d.month_date))
+      console.log('  Total QHH:', data?.total_qhh)
+      console.log('  Total Quotes:', data?.total_quotes)
+      console.log('  Total Dials:', data?.total_dials)
+      console.log('  Total Talk Minutes:', data?.total_talk_minutes)
 
-      if (error) throw error
-      return data || []
+      if (error) {
+        console.error('❌ Error from get_monthly_summary:', error)
+        throw error
+      }
+      
+      // Return single object, not array
+      return data || {
+        month_date: targetMonth,
+        month_name: '',
+        total_qhh: 0,
+        total_quotes: 0,
+        total_dials: 0,
+        total_talk_minutes: 0,
+        framework_compliance_pct: 0,
+        avg_qhh_per_producer: 0,
+        avg_quotes_per_producer: 0
+      }
     }
   })
 }
