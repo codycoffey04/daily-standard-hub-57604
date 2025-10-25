@@ -150,9 +150,9 @@ export const useExecutionFunnel = (
 export const useExecutionBenchmarks = (
   fromDate: string,
   toDate: string,
-  minPairQHH: number = 1,
+  minPairQHH: number = 10,
   minPairSHH: number = 0,
-  minPairDials: number = 0
+  minPairDials: number = 100
 ) => {
   return useQuery({
     queryKey: ['execution-benchmarks-v2', fromDate, toDate, minPairQHH, minPairSHH, minPairDials],
