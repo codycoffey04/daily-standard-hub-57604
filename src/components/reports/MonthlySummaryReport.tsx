@@ -54,7 +54,7 @@ const MonthlySummaryReport: React.FC<MonthlySummaryReportProps> = ({ selectedYea
     const totalQuotes = summaryData.total_quotes || 0
     const avgFramework = summaryData.framework_compliance_pct || 0
     const totalDials = summaryData.total_dials || 0
-    const totalTalkMins = summaryData.total_talk_minutes || 0
+    const totalTalkMins = summaryData.total_talk_time || 0
     const totalTalkTimeHrs = Math.round(totalTalkMins / 60)
     const avgQuotesPerHH = totalQHH > 0 ? (totalQuotes / totalQHH) : 0
 

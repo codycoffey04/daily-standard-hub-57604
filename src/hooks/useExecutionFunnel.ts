@@ -196,6 +196,18 @@ export const useExecutionBenchmarks = (
       const benchmarks: ExecutionBenchmark[] = [];
 
       for (const [sourceId, producerSet] of Object.entries(sourceGroups)) {
+        // Debug logging for RPC call
+        console.log('📊 === EXECUTION BENCHMARKS RPC CALL ===')
+        console.log('  Source ID:', sourceId, 'Type:', typeof sourceId)
+        console.log('  Exact params:', JSON.stringify({
+          from_date: fromDate,
+          to_date: toDate,
+          source_filter: sourceId,
+          min_pair_qhh: minPairQHH,
+          min_pair_shh: minPairSHH,
+          min_pair_dials: minPairDials
+        }, null, 2))
+
         // Call the database function to get dynamic percentile-based benchmarks
         const { data: benchmarkData, error: benchmarkError } = await supabase
           .rpc('get_execution_benchmarks_by_source' as any, {

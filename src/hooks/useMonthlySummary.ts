@@ -8,7 +8,7 @@ export interface MonthlySummaryData {
   total_qhh: number
   total_quotes: number
   total_dials: number
-  total_talk_minutes: number
+  total_talk_time: number
   framework_compliance_pct: number
   avg_qhh_per_producer: number
   avg_quotes_per_producer: number
@@ -33,19 +33,24 @@ export const useMonthlySummary = (year: number, month: number | null) => {
     staleTime: 0,
     gcTime: 0,
     queryFn: async (): Promise<MonthlySummaryData> => {
-      // Calculate the target month date (first day of month)
-      const targetMonth = month 
+      // Calculate the date range (first and last day of month)
+      const fromDate = month 
         ? `${year}-${String(month).padStart(2, '0')}-01`
         : `${year}-01-01`
+      
+      const toDate = month
+        ? `${year}-${String(month).padStart(2, '0')}-${new Date(year, month, 0).getDate()}`
+        : `${year}-12-31`
 
       console.log('📅 === MONTHLY SUMMARY RPC CALL ===')
       console.log('  Input - year:', year, 'month:', month)
-      console.log('  Calculated targetMonth:', targetMonth)
-      console.log('  Exact RPC params:', JSON.stringify({ target_month: targetMonth }, null, 2))
+      console.log('  Calculated fromDate:', fromDate, 'toDate:', toDate)
+      console.log('  Exact RPC params:', JSON.stringify({ from_date: fromDate, to_date: toDate }, null, 2))
       console.log('  About to call: supabase.rpc("get_monthly_summary", {...})')
 
       const { data, error } = await supabase.rpc('get_monthly_summary' as any, {
-        target_month: targetMonth
+        from_date: fromDate,
+        to_date: toDate
       }) as { data: MonthlySummaryData[] | null, error: any }
 
       console.log('📊 Monthly summary data received:', data)
@@ -65,16 +70,16 @@ export const useMonthlySummary = (year: number, month: number | null) => {
       console.log('  Total QHH:', summaryData?.total_qhh)
       console.log('  Total Quotes:', summaryData?.total_quotes)
       console.log('  Total Dials:', summaryData?.total_dials)
-      console.log('  Total Talk Minutes:', summaryData?.total_talk_minutes)
+      console.log('  Total Talk Time:', summaryData?.total_talk_time)
 
       // Return single object (first element of array)
       return summaryData || {
-        month_date: targetMonth,
+        month_date: fromDate,
         month_name: '',
         total_qhh: 0,
         total_quotes: 0,
         total_dials: 0,
-        total_talk_minutes: 0,
+        total_talk_time: 0,
         framework_compliance_pct: 0,
         avg_qhh_per_producer: 0,
         avg_quotes_per_producer: 0
