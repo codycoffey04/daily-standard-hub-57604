@@ -155,101 +155,53 @@ export const useExecutionBenchmarks = (
   minPairDials: number = 100
 ) => {
   return useQuery({
-    queryKey: ['execution-benchmarks-v2', fromDate, toDate, minPairQHH, minPairSHH, minPairDials],
+    queryKey: ['execution-benchmarks-unified', fromDate, toDate, minPairQHH, minPairSHH, minPairDials],
     queryFn: async (): Promise<ExecutionBenchmark[]> => {
-      // Extract month_ym from fromDate (format: YYYY-MM-DD -> YYYY-MM)
-      const monthYm = fromDate.substring(0, 7) // '2025-10-15' -> '2025-10'
+      // Use toDate for month_ym (represents the period being analyzed)
+      const monthYm = toDate.substring(0, 7) // '2025-10-25' -> '2025-10'
 
-      console.log('📊 === EXECUTION BENCHMARKS RPC CALL (NEW) ===')
-      console.log('  Original dates - from:', fromDate, 'to:', toDate)
-      console.log('  Extracted month_ym:', monthYm)
+      console.log('📊 === EXECUTION BENCHMARKS RPC CALL (UNIFIED) ===')
+      console.log('  Date range - from:', fromDate, 'to:', toDate)
+      console.log('  Using month_ym:', monthYm)
+      console.log('  Thresholds:', { minPairQHH, minPairSHH, minPairDials })
+      console.log('  source_filter: null (ALL SOURCES)')
 
-      // Fetch all source IDs that have data
-      const { data: rollupData, error: rollupError } = await supabase
-        .from('producer_day_source_rollup' as any)
-        .select('source_id, producer_id')
-        .gte('entry_date', fromDate)
-        .lte('entry_date', toDate);
-
-      if (rollupError) {
-        console.error('❌ Error fetching source rollup:', rollupError);
-        throw rollupError;
-      }
-
-      if (!rollupData || rollupData.length === 0) return [];
-
-      // Fetch source names
-      const { data: sources, error: sourcesError } = await supabase
-        .from('sources')
-        .select('id, name');
-
-      if (sourcesError) {
-        console.error('❌ Error fetching sources:', sourcesError);
-        throw sourcesError;
-      }
-
-      const sourceMap = new Map(sources?.map(s => [s.id, s.name]) || []);
-
-      // Group by source to get unique sources with producer counts
-      const sourceGroups: Record<string, Set<string>> = {};
-      rollupData.forEach((row: any) => {
-        if (!sourceGroups[row.source_id]) {
-          sourceGroups[row.source_id] = new Set();
-        }
-        sourceGroups[row.source_id].add(row.producer_id);
-      });
-
-      // Calculate dynamic benchmarks for each source
-      const benchmarks: ExecutionBenchmark[] = [];
-
-      for (const [sourceId, producerSet] of Object.entries(sourceGroups)) {
-        console.log('  Processing source:', sourceId, 'with', producerSet.size, 'producers')
-        console.log('  RPC params:', JSON.stringify({
+      // Make ONE RPC call for ALL sources
+      const { data: benchmarkData, error: benchmarkError } = await supabase
+        .rpc('rpc_get_execution_benchmarks_by_source' as any, {
           month_ym: monthYm,
-          source_filter: sourceId,
+          source_filter: null,  // ← NULL to get all sources at once
           min_pair_qhh: minPairQHH,
           min_pair_shh: minPairSHH,
           min_pair_dials: minPairDials
-        }, null, 2))
-
-        // Call the NEW database function with month_ym
-        const { data: benchmarkData, error: benchmarkError } = await supabase
-          .rpc('rpc_get_execution_benchmarks_by_source' as any, {
-            month_ym: monthYm,
-            source_filter: sourceId,
-            min_pair_qhh: minPairQHH,
-            min_pair_shh: minPairSHH,
-            min_pair_dials: minPairDials
-          });
-
-        if (benchmarkError) {
-          console.error(`❌ Error fetching benchmarks for source ${sourceId}:`, benchmarkError);
-          continue;
-        }
-
-        // If no benchmark data (insufficient volume), skip this source
-        if (!benchmarkData || (benchmarkData as any[]).length === 0) {
-          console.log(`ℹ️ Insufficient data for source ${sourceId} (${sourceMap.get(sourceId)})`);
-          continue;
-        }
-
-        const benchmark = (benchmarkData as any[])[0];
-        const sourceName = sourceMap.get(sourceId) || 'Unknown';
-
-        benchmarks.push({
-          source_id: sourceId,
-          source_name: sourceName,
-          total_producers: producerSet.size,
-          quote_rate_normal: Number(benchmark.quote_bench_normal) || 0,
-          quote_rate_excellent: Number(benchmark.quote_bench_excellent) || 0,
-          close_rate_normal: Number(benchmark.close_bench_normal) || 0,
-          close_rate_excellent: Number(benchmark.close_bench_excellent) || 0,
-          attach_rate_normal: Number(benchmark.attach_bench_normal) || 0,
-          attach_rate_excellent: Number(benchmark.attach_bench_excellent) || 0,
         });
+
+      if (benchmarkError) {
+        console.error('❌ Error fetching benchmarks:', benchmarkError);
+        throw benchmarkError;
       }
 
-      console.log('✅ Fetched benchmarks for', benchmarks.length, 'sources')
+      if (!benchmarkData || (benchmarkData as any[]).length === 0) {
+        console.log('ℹ️ No benchmark data returned (insufficient volume or no data)');
+        return [];
+      }
+
+      // Transform the data to match ExecutionBenchmark interface
+      const benchmarks: ExecutionBenchmark[] = (benchmarkData as any[]).map(row => ({
+        source_id: row.source_id,
+        source_name: row.source_name,
+        total_producers: Number(row.total_producers) || 0,
+        quote_rate_normal: Number(row.quote_bench_normal) || 0,
+        quote_rate_excellent: Number(row.quote_bench_excellent) || 0,
+        close_rate_normal: Number(row.close_bench_normal) || 0,
+        close_rate_excellent: Number(row.close_bench_excellent) || 0,
+        attach_rate_normal: Number(row.attach_bench_normal) || 0,
+        attach_rate_excellent: Number(row.attach_bench_excellent) || 0,
+      }));
+
+      console.log('✅ Fetched benchmarks for', benchmarks.length, 'sources in ONE call');
+      console.log('Sources:', benchmarks.map(b => b.source_name).join(', '));
+      
       return benchmarks;
     },
     enabled: !!fromDate && !!toDate
