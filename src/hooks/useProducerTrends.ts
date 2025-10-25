@@ -20,29 +20,21 @@ export interface ProducerTrendData {
 
 export function useProducerTrends(
   producerIds: string[] | null,
-  year: number,
-  month: number | null
+  fromDate: string,
+  toDate: string
 ) {
   return useQuery({
-    queryKey: ['producer-trends', producerIds, year, month],
+    queryKey: ['producer-trends', producerIds, fromDate, toDate],
     queryFn: async (): Promise<ProducerTrendData[]> => {
-      const startDate = month
-        ? `${year}-${String(month).padStart(2, '0')}-01`
-        : `${year}-01-01`
-      
-      const endDate = month
-        ? new Date(year, month, 0).toISOString().split('T')[0]
-        : `${year}-12-31`
-
       const { data, error } = await supabase.rpc('get_producer_trends' as any, {
         producer_ids: producerIds,
-        from_date: startDate,
-        to_date: endDate
+        from_date: fromDate,
+        to_date: toDate
       })
 
       if (error) throw error
       return (data || []) as ProducerTrendData[]
     },
-    enabled: true
+    enabled: !!fromDate && !!toDate
   })
 }
