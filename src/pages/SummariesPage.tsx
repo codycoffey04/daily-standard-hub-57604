@@ -89,7 +89,7 @@ const ReportContent: React.FC<ReportContentProps> = ({
 const SummariesPage: React.FC = () => {
   const isMobile = useIsMobile()
   const [selectedYear, setSelectedYear] = useState(2025)
-  const [selectedMonth, setSelectedMonth] = useState<number | null>(null)
+  const [selectedMonth, setSelectedMonth] = useState<number | null>(10) // Default to October
   const [activeReportId, setActiveReportId] = useState('qhh-by-source')
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(
     new Set(['lead-source-analysis']) // Start with lead source analysis expanded
