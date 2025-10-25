@@ -60,13 +60,10 @@ BEGIN
   sales AS (
     SELECT 
       e.producer_id,
-      COALESCE(SUM(qh.items_sold), 0)::integer as sales_count
+      COALESCE(SUM(e.sales_total), 0)::integer as sales_count
     FROM public.daily_entries e
-    INNER JOIN public.quoted_households qh ON qh.daily_entry_id = e.id
     WHERE e.entry_month = DATE_TRUNC('month', ref)::date 
       AND e.entry_date <= ref
-      AND qh.quick_action_status = 'SOLD'
-      AND qh.items_sold > 0
     GROUP BY e.producer_id
   ),
   items_data AS (
