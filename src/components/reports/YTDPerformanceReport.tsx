@@ -18,11 +18,7 @@ type DailyEntry = {
   talk_minutes: number | null;
   qhh_total: number | null;
   items_total: number | null;
-};
-type QuotedHousehold = {
-  id: string;
-  daily_entry_id: string;
-  items_sold: number | null;
+  sales_total: number | null;
 };
 
 type MetricKey = "qhh" | "items" | "sales" | "dials" | "talk";
@@ -64,7 +60,6 @@ export default function YTDPerformanceReport() {
 
   const [producers, setProducers] = useState<Producer[]>([]);
   const [entries, setEntries] = useState<DailyEntry[]>([]);
-  const [quotes, setQuotes] = useState<QuotedHousehold[]>([]);
 
   // Auto-derived month window
   const [fromYm, setFromYm] = useState<string | null>(null);
@@ -94,7 +89,6 @@ export default function YTDPerformanceReport() {
           if (!cancelled) {
             setProducers([]);
             setEntries([]);
-            setQuotes([]);
             setFromYm(null);
             setToYm(null);
             setMonths([]);
@@ -127,21 +121,9 @@ export default function YTDPerformanceReport() {
         // 3) Daily entries for computed month window
         const deRes = await supabase
           .from("daily_entries")
-          .select("id, producer_id, entry_month, outbound_dials, talk_minutes, qhh_total, items_total")
+          .select("id, producer_id, entry_month, outbound_dials, talk_minutes, qhh_total, items_total, sales_total")
           .in("entry_month", MONTHS);
         if (deRes.error) throw deRes.error;
-
-        // 4) Quoted households for those entries to compute Sales (HH with items_sold > 0)
-        const dailyIds = (deRes.data ?? []).map((r) => r.id);
-        let qhRows: QuotedHousehold[] = [];
-        if (dailyIds.length) {
-          const qhRes = await supabase
-            .from("quoted_households")
-            .select("id, daily_entry_id, items_sold")
-            .in("daily_entry_id", dailyIds);
-          if (qhRes.error) throw qhRes.error;
-          qhRows = qhRes.data ?? [];
-        }
 
         if (!cancelled) {
           setFromYm(earliestYmInYear);
@@ -149,7 +131,6 @@ export default function YTDPerformanceReport() {
           setMonths(MONTHS);
           setProducers(prodRes.data ?? []);
           setEntries(deRes.data ?? []);
-          setQuotes(qhRows);
         }
       } catch (e: any) {
         if (!cancelled) setError(e?.message ?? "Failed to load YTD performance");
@@ -187,35 +168,22 @@ export default function YTDPerformanceReport() {
       const m = p.byMonth[e.entry_month];
       const qhh = e.qhh_total ?? 0;
       const items = e.items_total ?? 0;
+      const sales = e.sales_total ?? 0;
       const dials = e.outbound_dials ?? 0;
       const talk = e.talk_minutes ?? 0;
 
       m.qhh += qhh;       p.totals.qhh += qhh;
       m.items += items;   p.totals.items += items;
+      m.sales += sales;   p.totals.sales += sales;
       m.dials += dials;   p.totals.dials += dials;
       m.talk += talk;     p.totals.talk += talk;
-    }
-
-    // Aggregate Sales (households with items_sold > 0)
-    const entryById: Record<string, DailyEntry> = {};
-    for (const e of entries) entryById[e.id] = e;
-
-    for (const q of quotes) {
-      const e = entryById[q.daily_entry_id];
-      if (!e || !months.includes(e.entry_month)) continue;
-      const p = byProducer[e.producer_id];
-      if (!p) continue;
-
-      const isSale = (q.items_sold ?? 0) > 0 ? 1 : 0;
-      p.byMonth[e.entry_month].sales += isSale;
-      p.totals.sales += isSale;
     }
 
     // Return ordered by producer name
     return Object.values(byProducer).sort((a, b) =>
       a.producerName.localeCompare(b.producerName)
     );
-  }, [producers, entries, quotes, months]);
+  }, [producers, entries, months]);
 
   const teamTotals = useMemo<Totals>(() => {
     const t = zeroTotals();
