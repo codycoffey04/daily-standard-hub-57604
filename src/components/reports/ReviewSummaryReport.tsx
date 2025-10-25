@@ -10,7 +10,7 @@ import {
 } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
-import { EmptyState } from '@/components/ui/empty-state'
+import { ReviewsEmptyState } from '@/components/ui/reviews-empty-state'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { AlertCircle } from 'lucide-react'
 import { format } from 'date-fns'
@@ -47,12 +47,7 @@ export const ReviewSummaryReport: React.FC<ReviewSummaryReportProps> = ({
   }
 
   if (!reviews || reviews.length === 0) {
-    return (
-      <EmptyState
-        message="No reviews found for this period"
-        suggestion="Try selecting a different time period or check if reviews have been completed"
-      />
-    )
+    return <ReviewsEmptyState />
   }
 
   return (

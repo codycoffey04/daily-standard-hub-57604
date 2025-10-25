@@ -1,6 +1,6 @@
 import React from 'react'
 import { Button } from '@/components/ui/button'
-import { Download, Printer, RefreshCw } from 'lucide-react'
+import { Download, Printer, RefreshCw, BarChart3 } from 'lucide-react'
 import { MonthYearPickers } from '@/components/MonthYearPickers'
 import { type ReportConfig } from '@/config/reportConfig'
 
@@ -23,7 +23,7 @@ export const ReportHeader: React.FC<ReportHeaderProps> = ({
   onRefresh,
   isLoading = false
 }) => {
-  const Icon = report.icon
+  const Icon = report?.icon ?? BarChart3
 
   const handleExport = () => {
     // Placeholder for export functionality
@@ -91,10 +91,10 @@ export const ReportHeader: React.FC<ReportHeaderProps> = ({
         </div>
         <div className="text-center">
           <h1 className="text-2xl font-bold text-foreground">
-            {report.title}
+            {report?.title ?? "Loading…"}
           </h1>
           <p className="text-muted-foreground mt-1">
-            {report.description}
+            {report?.description ?? ""}
           </p>
         </div>
       </div>

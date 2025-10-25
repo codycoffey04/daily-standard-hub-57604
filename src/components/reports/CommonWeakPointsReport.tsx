@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Skeleton } from '@/components/ui/skeleton'
-import { EmptyState } from '@/components/ui/empty-state'
+import { ReviewsEmptyState } from '@/components/ui/reviews-empty-state'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LabelList, Cell } from 'recharts'
 import { AlertCircle, TrendingUp, Users, Target, Activity } from 'lucide-react'
 import { useCommonWeakPoints, WeakPoint } from '@/hooks/useCommonWeakPoints'
@@ -150,12 +150,7 @@ const CommonWeakPointsReport: React.FC<CommonWeakPointsReportProps> = ({
   }
 
   if (!weakPoints || weakPoints.length === 0) {
-    return (
-      <EmptyState 
-        message="No coaching reviews found for this period"
-        suggestion="Start adding reviews to identify common weak points"
-      />
-    )
+    return <ReviewsEmptyState />
   }
 
   return (
