@@ -106,30 +106,23 @@ export function useQHHBySource(year: number, month: number | null) {
   return useQuery({
     queryKey: ['qhh-by-source', year, month],
     queryFn: async (): Promise<QHHBySourceData[]> => {
-      const { startDate, endDate } = getDateRange(year, month)
+      const { startDate } = getDateRange(year, month)
       
-      const { data, error } = await supabase
-        .from('daily_entry_sources')
-        .select(`
-          qhh,
-          sources!inner(name),
-          daily_entries!inner(entry_date)
-        `)
-        .gte('daily_entries.entry_date', startDate)
-        .lte('daily_entries.entry_date', endDate)
+      const { data, error } = await supabase.rpc(
+        'get_top_sources_by_month' as any,
+        {
+          target_month: startDate,
+          metric_type: 'qhh'
+        }
+      )
       
       if (error) throw error
       
-      // Group by source and sum QHH
-      const grouped = data.reduce((acc: Record<string, number>, item: any) => {
-        const sourceName = item.sources.name
-        acc[sourceName] = (acc[sourceName] || 0) + item.qhh
-        return acc
-      }, {})
-      
-      return Object.entries(grouped)
-        .map(([source_name, qhh]) => ({ source_name, qhh }))
-        .sort((a, b) => b.qhh - a.qhh)
+      // Transform to match QHHBySourceData interface
+      return (data || []).map((item: any) => ({
+        source_name: item.source_name,
+        qhh: item.metric_value
+      }))
     }
   })
 }
@@ -210,30 +203,23 @@ export function useQuotesBySource(year: number, month: number | null) {
   return useQuery({
     queryKey: ['quotes-by-source', year, month],
     queryFn: async (): Promise<QuotesBySourceData[]> => {
-      const { startDate, endDate } = getDateRange(year, month)
+      const { startDate } = getDateRange(year, month)
       
-      const { data, error } = await supabase
-        .from('daily_entry_sources')
-        .select(`
-          quotes,
-          sources!inner(name),
-          daily_entries!inner(entry_date)
-        `)
-        .gte('daily_entries.entry_date', startDate)
-        .lte('daily_entries.entry_date', endDate)
+      const { data, error } = await supabase.rpc(
+        'get_top_sources_by_month' as any,
+        {
+          target_month: startDate,
+          metric_type: 'quotes'
+        }
+      )
       
       if (error) throw error
       
-      // Group by source and sum quotes
-      const grouped = data.reduce((acc: Record<string, number>, item: any) => {
-        const sourceName = item.sources.name
-        acc[sourceName] = (acc[sourceName] || 0) + item.quotes
-        return acc
-      }, {})
-      
-      return Object.entries(grouped)
-        .map(([source_name, quotes]) => ({ source_name, quotes }))
-        .sort((a, b) => b.quotes - a.quotes)
+      // Transform to match QuotesBySourceData interface
+      return (data || []).map((item: any) => ({
+        source_name: item.source_name,
+        quotes: item.metric_value
+      }))
     }
   })
 }
