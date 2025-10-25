@@ -104,24 +104,28 @@ function getDateRange(year: number, month: number | null) {
 
 export function useQHHBySource(year: number, month: number | null) {
   return useQuery({
-    queryKey: ['qhh-by-source', year, month],
+    queryKey: ['qhh-by-source-v2', year, month],
     queryFn: async (): Promise<QHHBySourceData[]> => {
-      const { startDate } = getDateRange(year, month)
+      // Calculate month_ym in 'YYYY-MM' format
+      const monthYm = month 
+        ? `${year}-${String(month).padStart(2, '0')}`
+        : `${year}-01`
       
-      console.log('🔍 === QHH BY SOURCE RPC CALL ===')
+      console.log('🔍 === QHH BY SOURCE RPC CALL (NEW) ===')
       console.log('  Input - year:', year, 'month:', month)
-      console.log('  Calculated startDate:', startDate)
+      console.log('  Calculated month_ym:', monthYm)
       console.log('  Exact RPC params:', JSON.stringify({ 
-        target_month: startDate, 
-        metric_type: 'qhh' 
+        month_ym: monthYm, 
+        metric_type: 'qhh',
+        lim: 50
       }, null, 2))
-      console.log('  About to call: supabase.rpc("get_top_sources_by_month", {...})')
       
       const { data, error } = await supabase.rpc(
-        'get_top_sources_by_month' as any,
+        'rpc_get_top_sources_by_month' as any,
         {
-          target_month: startDate,
-          metric_type: 'qhh'
+          month_ym: monthYm,
+          metric_type: 'qhh',
+          lim: 50
         }
       )
       
@@ -215,15 +219,22 @@ export function useQuotesByProducer(year: number, month: number | null) {
 
 export function useQuotesBySource(year: number, month: number | null) {
   return useQuery({
-    queryKey: ['quotes-by-source', year, month],
+    queryKey: ['quotes-by-source-v2', year, month],
     queryFn: async (): Promise<QuotesBySourceData[]> => {
-      const { startDate } = getDateRange(year, month)
+      // Calculate month_ym in 'YYYY-MM' format
+      const monthYm = month 
+        ? `${year}-${String(month).padStart(2, '0')}`
+        : `${year}-01`
+      
+      console.log('🔍 === QUOTES BY SOURCE RPC CALL (NEW) ===')
+      console.log('  Calculated month_ym:', monthYm)
       
       const { data, error } = await supabase.rpc(
-        'get_top_sources_by_month' as any,
+        'rpc_get_top_sources_by_month' as any,
         {
-          target_month: startDate,
-          metric_type: 'quotes'
+          month_ym: monthYm,
+          metric_type: 'quotes',
+          lim: 50
         }
       )
       

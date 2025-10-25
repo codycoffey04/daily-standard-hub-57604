@@ -28,14 +28,18 @@ const MonthlySummaryReport: React.FC<MonthlySummaryReportProps> = ({ selectedYea
     }
   }, [summaryData])
 
-  // Get most recent month for top sources
-  const mostRecentMonth = useMemo(() => {
+  // Get most recent month for top sources - convert to month_ym format (YYYY-MM)
+  const monthYm = useMemo(() => {
     if (!summaryData) return null
-    return summaryData.month_date
+    // Convert month_date (2025-10-01) to month_ym (2025-10)
+    return summaryData.month_date ? summaryData.month_date.substring(0, 7) : null
   }, [summaryData])
 
-  const { data: topQuoteSources } = useTopSourcesByMonth(mostRecentMonth, 'quotes')
-  const { data: topQHHSources } = useTopSourcesByMonth(mostRecentMonth, 'qhh')
+  // Keep month_date for display purposes
+  const mostRecentMonth = summaryData?.month_date || null
+
+  const { data: topQuoteSources } = useTopSourcesByMonth(monthYm, 'quotes')
+  const { data: topQHHSources } = useTopSourcesByMonth(monthYm, 'qhh')
 
   // Calculate summary metrics
   const summaryMetrics = useMemo(() => {

@@ -29,32 +29,30 @@ export interface TopSourceData {
 
 export const useMonthlySummary = (year: number, month: number | null) => {
   return useQuery({
-    queryKey: ['monthly-summary-v3', year, month],
+    queryKey: ['monthly-summary-v4', year, month],
     staleTime: 0,
     gcTime: 0,
     queryFn: async (): Promise<MonthlySummaryData> => {
-      // Calculate the target month date (first day of month)
-      const targetMonth = month 
-        ? `${year}-${String(month).padStart(2, '0')}-01`
-        : `${year}-01-01`
+      // Calculate month_ym in 'YYYY-MM' format
+      const monthYm = month 
+        ? `${year}-${String(month).padStart(2, '0')}`
+        : `${year}-01`
 
-      console.log('📅 === MONTHLY SUMMARY RPC CALL ===')
+      console.log('📅 === MONTHLY SUMMARY RPC CALL (NEW) ===')
       console.log('  Input - year:', year, 'month:', month)
-      console.log('  Calculated targetMonth:', targetMonth)
-      console.log('  Exact RPC params:', JSON.stringify({ target_month: targetMonth }, null, 2))
-      console.log('  About to call: supabase.rpc("get_monthly_summary", {...})')
+      console.log('  Calculated month_ym:', monthYm)
+      console.log('  Exact RPC params:', JSON.stringify({ month_ym: monthYm }, null, 2))
 
-      const { data, error } = await supabase.rpc('get_monthly_summary' as any, {
-        target_month: targetMonth
+      const { data, error } = await supabase.rpc('rpc_get_monthly_summary' as any, {
+        month_ym: monthYm
       }) as { data: MonthlySummaryData[] | null, error: any }
 
       console.log('📊 Monthly summary data received:', data)
       console.log('  Is Array:', Array.isArray(data))
       console.log('  Array length:', data?.length)
-      console.log('  First item:', data?.[0])
 
       if (error) {
-        console.error('❌ Error from get_monthly_summary:', error)
+        console.error('❌ Error from rpc_get_monthly_summary:', error)
         throw error
       }
 
@@ -64,12 +62,10 @@ export const useMonthlySummary = (year: number, month: number | null) => {
       console.log('  Extracted summaryData:', summaryData)
       console.log('  Total QHH:', summaryData?.total_qhh)
       console.log('  Total Quotes:', summaryData?.total_quotes)
-      console.log('  Total Dials:', summaryData?.total_dials)
-      console.log('  Total Talk Time:', summaryData?.total_talk_time)
 
-      // Return single object (first element of array)
+      // Return single object
       return summaryData || {
-        month_date: targetMonth,
+        month_date: `${monthYm}-01`,
         month_name: '',
         total_qhh: 0,
         total_quotes: 0,
@@ -83,20 +79,29 @@ export const useMonthlySummary = (year: number, month: number | null) => {
   })
 }
 
-export const useTopSourcesByMonth = (targetMonth: string | null, metricType: 'quotes' | 'qhh') => {
+export const useTopSourcesByMonth = (monthYm: string | null, metricType: 'quotes' | 'qhh') => {
   return useQuery({
-    queryKey: ['top-sources-by-month', targetMonth, metricType],
+    queryKey: ['top-sources-by-month-v2', monthYm, metricType],
     queryFn: async (): Promise<TopSourceData[]> => {
-      if (!targetMonth) return []
+      if (!monthYm) return []
 
-      const { data, error } = await supabase.rpc('get_top_sources_by_month' as any, {
-        target_month: targetMonth,
-        metric_type: metricType
+      console.log('📊 === TOP SOURCES RPC CALL (NEW) ===')
+      console.log('  month_ym:', monthYm)
+      console.log('  metric_type:', metricType)
+
+      const { data, error } = await supabase.rpc('rpc_get_top_sources_by_month' as any, {
+        month_ym: monthYm,
+        metric_type: metricType,
+        lim: 50
       }) as { data: TopSourceData[] | null, error: any }
 
-      if (error) throw error
+      if (error) {
+        console.error('❌ Error from rpc_get_top_sources_by_month:', error)
+        throw error
+      }
+      
       return data || []
     },
-    enabled: !!targetMonth
+    enabled: !!monthYm
   })
 }

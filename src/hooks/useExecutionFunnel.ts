@@ -155,8 +155,15 @@ export const useExecutionBenchmarks = (
   minPairDials: number = 100
 ) => {
   return useQuery({
-    queryKey: ['execution-benchmarks', fromDate, toDate, minPairQHH, minPairSHH, minPairDials],
+    queryKey: ['execution-benchmarks-v2', fromDate, toDate, minPairQHH, minPairSHH, minPairDials],
     queryFn: async (): Promise<ExecutionBenchmark[]> => {
+      // Extract month_ym from fromDate (format: YYYY-MM-DD -> YYYY-MM)
+      const monthYm = fromDate.substring(0, 7) // '2025-10-15' -> '2025-10'
+
+      console.log('📊 === EXECUTION BENCHMARKS RPC CALL (NEW) ===')
+      console.log('  Original dates - from:', fromDate, 'to:', toDate)
+      console.log('  Extracted month_ym:', monthYm)
+
       // Fetch all source IDs that have data
       const { data: rollupData, error: rollupError } = await supabase
         .from('producer_day_source_rollup' as any)
@@ -196,23 +203,19 @@ export const useExecutionBenchmarks = (
       const benchmarks: ExecutionBenchmark[] = [];
 
       for (const [sourceId, producerSet] of Object.entries(sourceGroups)) {
-        // Debug logging for RPC call
-        console.log('📊 === EXECUTION BENCHMARKS RPC CALL ===')
-        console.log('  Source ID:', sourceId, 'Type:', typeof sourceId)
-        console.log('  Exact params:', JSON.stringify({
-          from_date: fromDate,
-          to_date: toDate,
+        console.log('  Processing source:', sourceId, 'with', producerSet.size, 'producers')
+        console.log('  RPC params:', JSON.stringify({
+          month_ym: monthYm,
           source_filter: sourceId,
           min_pair_qhh: minPairQHH,
           min_pair_shh: minPairSHH,
           min_pair_dials: minPairDials
         }, null, 2))
 
-        // Call the database function to get dynamic percentile-based benchmarks
+        // Call the NEW database function with month_ym
         const { data: benchmarkData, error: benchmarkError } = await supabase
-          .rpc('get_execution_benchmarks_by_source' as any, {
-            from_date: fromDate,
-            to_date: toDate,
+          .rpc('rpc_get_execution_benchmarks_by_source' as any, {
+            month_ym: monthYm,
             source_filter: sourceId,
             min_pair_qhh: minPairQHH,
             min_pair_shh: minPairSHH,
@@ -246,6 +249,7 @@ export const useExecutionBenchmarks = (
         });
       }
 
+      console.log('✅ Fetched benchmarks for', benchmarks.length, 'sources')
       return benchmarks;
     },
     enabled: !!fromDate && !!toDate
