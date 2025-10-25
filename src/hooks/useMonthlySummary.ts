@@ -33,24 +33,19 @@ export const useMonthlySummary = (year: number, month: number | null) => {
     staleTime: 0,
     gcTime: 0,
     queryFn: async (): Promise<MonthlySummaryData> => {
-      // Calculate the date range (first and last day of month)
-      const fromDate = month 
+      // Calculate the target month date (first day of month)
+      const targetMonth = month 
         ? `${year}-${String(month).padStart(2, '0')}-01`
         : `${year}-01-01`
-      
-      const toDate = month
-        ? `${year}-${String(month).padStart(2, '0')}-${new Date(year, month, 0).getDate()}`
-        : `${year}-12-31`
 
       console.log('📅 === MONTHLY SUMMARY RPC CALL ===')
       console.log('  Input - year:', year, 'month:', month)
-      console.log('  Calculated fromDate:', fromDate, 'toDate:', toDate)
-      console.log('  Exact RPC params:', JSON.stringify({ from_date: fromDate, to_date: toDate }, null, 2))
+      console.log('  Calculated targetMonth:', targetMonth)
+      console.log('  Exact RPC params:', JSON.stringify({ target_month: targetMonth }, null, 2))
       console.log('  About to call: supabase.rpc("get_monthly_summary", {...})')
 
       const { data, error } = await supabase.rpc('get_monthly_summary' as any, {
-        from_date: fromDate,
-        to_date: toDate
+        target_month: targetMonth
       }) as { data: MonthlySummaryData[] | null, error: any }
 
       console.log('📊 Monthly summary data received:', data)
@@ -74,7 +69,7 @@ export const useMonthlySummary = (year: number, month: number | null) => {
 
       // Return single object (first element of array)
       return summaryData || {
-        month_date: fromDate,
+        month_date: targetMonth,
         month_name: '',
         total_qhh: 0,
         total_quotes: 0,
