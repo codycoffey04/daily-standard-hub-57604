@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '@/integrations/supabase/client'
+import { useAuth } from '@/contexts/AuthContext'
 import { useProducerTrends } from '@/hooks/useProducerTrends'
 import { ProducerTrendsDateFilter } from './ProducerTrendsDateFilter'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -24,6 +25,7 @@ interface ProducerTrendsReportProps {
 }
 
 export const ProducerTrendsReport: React.FC<ProducerTrendsReportProps> = () => {
+  const { session, loading: authLoading } = useAuth()
   const [dateFrom, setDateFrom] = useState('2025-04-01')
   const [dateTo, setDateTo] = useState(() => {
     const today = new Date()
@@ -31,7 +33,7 @@ export const ProducerTrendsReport: React.FC<ProducerTrendsReportProps> = () => {
   })
   const [selectedProducers, setSelectedProducers] = useState<string[] | null>(null)
 
-  const { data: producers } = useQuery({
+  const { data: producers, isLoading: isLoadingProducers, error: producersError } = useQuery({
     queryKey: ['producers-active'],
     queryFn: async (): Promise<Producer[]> => {
       const { data, error } = await supabase
@@ -42,7 +44,9 @@ export const ProducerTrendsReport: React.FC<ProducerTrendsReportProps> = () => {
       
       if (error) throw error
       return (data || []).map(p => ({ id: p.id, name: p.display_name }))
-    }
+    },
+    enabled: !authLoading && !!session,
+    retry: 1
   })
 
   const { data: trendsData, isLoading, error } = useProducerTrends(
@@ -131,6 +135,7 @@ export const ProducerTrendsReport: React.FC<ProducerTrendsReportProps> = () => {
         </CardHeader>
         <CardContent>
           <Select
+            disabled={!producers || producers.length === 0 || isLoadingProducers}
             value={selectedProducers ? 'selected' : 'all'}
             onValueChange={(value) => {
               if (value === 'all') {
@@ -139,11 +144,16 @@ export const ProducerTrendsReport: React.FC<ProducerTrendsReportProps> = () => {
             }}
           >
             <SelectTrigger className="w-[300px]">
-              <SelectValue placeholder="All Producers" />
+              <SelectValue placeholder={
+                isLoadingProducers ? "Loading producers..." :
+                producersError ? "Producers unavailable" :
+                !producers ? "No producers found" :
+                "All Producers"
+              } />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Producers</SelectItem>
-              {producers?.map((producer) => (
+              {(producers || []).map((producer) => (
                 <SelectItem 
                   key={producer.id} 
                   value={producer.id}
