@@ -365,9 +365,17 @@ export const ExecutionFunnelReport: React.FC<ExecutionFunnelReportProps> = () =>
         <CardContent>
           {isBenchmarksLoading ? (
             <ChartLoading />
-          ) : !benchmarks || benchmarks.length === 0 ? (
-            <EmptyState message="Insufficient data for benchmarks (requires minimum volume thresholds)" />
-          ) : (
+          ) : (() => {
+              console.log('BENCHMARK DEBUG:', {
+                hasData: benchmarks && benchmarks.length > 0,
+                dataLength: benchmarks?.length,
+                actualData: benchmarks,
+                thresholds: { min_pair_qhh: 10, min_pair_shh: 0, min_pair_dials: 100 }
+              });
+              
+              return !benchmarks || benchmarks.length === 0 ? (
+                <EmptyState message="Insufficient data for benchmarks (requires minimum volume thresholds)" />
+              ) : (
             <Table>
               <TableHeader>
                 <TableRow>
@@ -402,7 +410,8 @@ export const ExecutionFunnelReport: React.FC<ExecutionFunnelReportProps> = () =>
                 ))}
               </TableBody>
             </Table>
-          )}
+              );
+            })()}
         </CardContent>
       </Card>
     </div>
