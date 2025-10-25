@@ -314,6 +314,14 @@ export default function YTDPerformanceReport() {
             </div>
             <Legend series={chartSeries.series} />
           </div>
+          {months.length === 1 && (
+            <Alert>
+              <Info className="h-4 w-4" />
+              <AlertDescription>
+                Trend lines will display when multiple months of data are available. Current view shows {ymLabel(months[0])} data only.
+              </AlertDescription>
+            </Alert>
+          )}
           <MultiLineChart
             months={months.map(ymLabel)}
             series={chartSeries.series}
