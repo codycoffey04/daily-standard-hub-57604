@@ -28,18 +28,32 @@ const MonthlySummaryReport: React.FC<MonthlySummaryReportProps> = ({ selectedYea
     }
   }, [summaryData])
 
-  // Get most recent month for top sources - convert to month_ym format (YYYY-MM)
+  // Calculate monthYm directly from props (same as useMonthlySummary hook)
   const monthYm = useMemo(() => {
-    if (!summaryData) return null
-    // Convert month_date (2025-10-01) to month_ym (2025-10)
-    return summaryData.month_date ? summaryData.month_date.substring(0, 7) : null
-  }, [summaryData])
+    return selectedMonth 
+      ? `${selectedYear}-${String(selectedMonth).padStart(2, '0')}`
+      : `${selectedYear}-01`
+  }, [selectedYear, selectedMonth])
+
+  console.log('🔍 MonthlySummaryReport - Calculated monthYm:', monthYm)
 
   // Keep month_date for display purposes
   const mostRecentMonth = summaryData?.month_date || null
 
-  const { data: topQuoteSources } = useTopSourcesByMonth(monthYm, 'quotes')
-  const { data: topQHHSources } = useTopSourcesByMonth(monthYm, 'qhh')
+  const { data: topQuoteSources, isLoading: isLoadingQuotes, error: quotesError } = useTopSourcesByMonth(monthYm, 'quotes')
+  const { data: topQHHSources, isLoading: isLoadingQHH, error: qhhError } = useTopSourcesByMonth(monthYm, 'qhh')
+
+  // Debug logging for Top Sources
+  React.useEffect(() => {
+    console.log('📊 Top Sources Data Status:')
+    console.log('  monthYm:', monthYm)
+    console.log('  topQuoteSources:', topQuoteSources)
+    console.log('  topQHHSources:', topQHHSources)
+    console.log('  isLoadingQuotes:', isLoadingQuotes)
+    console.log('  isLoadingQHH:', isLoadingQHH)
+    console.log('  quotesError:', quotesError)
+    console.log('  qhhError:', qhhError)
+  }, [monthYm, topQuoteSources, topQHHSources, isLoadingQuotes, isLoadingQHH, quotesError, qhhError])
 
   // Calculate summary metrics
   const summaryMetrics = useMemo(() => {
