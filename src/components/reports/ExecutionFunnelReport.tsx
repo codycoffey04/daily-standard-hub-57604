@@ -390,24 +390,43 @@ export const ExecutionFunnelReport: React.FC<ExecutionFunnelReportProps> = () =>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {benchmarks.map((benchmark) => (
-                  <TableRow key={benchmark.source_id}>
-                    <TableCell className="font-medium">{benchmark.source_name}</TableCell>
-                    <TableCell className="text-center">{benchmark.total_producers}</TableCell>
-                    <TableCell className="text-right">{safeToFixed(benchmark.quote_rate_normal, 2)}%</TableCell>
-                    <TableCell className="text-right text-green-600 dark:text-green-400 font-semibold">
-                      {safeToFixed(benchmark.quote_rate_excellent, 2)}%
-                    </TableCell>
-                    <TableCell className="text-right">{safeToFixed(benchmark.close_rate_normal, 2)}%</TableCell>
-                    <TableCell className="text-right text-green-600 dark:text-green-400 font-semibold">
-                      {safeToFixed(benchmark.close_rate_excellent, 2)}%
-                    </TableCell>
-                    <TableCell className="text-right">{safeToFixed(benchmark.attach_rate_normal, 2)}</TableCell>
-                    <TableCell className="text-right text-green-600 dark:text-green-400 font-semibold">
-                      {safeToFixed(benchmark.attach_rate_excellent, 2)}
-                    </TableCell>
-                  </TableRow>
-                ))}
+                {benchmarks.map((benchmark, idx) => {
+                  // DEBUG: Log raw values before formatting
+                  if (idx === 0) {
+                    console.log('🎨 DISPLAY DEBUG (first benchmark):', {
+                      source: benchmark.source_name,
+                      raw_object: benchmark,
+                      raw_quote_normal: benchmark.quote_rate_normal,
+                      raw_quote_excellent: benchmark.quote_rate_excellent,
+                      raw_close_normal: benchmark.close_rate_normal,
+                      raw_close_excellent: benchmark.close_rate_excellent,
+                      raw_attach_normal: benchmark.attach_rate_normal,
+                      raw_attach_excellent: benchmark.attach_rate_excellent,
+                      typeof_quote_normal: typeof benchmark.quote_rate_normal,
+                      displayed_quote_normal: safeToFixed(benchmark.quote_rate_normal, 2),
+                      displayed_quote_excellent: safeToFixed(benchmark.quote_rate_excellent, 2),
+                    });
+                  }
+                  
+                  return (
+                    <TableRow key={benchmark.source_id}>
+                      <TableCell className="font-medium">{benchmark.source_name}</TableCell>
+                      <TableCell className="text-center">{benchmark.total_producers}</TableCell>
+                      <TableCell className="text-right">{safeToFixed(benchmark.quote_rate_normal, 2)}%</TableCell>
+                      <TableCell className="text-right text-green-600 dark:text-green-400 font-semibold">
+                        {safeToFixed(benchmark.quote_rate_excellent, 2)}%
+                      </TableCell>
+                      <TableCell className="text-right">{safeToFixed(benchmark.close_rate_normal, 2)}%</TableCell>
+                      <TableCell className="text-right text-green-600 dark:text-green-400 font-semibold">
+                        {safeToFixed(benchmark.close_rate_excellent, 2)}%
+                      </TableCell>
+                      <TableCell className="text-right">{safeToFixed(benchmark.attach_rate_normal, 2)}</TableCell>
+                      <TableCell className="text-right text-green-600 dark:text-green-400 font-semibold">
+                        {safeToFixed(benchmark.attach_rate_excellent, 2)}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
               </TableBody>
             </Table>
               );
