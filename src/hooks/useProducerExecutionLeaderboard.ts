@@ -51,153 +51,37 @@ export const useProducerExecutionLeaderboard = (
   return useQuery({
     queryKey: ['producer-execution-leaderboard', fromDate, toDate, sourceId, minDials, minQHH, minSHH],
     queryFn: async (): Promise<ProducerLeaderboardRow[]> => {
-      // Choose table based on source filter
-      const tableName = sourceId ? 'producer_day_source_rollup' : 'producer_day_rollup';
+      console.log('🔄 Fetching producer execution leaderboard via RPC...');
+      console.log('📅 Date range:', fromDate, 'to', toDate);
+      console.log('🎯 Source filter:', sourceId || 'All sources');
+      console.log('📊 Thresholds - Dials:', minDials, 'QHH:', minQHH, 'SHH:', minSHH);
       
-      // Fetch rollup data without join
-      let query = supabase
-        .from(tableName as any)
-        .select('producer_id, dials, qhh, shh, items, policies_sold, written_premium')
-        .gte('entry_date', fromDate)
-        .lte('entry_date', toDate);
+      const { data, error } = await supabase.rpc('get_producer_execution_leaderboard' as any, {
+        from_date: fromDate,
+        to_date: toDate,
+        source_filter: sourceId,
+        min_dials: minDials,
+        min_qhh: minQHH,
+        min_shh: minSHH,
+        min_pair_qhh: 30,
+        min_pair_shh: 10,
+        min_pair_dials: 200
+      }) as { data: ProducerLeaderboardRow[] | null, error: any };
 
-      if (sourceId && tableName === 'producer_day_source_rollup') {
-        query = query.eq('source_id', sourceId);
+      if (error) {
+        console.error('❌ Error fetching producer execution leaderboard:', error);
+        throw error;
       }
 
-      const { data: rollupData, error: rollupError } = await query;
-
-      if (rollupError) {
-        console.error('❌ Error fetching producer leaderboard rollup:', rollupError);
-        throw rollupError;
+      console.log(`✅ Leaderboard data fetched: ${data?.length || 0} producers`);
+      if (data && data.length > 0) {
+        console.log('📊 Sample producer data:', data[0]);
       }
 
-      if (!rollupData || rollupData.length === 0) return [];
-
-      // Fetch producers separately
-      const { data: producers, error: producersError } = await supabase
-        .from('producers')
-        .select('id, display_name');
-
-      if (producersError) {
-        console.error('❌ Error fetching producers:', producersError);
-      }
-
-      // Create lookup map for fast joins
-      const producerMap = new Map(
-        producers?.map(p => [p.id, p.display_name]) || []
-      );
-
-      // Aggregate by producer_id
-      const aggregated = rollupData.reduce((acc: any, row: any) => {
-        const producerId = row.producer_id;
-        
-        if (!acc[producerId]) {
-          acc[producerId] = {
-            producer_id: producerId,
-            producer_name: producerMap.get(producerId) || 'Unknown',
-            total_dials: 0,
-            total_qhh: 0,
-            total_shh: 0,
-            total_items: 0,
-            total_policies: 0,
-            total_premium: 0,
-          };
-        }
-
-        acc[producerId].total_dials += Number(row.dials || 0);
-        acc[producerId].total_qhh += Number(row.qhh || 0);
-        acc[producerId].total_shh += Number(row.shh || 0);
-        acc[producerId].total_items += Number(row.items || 0);
-        acc[producerId].total_policies += Number(row.policies_sold || 0);
-        acc[producerId].total_premium += Number(row.written_premium || 0);
-
-        return acc;
-      }, {});
-
-      // Helper to determine guidance
-      const determineGuidance = (
-        rate: number | null,
-        metric: 'quote_rate' | 'close_rate' | 'attach_rate',
-        meetsThreshold: boolean
-      ): GuidanceType => {
-        if (!meetsThreshold || rate === null) return 'insufficient_volume';
-        
-        const thresholds = BENCHMARKS[metric];
-        
-        if (metric === 'close_rate') {
-          // Close rate has a specific range for normal (18-24%)
-          const closeThresholds = BENCHMARKS.close_rate;
-          if (rate < closeThresholds.needs_attention) return 'needs_attention';
-          if (rate >= closeThresholds.normal_min && rate <= closeThresholds.normal_max) return 'normal_range';
-          if (rate >= closeThresholds.excellent) return 'above_excellent';
-        } else {
-          // Quote rate and attach rate use simpler logic
-          if (rate < thresholds.needs_attention) return 'needs_attention';
-          if (rate >= thresholds.normal_min && rate < thresholds.excellent) return 'normal_range';
-          if (rate >= thresholds.excellent) return 'above_excellent';
-        }
-        
-        return 'normal_range'; // fallback
-      };
-
-      // Convert to array and calculate rates with guidance
-      const results = Object.values(aggregated).map((row: any) => {
-        const quoteRate = row.total_dials > 0 ? (row.total_qhh / row.total_dials) * 100 : null;
-        const closeRate = row.total_qhh > 0 ? (row.total_shh / row.total_qhh) * 100 : null;
-        const attachRate = row.total_shh > 0 ? row.total_policies / row.total_shh : null; // Use policies, not items
-
-        // Apply minimum thresholds
-        const meetsDialThreshold = row.total_dials >= minDials;
-        const meetsQHHThreshold = row.total_qhh >= minQHH;
-        const meetsSHHThreshold = row.total_shh >= minSHH;
-
-        const quoteGuidance = determineGuidance(
-          quoteRate,
-          'quote_rate',
-          meetsDialThreshold && meetsQHHThreshold
-        );
-
-        const closeGuidance = determineGuidance(
-          closeRate,
-          'close_rate',
-          meetsQHHThreshold && meetsSHHThreshold
-        );
-
-        const attachGuidance = determineGuidance(
-          attachRate,
-          'attach_rate',
-          meetsSHHThreshold
-        );
-
-        console.log(`\n👤 Producer: ${row.producer_name}`);
-        console.log(`   Dials: ${row.total_dials} (meets threshold: ${meetsDialThreshold})`);
-        console.log(`   Quote Rate: ${quoteRate?.toFixed(2)}% → ${quoteGuidance} (Benchmarks: <3%=attention, 3-6%=normal, >6%=excellent)`);
-        console.log(`   QHH: ${row.total_qhh} (meets threshold: ${meetsQHHThreshold})`);
-        console.log(`   Close Rate: ${closeRate?.toFixed(2)}% → ${closeGuidance} (Benchmarks: <17%=attention, 18-24%=normal, ≥25%=excellent)`);
-        console.log(`   SHH: ${row.total_shh} (meets threshold: ${meetsSHHThreshold})`);
-        console.log(`   Policies: ${row.total_policies}, Attach Rate: ${attachRate?.toFixed(2)} → ${attachGuidance} (Benchmarks: <1.2=attention, 1.2-1.5=normal, >1.5=excellent)`);
-
-        return {
-          producer_id: row.producer_id,
-          producer_name: row.producer_name,
-          total_dials: meetsDialThreshold ? row.total_dials : null,
-          total_qhh: meetsQHHThreshold ? row.total_qhh : null,
-          quote_rate: meetsDialThreshold && meetsQHHThreshold ? quoteRate : null,
-          quote_guidance: quoteGuidance,
-          total_shh: meetsSHHThreshold ? row.total_shh : null,
-          close_rate: meetsQHHThreshold && meetsSHHThreshold ? closeRate : null,
-          close_guidance: closeGuidance,
-          total_items: meetsSHHThreshold ? row.total_items : null,
-          attach_rate: meetsSHHThreshold ? attachRate : null,
-          attach_guidance: attachGuidance,
-          total_premium: row.total_premium,
-        };
-      });
-
-      console.log(`\n✅ Final results count: ${results.length}`);
-      return results as ProducerLeaderboardRow[];
+      return data || [];
     },
-    enabled: !!fromDate && !!toDate
+    enabled: !!fromDate && !!toDate,
+    staleTime: 30000, // 30 seconds
+    gcTime: 300000 // 5 minutes
   });
 };
