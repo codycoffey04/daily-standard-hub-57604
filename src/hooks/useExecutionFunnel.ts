@@ -55,7 +55,7 @@ export const useExecutionFunnel = (
   sourceId: string | null = null
 ) => {
   return useQuery({
-    queryKey: ['execution-funnel', fromDate, toDate, producerId, sourceId],
+    queryKey: ['execution-funnel-v2', fromDate, toDate, producerId, sourceId],
     queryFn: async (): Promise<ExecutionFunnelStage[]> => {
       const { data, error } = await supabase.rpc('get_execution_funnel' as any, {
         from_date: fromDate,
@@ -105,7 +105,7 @@ export const useExecutionBenchmarks = (
   minPairDials: number = 100
 ) => {
   return useQuery({
-    queryKey: ['execution-benchmarks-unified', fromDate, toDate, minPairQHH, minPairSHH, minPairDials],
+    queryKey: ['execution-benchmarks-unified-v2', fromDate, toDate, minPairQHH, minPairSHH, minPairDials],
     queryFn: async (): Promise<ExecutionBenchmark[]> => {
       // Use toDate for month_ym (represents the period being analyzed)
       const monthYm = toDate.substring(0, 7) // '2025-10-25' -> '2025-10'
@@ -178,7 +178,7 @@ export const useExecutionEfficiency = (
   commissionPct: number = 0.12
 ) => {
   return useQuery({
-    queryKey: ['execution-efficiency', fromDate, toDate, producerId, sourceId, commissionPct],
+    queryKey: ['execution-efficiency-v2', fromDate, toDate, producerId, sourceId, commissionPct],
     queryFn: async (): Promise<ExecutionEfficiency[]> => {
       // Always query daily_entries — never daily_entry_sources
       let query = supabase
@@ -248,7 +248,7 @@ export const useExecutionEfficiency = (
 
 export const useProducersForExecution = () => {
   return useQuery({
-    queryKey: ['producers-for-execution-filter'],
+    queryKey: ['producers-for-execution-filter-v2'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('producers')

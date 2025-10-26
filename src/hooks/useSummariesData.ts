@@ -131,7 +131,7 @@ export function useQHHByProducer(year: number, month: number | null) {
   const { startDate, endDate } = getDateRange(year, month)
   
   return useQuery({
-    queryKey: ['qhh-by-producer', year, month],
+    queryKey: ['qhh-by-producer-v2', year, month],
     queryFn: async () => {
       // 1) Get daily_entry IDs + producer mapping for date range
       const { data: entries, error: entriesErr } = await supabase
@@ -196,7 +196,7 @@ export function useQHHByProducer(year: number, month: number | null) {
 
 export function useQuotesByProducer(year: number, month: number | null) {
   return useQuery({
-    queryKey: ['quotes-by-producer', year, month],
+    queryKey: ['quotes-by-producer-v2', year, month],
     queryFn: async (): Promise<QuotesByProducerData[]> => {
       const { startDate, endDate } = getDateRange(year, month)
       
@@ -323,7 +323,7 @@ export function useItemsByProducer(year: number, month: number | null) {
 
 export function useItemsBySource(year: number, month: number | null) {
   return useQuery({
-    queryKey: ['items-by-source', year, month],
+    queryKey: ['items-by-source-v2', year, month],
     queryFn: async (): Promise<ItemsBySourceData[]> => {
       const { startDate, endDate } = getDateRange(year, month)
       
@@ -357,7 +357,7 @@ export function useItemsBySource(year: number, month: number | null) {
 
 export function useProducerSourceMatrix(year: number, month: number | null) {
   return useQuery({
-    queryKey: ['producer-source-matrix', year, month],
+    queryKey: ['producer-source-matrix-v2', year, month],
     queryFn: async (): Promise<ProducerSourceMatrixData[]> => {
       const { startDate, endDate } = getDateRange(year, month)
       
@@ -444,7 +444,7 @@ export function useProducerSourceMatrix(year: number, month: number | null) {
 
 export function useCloseRateAnalysis(year: number, month: number | null) {
   return useQuery({
-    queryKey: ['close-rate-analysis', year, month],
+    queryKey: ['close-rate-analysis-v2', year, month],
     queryFn: async (): Promise<CloseRateData[]> => {
       const { startDate, endDate } = getDateRange(year, month)
       
