@@ -3,52 +3,6 @@ import { useQuery } from '@tanstack/react-query';
 import type { PostgrestError } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 
-// Add missing hooks that components depend on
-export function useCoachingEffectiveness(dateRange: { from: Date; to: Date }, producerId?: string) {
-  return useQuery({
-    queryKey: ['coaching-effectiveness', dateRange, producerId],
-    queryFn: async () => {
-      // Placeholder implementation
-      return {
-        total_issues: 0,
-        resolved_issues: 0,
-        improvement_rate: 0,
-      };
-    },
-  });
-}
-
-export function useConversionFunnelData(dateRange: { from: Date; to: Date }) {
-  return useQuery({
-    queryKey: ['conversion-funnel-data', dateRange],
-    queryFn: async () => {
-      // Placeholder implementation
-      return {
-        stages: [],
-        total: 0,
-      };
-    },
-  });
-}
-
-export function useProducerPerformanceAlerts(dateRange: { from: Date; to: Date }) {
-  return useQuery({
-    queryKey: ['producer-performance-alerts', dateRange],
-    queryFn: async () => {
-      return [];
-    },
-  });
-}
-
-export function useSalesProcessGaps(dateRange: { from: Date; to: Date }, producerId?: string) {
-  return useQuery({
-    queryKey: ['sales-process-gaps', dateRange, producerId],
-    queryFn: async () => {
-      return [];
-    },
-  });
-}
-
 export type ISODate = string;
 export type YearMonth = string; // 'YYYY-MM'
 

@@ -49,7 +49,7 @@ export function useExecutionFunnel(
   maybeToDate?: ISODate,
   maybeProducerId?: UUID | null,
   maybeSourceId?: UUID | null,
-  maybeOptions?: Partial<UseQueryOptions<ExecutionFunnelRow[], PostgrestError>>
+  maybeOptions?: Partial<UseQueryOptions<ExecutionFunnelData, PostgrestError>>
 ) {
   const args: ArgsObject =
     typeof argsOrFrom === 'string'
@@ -68,7 +68,7 @@ export function useExecutionFunnel(
 
   const { fromDate, toDate, producerId, sourceId } = args;
 
-  return useQuery<ExecutionFunnelRow[], PostgrestError>({
+  return useQuery<ExecutionFunnelData, PostgrestError>({
     queryKey: [
       'execution-funnel',
       fromDate,
@@ -77,16 +77,16 @@ export function useExecutionFunnel(
       sourceId ?? null,
     ],
     queryFn: async () => {
-      // Use RPC function
-      const { data, error } = await supabase
-        .rpc('rpc_get_execution_funnel' as any, {
-          from_date: fromDate,
-          to_date: toDate,
-          producer_filter: producerId ?? null,
-          source_filter: sourceId ?? null,
-        });
+      // Single source of truth: RPC (backend handles filters & logic)
+      const { data, error } = await supabase.rpc('get_execution_funnel', {
+        from_date: fromDate,
+        to_date: toDate,
+        producer_filter: producerId ?? null,
+        source_filter: sourceId ?? null,
+      });
 
       if (error) {
+        // Surface full stack context to React Query error boundary / logger
         throw error;
       }
 
@@ -108,9 +108,26 @@ export function useExecutionFunnel(
             : Number(r.drop_off_rate),
       }));
 
-      return stages;
+      // Fast index by name (case‑insensitive)
+      const byName: Record<string, ExecutionFunnelRow | undefined> = {};
+      for (const s of stages) {
+        byName[s.stage_name.toLowerCase()] = s;
+      }
+
+      const totals = {
+        qhh_total: byName['qhh']?.stage_value ?? findByNumber(stages, 1) ?? 0,
+        quotes_total:
+          byName['quotes']?.stage_value ?? findByNumber(stages, 2) ?? 0,
+        sales_total:
+          byName['sales']?.stage_value ?? findByNumber(stages, 3) ?? 0,
+        items_total:
+          byName['items']?.stage_value ?? findByNumber(stages, 4) ?? 0,
+      };
+
+      return { stages, totals, byName };
     },
     enabled: Boolean(fromDate && toDate),
+    // Caching discipline: ensure fresh, avoid stale cross‑filter reuse.
     staleTime: 0,
     refetchOnMount: true,
     refetchOnWindowFocus: true,
@@ -118,21 +135,6 @@ export function useExecutionFunnel(
     retry: 1,
     ...maybeOptions,
   });
-}
-
-// Add missing export for useExecutionEfficiency
-export function useExecutionEfficiency(args: ArgsObject) {
-  const funnelQuery = useExecutionFunnel(args);
-  
-  return {
-    ...funnelQuery,
-    data: funnelQuery.data ? {
-      qhh: funnelQuery.data.find(s => s.stage_name.toLowerCase() === 'qhh')?.stage_value ?? 0,
-      quotes: funnelQuery.data.find(s => s.stage_name.toLowerCase() === 'quotes')?.stage_value ?? 0,
-      sales: funnelQuery.data.find(s => s.stage_name.toLowerCase() === 'sales')?.stage_value ?? 0,
-      items: funnelQuery.data.find(s => s.stage_name.toLowerCase() === 'items')?.stage_value ?? 0,
-    } : undefined,
-  };
 }
 
 function normalizeId(id?: string | null) {
