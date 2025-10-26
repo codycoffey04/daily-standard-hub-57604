@@ -106,40 +106,22 @@ export function useQHHBySource(year: number, month: number | null) {
   return useQuery({
     queryKey: ['qhh-by-source-v2', year, month],
     queryFn: async (): Promise<QHHBySourceData[]> => {
-      // Calculate month_ym in 'YYYY-MM' format
-      const monthYm = month 
-        ? `${year}-${String(month).padStart(2, '0')}`
-        : `${year}-01`
+      const { startDate, endDate } = getDateRange(year, month)
       
-      console.log('🔍 === QHH BY SOURCE RPC CALL (NEW) ===')
-      console.log('  Input - year:', year, 'month:', month)
-      console.log('  Calculated month_ym:', monthYm)
-      console.log('  Exact RPC params:', JSON.stringify({ 
-        month_ym: monthYm, 
-        metric_type: 'qhh',
-        lim: 50
-      }, null, 2))
-      
-      const { data, error } = await supabase.rpc(
-        'rpc_get_top_sources_by_month' as any,
-        {
-          month_ym: monthYm,
-          metric_type: 'qhh',
-          lim: 50
-        }
-      )
-      
-      console.log('📊 === QHH BY SOURCE RPC RESPONSE ===')
-      console.log('  Data:', data)
-      console.log('  Error:', error)
-      console.log('  Row count:', data?.length || 0)
-      
-      if (error) throw error
-      
-      // Transform to match QHHBySourceData interface
-      return (data || []).map((item: any) => ({
-        source_name: item.source_name,
-        qhh: item.metric_value
+      const { data, error } = await supabase.rpc('get_items_by_source' as any, {
+        from_date: startDate,
+        to_date: endDate
+      })
+
+      if (error) {
+        console.error('❌ Error fetching QHH by source via RPC:', error)
+        throw error
+      }
+
+      // Map to existing return structure
+      return (data || []).map((row: any) => ({
+        source_name: row.source_name,
+        qhh: Number(row.qhh) || 0
       }))
     }
   })
@@ -286,17 +268,30 @@ export function useItemsBySource(year: number, month: number | null) {
     queryFn: async (): Promise<ItemsBySourceData[]> => {
       const { startDate, endDate } = getDateRange(year, month)
       
-      const { data, error } = await supabase.rpc(
-        'get_items_by_source' as any,
-        {
-          from_date: startDate,
-          to_date: endDate
-        }
-      )
+      const { data, error } = await supabase.rpc('get_items_by_source' as any, {
+        from_date: startDate,
+        to_date: endDate
+      })
       
-      if (error) throw error
+      if (error) {
+        console.error('❌ Error fetching Items by source via RPC:', error)
+        throw error
+      }
       
-      return (data as ItemsBySourceData[]) || []
+      return (data || []).map((row: any) => ({
+        source_id: row.source_id,
+        source_name: row.source_name,
+        qhh: Number(row.qhh) || 0,
+        quotes: Number(row.quotes) || 0,
+        items: Number(row.items) || 0,
+        items_per_qhh: row.items_per_qhh == null ? null : Number(row.items_per_qhh),
+        items_per_quote: row.items_per_quote == null ? null : Number(row.items_per_quote),
+        qhh_rows_detail: Number(row.qhh_rows_detail) || 0,
+        detail_coverage_pct: row.detail_coverage_pct == null ? null : Number(row.detail_coverage_pct),
+        bundle_rate: row.bundle_rate == null ? null : Number(row.bundle_rate),
+        avg_quoted_premium: row.avg_quoted_premium == null ? null : Number(row.avg_quoted_premium),
+        avg_sold_quote_premium: row.avg_sold_quote_premium == null ? null : Number(row.avg_sold_quote_premium)
+      }))
     }
   })
 }

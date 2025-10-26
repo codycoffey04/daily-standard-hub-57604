@@ -59,46 +59,58 @@ export const useConversionFunnelData = (dateRange: { from: Date; to: Date }) => 
       const previousStart = format(subDays(dateRange.from, daysDiff), 'yyyy-MM-dd')
       const previousEnd = format(subDays(dateRange.to, daysDiff), 'yyyy-MM-dd')
 
-      // Fetch current period data
-      const { data: currentData } = await supabase
-        .from('daily_entries')
-        .select('qhh_total, items_total, sales_total')
-        .gte('entry_date', currentStart)
-        .lte('entry_date', currentEnd)
+      // Fetch current period funnel via RPC
+      const { data: currentFunnel, error: currentError } = await supabase.rpc('get_execution_funnel' as any, {
+        from_date: currentStart,
+        to_date: currentEnd,
+        producer_filter: null,
+        source_filter: null
+      })
 
-      // Fetch previous period data
-      const { data: previousData } = await supabase
-        .from('daily_entries')
-        .select('qhh_total, items_total, sales_total')
-        .gte('entry_date', previousStart)
-        .lte('entry_date', previousEnd)
+      if (currentError) {
+        console.error('❌ Error fetching current conversion funnel via RPC:', currentError)
+        throw currentError
+      }
 
-      // Calculate current period metrics
-      const currentTotals = currentData?.reduce(
-        (acc, entry) => ({
-          qhh: acc.qhh + entry.qhh_total,
-          items: acc.items + entry.items_total,
-          sales: acc.sales + entry.sales_total
-        }),
-        { qhh: 0, items: 0, sales: 0 }
-      ) || { qhh: 0, items: 0, sales: 0 }
+      // Fetch previous period funnel via RPC
+      const { data: previousFunnel, error: previousError } = await supabase.rpc('get_execution_funnel' as any, {
+        from_date: previousStart,
+        to_date: previousEnd,
+        producer_filter: null,
+        source_filter: null
+      })
 
-      // Calculate previous period metrics
-      const previousTotals = previousData?.reduce(
-        (acc, entry) => ({
-          qhh: acc.qhh + entry.qhh_total,
-          items: acc.items + entry.items_total,
-          sales: acc.sales + entry.sales_total
-        }),
-        { qhh: 0, items: 0, sales: 0 }
-      ) || { qhh: 0, items: 0, sales: 0 }
+      if (previousError) {
+        console.error('❌ Error fetching previous conversion funnel via RPC:', previousError)
+        throw previousError
+      }
+
+      // Parse current funnel stages
+      const currentStages = (currentFunnel || []).map((r: any) => ({
+        stage_name: String(r.stage_name),
+        stage_value: Number(r.stage_value) || 0
+      }))
+
+      const currentQHH = currentStages.find(s => s.stage_name === 'QHH')?.stage_value || 0
+      const currentItems = currentStages.find(s => s.stage_name === 'Items Sold')?.stage_value || 0
+      const currentSales = currentStages.find(s => s.stage_name === 'Sales')?.stage_value || 0
+
+      // Parse previous funnel stages
+      const previousStages = (previousFunnel || []).map((r: any) => ({
+        stage_name: String(r.stage_name),
+        stage_value: Number(r.stage_value) || 0
+      }))
+
+      const previousQHH = previousStages.find(s => s.stage_name === 'QHH')?.stage_value || 0
+      const previousItems = previousStages.find(s => s.stage_name === 'Items Sold')?.stage_value || 0
+      const previousSales = previousStages.find(s => s.stage_name === 'Sales')?.stage_value || 0
 
       // Calculate conversion rates
-      const currentQhhToItems = currentTotals.qhh > 0 ? (currentTotals.items / currentTotals.qhh) * 100 : 0
-      const currentItemsToSales = currentTotals.items > 0 ? (currentTotals.sales / currentTotals.items) * 100 : 0
+      const currentQhhToItems = currentQHH > 0 ? (currentItems / currentQHH) * 100 : 0
+      const currentItemsToSales = currentItems > 0 ? (currentSales / currentItems) * 100 : 0
       
-      const previousQhhToItems = previousTotals.qhh > 0 ? (previousTotals.items / previousTotals.qhh) * 100 : 0
-      const previousItemsToSales = previousTotals.items > 0 ? (previousTotals.sales / previousTotals.items) * 100 : 0
+      const previousQhhToItems = previousQHH > 0 ? (previousItems / previousQHH) * 100 : 0
+      const previousItemsToSales = previousItems > 0 ? (previousSales / previousItems) * 100 : 0
 
       // Calculate trends
       const qhhToItemsChange = currentQhhToItems - previousQhhToItems
@@ -112,9 +124,9 @@ export const useConversionFunnelData = (dateRange: { from: Date; to: Date }) => 
         current: {
           qhhToItems: currentQhhToItems,
           itemsToSales: currentItemsToSales,
-          totalQhh: currentTotals.qhh,
-          totalItems: currentTotals.items,
-          totalSales: currentTotals.sales
+          totalQhh: currentQHH,
+          totalItems: currentItems,
+          totalSales: currentSales
         },
         previous: {
           qhhToItems: previousQhhToItems,
