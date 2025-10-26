@@ -65,12 +65,12 @@ export const useExecutionFunnel = (
         let query = supabase
           .from('daily_entries')
           .select(`
+            id,
             outbound_dials,
             daily_entry_sources!inner(
               qhh,
               sales,
-              items,
-              written_premium
+              items
             )
           `)
           .gte('entry_date', fromDate)
@@ -85,18 +85,18 @@ export const useExecutionFunnel = (
         if (response.data) {
           // Flatten the nested structure for aggregation
           data = response.data.map((entry: any) => ({
+            id: entry.id,
             outbound_dials: entry.outbound_dials || 0,
             qhh_total: entry.daily_entry_sources?.qhh || 0,
             sales_total: entry.daily_entry_sources?.sales || 0,
-            items_total: entry.daily_entry_sources?.items || 0,
-            written_premium: entry.daily_entry_sources?.written_premium || 0
+            items_total: entry.daily_entry_sources?.items || 0
           }));
         }
       } else {
         // When no source filter, query daily_entries directly
         let query = supabase
           .from('daily_entries')
-          .select('outbound_dials, qhh_total, sales_total, items_total, written_premium')
+          .select('id, outbound_dials, qhh_total, sales_total, items_total')
           .gte('entry_date', fromDate)
           .lte('entry_date', toDate);
 
@@ -122,12 +122,29 @@ export const useExecutionFunnel = (
         ];
       }
 
-      // Aggregate totals
+      // Get entry IDs for premium calculation
+      const entryIds = data.map(row => row.id).filter(Boolean);
+      
+      // Query premium from the premium_by_entry view
+      let totalPremium = 0;
+      if (entryIds.length > 0) {
+        const { data: premiumData, error: premiumError } = await supabase
+          .from('premium_by_entry' as any)
+          .select('total_premium')
+          .in('daily_entry_id', entryIds);
+
+        if (premiumError) {
+          console.error('❌ Error fetching premium:', premiumError);
+        } else {
+          totalPremium = (premiumData || []).reduce((sum, row: any) => sum + (Number(row.total_premium) || 0), 0);
+        }
+      }
+
+      // Aggregate other totals
       const totalDials = data.reduce((sum, row) => sum + (Number(row.outbound_dials) || 0), 0);
       const totalQHH = data.reduce((sum, row) => sum + (Number(row.qhh_total) || 0), 0);
       const totalSales = data.reduce((sum, row) => sum + (Number(row.sales_total) || 0), 0);
       const totalItems = data.reduce((sum, row) => sum + (Number(row.items_total) || 0), 0);
-      const totalPremium = data.reduce((sum, row) => sum + (Number(row.written_premium) || 0), 0);
 
       // Build funnel stages
       const stages: ExecutionFunnelStage[] = [
@@ -272,12 +289,12 @@ export const useExecutionEfficiency = (
         let query = supabase
           .from('daily_entries')
           .select(`
+            id,
             outbound_dials,
             daily_entry_sources!inner(
               qhh,
               sales,
-              items,
-              written_premium
+              items
             )
           `)
           .gte('entry_date', fromDate)
@@ -292,18 +309,18 @@ export const useExecutionEfficiency = (
         if (response.data) {
           // Flatten the nested structure for aggregation
           data = response.data.map((entry: any) => ({
+            id: entry.id,
             outbound_dials: entry.outbound_dials || 0,
             qhh_total: entry.daily_entry_sources?.qhh || 0,
             sales_total: entry.daily_entry_sources?.sales || 0,
-            items_total: entry.daily_entry_sources?.items || 0,
-            written_premium: entry.daily_entry_sources?.written_premium || 0
+            items_total: entry.daily_entry_sources?.items || 0
           }));
         }
       } else {
         // When no source filter, query daily_entries directly
         let query = supabase
           .from('daily_entries')
-          .select('outbound_dials, qhh_total, sales_total, items_total, written_premium')
+          .select('id, outbound_dials, qhh_total, sales_total, items_total')
           .gte('entry_date', fromDate)
           .lte('entry_date', toDate);
 
@@ -329,12 +346,29 @@ export const useExecutionEfficiency = (
         ];
       }
 
-      // Aggregate totals
+      // Get entry IDs for premium calculation
+      const entryIds = data.map(row => row.id).filter(Boolean);
+      
+      // Query premium from the premium_by_entry view
+      let totalPremium = 0;
+      if (entryIds.length > 0) {
+        const { data: premiumData, error: premiumError } = await supabase
+          .from('premium_by_entry' as any)
+          .select('total_premium')
+          .in('daily_entry_id', entryIds);
+
+        if (premiumError) {
+          console.error('❌ Error fetching premium:', premiumError);
+        } else {
+          totalPremium = (premiumData || []).reduce((sum, row: any) => sum + (Number(row.total_premium) || 0), 0);
+        }
+      }
+
+      // Aggregate other totals
       const totalDials = data.reduce((sum, row) => sum + (Number(row.outbound_dials) || 0), 0);
       const totalQHH = data.reduce((sum, row) => sum + (Number(row.qhh_total) || 0), 0);
       const totalSales = data.reduce((sum, row) => sum + (Number(row.sales_total) || 0), 0);
       const totalItems = data.reduce((sum, row) => sum + (Number(row.items_total) || 0), 0);
-      const totalPremium = data.reduce((sum, row) => sum + (Number(row.written_premium) || 0), 0);
 
       // Calculate efficiency metrics
       const metrics: ExecutionEfficiency[] = [
