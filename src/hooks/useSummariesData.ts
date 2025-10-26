@@ -133,33 +133,63 @@ export function useQHHByProducer(year: number, month: number | null) {
   return useQuery({
     queryKey: ['qhh-by-producer', year, month],
     queryFn: async () => {
-      const query = supabase
+      // 1) Get daily_entry IDs + producer mapping for date range
+      const { data: entries, error: entriesErr } = await supabase
         .from('daily_entries')
-        .select(`
-          producer_id,
-          producers!inner(display_name),
-          daily_entry_sources!inner(qhh)
-        `)
+        .select('id, producer_id')
         .gte('entry_date', startDate)
         .lte('entry_date', endDate)
 
-      const { data, error } = await query
+      if (entriesErr) throw entriesErr
+      if (!entries || entries.length === 0) return []
 
-      if (error) throw error
+      const entryIdToProducer = new Map<string, string>()
+      const entryIds: string[] = []
+      const producerIds = new Set<string>()
 
-      // Group by producer and sum QHH
-      const producerMap = new Map<string, { producer: string, qhh: number }>()
+      for (const e of entries) {
+        if (e?.id && e?.producer_id) {
+          entryIdToProducer.set(e.id, e.producer_id)
+          entryIds.push(e.id)
+          producerIds.add(e.producer_id)
+        }
+      }
 
-      data?.forEach((entry: any) => {
-        const producerName = entry.producers.display_name
-        entry.daily_entry_sources.forEach((source: any) => {
-          const existing = producerMap.get(producerName) || { producer: producerName, qhh: 0 }
-          existing.qhh += source.qhh || 0
-          producerMap.set(producerName, existing)
-        })
-      })
+      // 2) Get QH rows for those entries
+      const { data: qhRows, error: qhErr } = await supabase
+        .from('quoted_households')
+        .select('id, lead_id, daily_entry_id')
+        .in('daily_entry_id', entryIds)
 
-      return Array.from(producerMap.values()).sort((a, b) => b.qhh - a.qhh)
+      if (qhErr) throw qhErr
+
+      // 3) Distinct QHH per producer
+      const qhhSetsByProducer = new Map<string, Set<string>>()
+      for (const row of (qhRows || [])) {
+        const producerId = entryIdToProducer.get(row.daily_entry_id)
+        if (!producerId) continue
+        if (!row.lead_id) continue
+        if (!qhhSetsByProducer.has(producerId)) qhhSetsByProducer.set(producerId, new Set<string>())
+        qhhSetsByProducer.get(producerId)!.add(row.lead_id)
+      }
+
+      // 4) Producer names
+      const { data: producersData, error: prodErr } = await supabase
+        .from('producers')
+        .select('id, display_name')
+        .in('id', Array.from(producerIds))
+
+      if (prodErr) throw prodErr
+      const producerName = new Map<string, string>((producersData || []).map(p => [p.id, p.display_name]))
+
+      // 5) Shape result - Use 'producer' key to match component expectation
+      const result = Array.from(qhhSetsByProducer.entries()).map(([producer_id, set]) => ({
+        producer: producerName.get(producer_id) || 'Unknown',
+        qhh: set.size
+      }))
+
+      result.sort((a, b) => b.qhh - a.qhh)
+      return result
     }
   })
 }
@@ -170,31 +200,60 @@ export function useQuotesByProducer(year: number, month: number | null) {
     queryFn: async (): Promise<QuotesByProducerData[]> => {
       const { startDate, endDate } = getDateRange(year, month)
       
-      const { data, error } = await supabase
-        .from('daily_entry_sources')
-        .select(`
-          quotes,
-          daily_entries!inner(
-            producer_id,
-            entry_date,
-            producers!inner(display_name)
-          )
-        `)
-        .gte('daily_entries.entry_date', startDate)
-        .lte('daily_entries.entry_date', endDate)
-      
-      if (error) throw error
-      
-      // Group by producer and sum quotes
-      const grouped = data.reduce((acc: Record<string, number>, item: any) => {
-        const producerName = item.daily_entries.producers.display_name
-        acc[producerName] = (acc[producerName] || 0) + item.quotes
-        return acc
-      }, {})
-      
-      return Object.entries(grouped)
-        .map(([producer_name, quotes]) => ({ producer_name, quotes }))
-        .sort((a, b) => b.quotes - a.quotes)
+      // 1) Get daily_entry IDs + producer mapping
+      const { data: entries, error: entriesErr } = await supabase
+        .from('daily_entries')
+        .select('id, producer_id')
+        .gte('entry_date', startDate)
+        .lte('entry_date', endDate)
+
+      if (entriesErr) throw entriesErr
+      if (!entries || entries.length === 0) return []
+
+      const entryIdToProducer = new Map<string, string>()
+      const entryIds: string[] = []
+      const producerIds = new Set<string>()
+
+      for (const e of entries) {
+        if (e?.id && e?.producer_id) {
+          entryIdToProducer.set(e.id, e.producer_id)
+          entryIds.push(e.id)
+          producerIds.add(e.producer_id)
+        }
+      }
+
+      // 2) Quotes = count of quoted_households rows
+      const { data: qhRows, error: qhErr } = await supabase
+        .from('quoted_households')
+        .select('id, daily_entry_id')
+        .in('daily_entry_id', entryIds)
+
+      if (qhErr) throw qhErr
+
+      const quotesByProducer = new Map<string, number>()
+      for (const row of (qhRows || [])) {
+        const producerId = entryIdToProducer.get(row.daily_entry_id)
+        if (!producerId) continue
+        quotesByProducer.set(producerId, (quotesByProducer.get(producerId) || 0) + 1)
+      }
+
+      // 3) Producer names
+      const { data: producersData, error: prodErr } = await supabase
+        .from('producers')
+        .select('id, display_name')
+        .in('id', Array.from(producerIds))
+
+      if (prodErr) throw prodErr
+      const producerName = new Map<string, string>((producersData || []).map(p => [p.id, p.display_name]))
+
+      // 4) Shape result
+      const result = Array.from(quotesByProducer.entries()).map(([producer_id, quotes]) => ({
+        producer_name: producerName.get(producer_id) || 'Unknown',
+        quotes
+      }))
+
+      result.sort((a, b) => b.quotes - a.quotes)
+      return result
     }
   })
 }
@@ -302,42 +361,83 @@ export function useProducerSourceMatrix(year: number, month: number | null) {
     queryFn: async (): Promise<ProducerSourceMatrixData[]> => {
       const { startDate, endDate } = getDateRange(year, month)
       
-      const { data, error } = await supabase
-        .from('daily_entry_sources')
-        .select(`
-          quotes,
-          qhh,
-          items,
-          sources!inner(name),
-          daily_entries!inner(
-            entry_date,
-            producers!inner(display_name)
-          )
-        `)
-        .gte('daily_entries.entry_date', startDate)
-        .lte('daily_entries.entry_date', endDate)
-      
-      if (error) throw error
-      
-      // Group by producer-source combination
-      const grouped = data.reduce((acc: Record<string, any>, item: any) => {
-        const key = `${item.daily_entries.producers.display_name}|${item.sources.name}`
-        if (!acc[key]) {
-          acc[key] = {
-            producer_name: item.daily_entries.producers.display_name,
-            source_name: item.sources.name,
-            quotes: 0,
-            qhh: 0,
-            items: 0
-          }
+      // 1) Relevant entries in range
+      const { data: entries, error: entriesErr } = await supabase
+        .from('daily_entries')
+        .select('id, producer_id')
+        .gte('entry_date', startDate)
+        .lte('entry_date', endDate)
+
+      if (entriesErr) throw entriesErr
+      if (!entries || entries.length === 0) return []
+
+      const entryIdToProducer = new Map<string, string>()
+      const entryIds: string[] = []
+      const producerIds = new Set<string>()
+      for (const e of entries) {
+        if (e?.id && e?.producer_id) {
+          entryIdToProducer.set(e.id, e.producer_id)
+          entryIds.push(e.id)
+          producerIds.add(e.producer_id)
         }
-        acc[key].quotes += item.quotes
-        acc[key].qhh += item.qhh
-        acc[key].items += item.items
-        return acc
-      }, {})
-      
-      return Object.values(grouped)
+      }
+
+      // 2) QH rows (lead_id for QHH; items_sold and lead_source_id for metrics)
+      const { data: qhRows, error: qhErr } = await supabase
+        .from('quoted_households')
+        .select('id, lead_id, items_sold, lead_source_id, daily_entry_id')
+        .in('daily_entry_id', entryIds)
+
+      if (qhErr) throw qhErr
+      if (!qhRows || qhRows.length === 0) return []
+
+      const sourceIds = new Set<string>()
+      for (const r of qhRows) if (r.lead_source_id) sourceIds.add(r.lead_source_id)
+
+      // 3) Names lookups
+      const [{ data: producersData, error: prodErr }, { data: sourcesData, error: srcErr }] = await Promise.all([
+        supabase.from('producers').select('id, display_name').in('id', Array.from(producerIds)),
+        supabase.from('sources').select('id, name').in('id', Array.from(sourceIds))
+      ])
+      if (prodErr) throw prodErr
+      if (srcErr) throw srcErr
+
+      const producerName = new Map<string, string>((producersData || []).map(p => [p.id, p.display_name]))
+      const sourceName = new Map<string, string>((sourcesData || []).map(s => [s.id, s.name]))
+
+      // 4) Build matrix: (producer_id, source_id) → { qhhSet, quotes, items }
+      interface Cell { qhhSet: Set<string>; quotes: number; items: number }
+      const matrix = new Map<string, Cell>()
+      const makeKey = (pid: string, sid: string) => `${pid}||${sid}`
+
+      for (const r of qhRows) {
+        const producerId = entryIdToProducer.get(r.daily_entry_id)
+        const sourceId = r.lead_source_id
+        if (!producerId || !sourceId) continue
+
+        const key = makeKey(producerId, sourceId)
+        if (!matrix.has(key)) matrix.set(key, { qhhSet: new Set<string>(), quotes: 0, items: 0 })
+
+        const cell = matrix.get(key)!
+        if (r.lead_id) cell.qhhSet.add(r.lead_id)
+        cell.quotes += 1
+        cell.items += Number(r.items_sold || 0)
+      }
+
+      // 5) Shape to ProducerSourceMatrixData interface
+      const result = Array.from(matrix.entries()).map(([key, cell]) => {
+        const [producer_id, source_id] = key.split('||')
+        return {
+          producer_name: producerName.get(producer_id) || 'Unknown',
+          source_name: sourceName.get(source_id) || 'Unknown',
+          qhh: cell.qhhSet.size,
+          quotes: cell.quotes,
+          items: cell.items
+        }
+      })
+
+      result.sort((a, b) => (a.producer_name.localeCompare(b.producer_name) || a.source_name.localeCompare(b.source_name)))
+      return result
     }
   })
 }
@@ -348,38 +448,64 @@ export function useCloseRateAnalysis(year: number, month: number | null) {
     queryFn: async (): Promise<CloseRateData[]> => {
       const { startDate, endDate } = getDateRange(year, month)
       
-      const { data, error } = await supabase
-        .from('daily_entry_sources')
-        .select(`
-          qhh,
-          items,
-          sources!inner(name),
-          daily_entries!inner(entry_date)
-        `)
-        .gte('daily_entries.entry_date', startDate)
-        .lte('daily_entries.entry_date', endDate)
-      
-      if (error) throw error
-      
-      // Group by source and calculate close rates
-      const grouped = data.reduce((acc: Record<string, { qhh: number, items: number }>, item: any) => {
-        const sourceName = item.sources.name
-        if (!acc[sourceName]) {
-          acc[sourceName] = { qhh: 0, items: 0 }
+      // 1) Get daily_entry IDs for date range
+      const { data: entries, error: entriesErr } = await supabase
+        .from('daily_entries')
+        .select('id')
+        .gte('entry_date', startDate)
+        .lte('entry_date', endDate)
+
+      if (entriesErr) throw entriesErr
+      if (!entries || entries.length === 0) return []
+
+      const entryIds = entries.map(e => e.id).filter(Boolean)
+
+      // 2) Get quoted_households rows (grouped by SOURCE)
+      const { data: qhRows, error: qhErr } = await supabase
+        .from('quoted_households')
+        .select('lead_id, items_sold, lead_source_id')
+        .in('daily_entry_id', entryIds)
+
+      if (qhErr) throw qhErr
+      if (!qhRows || qhRows.length === 0) return []
+
+      // 3) Group by source: QHH = distinct lead_id, Items = sum(items_sold)
+      interface SourceMetrics { qhhSet: Set<string>; items: number }
+      const bySource = new Map<string, SourceMetrics>()
+
+      for (const r of qhRows) {
+        const sourceId = r.lead_source_id
+        if (!sourceId) continue
+
+        if (!bySource.has(sourceId)) {
+          bySource.set(sourceId, { qhhSet: new Set<string>(), items: 0 })
         }
-        acc[sourceName].qhh += item.qhh
-        acc[sourceName].items += item.items
-        return acc
-      }, {})
-      
-      return Object.entries(grouped)
-        .map(([source_name, data]) => ({
-          source_name,
-          qhh: data.qhh,
-          items: data.items,
-          close_rate: data.qhh > 0 ? (data.items / data.qhh) * 100 : 0
-        }))
-        .sort((a, b) => b.close_rate - a.close_rate)
+
+        const metrics = bySource.get(sourceId)!
+        if (r.lead_id) metrics.qhhSet.add(r.lead_id)
+        metrics.items += Number(r.items_sold || 0)
+      }
+
+      // 4) Get source names
+      const sourceIds = Array.from(bySource.keys())
+      const { data: sourcesData, error: srcErr } = await supabase
+        .from('sources')
+        .select('id, name')
+        .in('id', sourceIds)
+
+      if (srcErr) throw srcErr
+      const sourceName = new Map<string, string>((sourcesData || []).map(s => [s.id, s.name]))
+
+      // 5) Shape to CloseRateData interface
+      const result = Array.from(bySource.entries()).map(([source_id, metrics]) => ({
+        source_name: sourceName.get(source_id) || 'Unknown',
+        qhh: metrics.qhhSet.size,
+        items: metrics.items,
+        close_rate: metrics.qhhSet.size > 0 ? (metrics.items / metrics.qhhSet.size) * 100 : 0
+      }))
+
+      result.sort((a, b) => b.close_rate - a.close_rate)
+      return result
     }
   })
 }
