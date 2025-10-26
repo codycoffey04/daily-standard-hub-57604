@@ -10,6 +10,7 @@ import {
 } from '@/components/ui/table'
 import { SummaryBarChart } from '@/components/charts/SummaryBarChart'
 import { useItemsBySource, ItemsBySourceData } from '@/hooks/useSummariesData'
+import { useMonthlySummary } from '@/hooks/useMonthlySummary'
 import { ChartLoading } from '@/components/ui/chart-loading'
 import { EmptyState } from '@/components/ui/empty-state'
 import { formatNumber } from '@/lib/utils'
@@ -26,6 +27,7 @@ export const ItemsBySourceReport: React.FC<ItemsBySourceReportProps> = ({
   selectedMonth
 }) => {
   const { data, isLoading, error } = useItemsBySource(selectedYear, selectedMonth)
+  const { data: monthlySummary } = useMonthlySummary(selectedYear, selectedMonth)
   const [sortColumn, setSortColumn] = useState<keyof ItemsBySourceData>('items')
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc')
 
@@ -99,10 +101,10 @@ export const ItemsBySourceReport: React.FC<ItemsBySourceReportProps> = ({
     )
   }
 
-  // Calculate summary totals
-  const totalQHH = data.reduce((sum, item) => sum + item.qhh, 0)
-  const totalQuotes = data.reduce((sum, item) => sum + item.quotes, 0)
-  const totalItems = data.reduce((sum, item) => sum + item.items, 0)
+  // Calculate summary totals from monthly summary (prevents double-counting)
+  const totalQHH = monthlySummary?.total_qhh || 0
+  const totalQuotes = monthlySummary?.total_quotes || 0
+  const totalItems = monthlySummary?.total_items || 0
 
   // Prepare data for bar chart (top 10 by items)
   const top10Data = [...data]

@@ -2,6 +2,7 @@ import React from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { SummaryBarChart } from '@/components/charts/SummaryBarChart'
 import { useQHHBySource } from '@/hooks/useSummariesData'
+import { useMonthlySummary } from '@/hooks/useMonthlySummary'
 import { ChartLoading } from '@/components/ui/chart-loading'
 import { EmptyState } from '@/components/ui/empty-state'
 import { formatNumber } from '@/lib/utils'
@@ -20,6 +21,7 @@ export const QHHBySourceReport: React.FC<QHHBySourceReportProps> = ({
   console.log('  Props - selectedYear:', selectedYear, 'selectedMonth:', selectedMonth)
   
   const { data, isLoading, error } = useQHHBySource(selectedYear, selectedMonth)
+  const { data: monthlySummary } = useMonthlySummary(selectedYear, selectedMonth)
   
   console.log('  Hook returned - isLoading:', isLoading, 'hasData:', !!data, 'hasError:', !!error)
   if (data) console.log('  Data rows:', data.length)
@@ -76,7 +78,7 @@ export const QHHBySourceReport: React.FC<QHHBySourceReportProps> = ({
     value: item.qhh
   })) || []
 
-  const totalQHH = data?.reduce((sum, item) => sum + item.qhh, 0) || 0
+  const totalQHH = monthlySummary?.total_qhh || 0
 
   return (
     <div className="space-y-6">

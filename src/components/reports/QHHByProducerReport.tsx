@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { SummaryBarChart } from '@/components/charts/SummaryBarChart'
 import { useQHHByProducer } from '@/hooks/useSummariesData'
+import { useMonthlySummary } from '@/hooks/useMonthlySummary'
 import { formatNumber } from '@/lib/utils'
 
 interface QHHByProducerReportProps {
@@ -16,6 +17,7 @@ export const QHHByProducerReport: React.FC<QHHByProducerReportProps> = ({
   selectedMonth
 }) => {
   const { data, isLoading, error } = useQHHByProducer(selectedYear, selectedMonth)
+  const { data: monthlySummary } = useMonthlySummary(selectedYear, selectedMonth)
 
   if (isLoading) {
     return (
@@ -60,7 +62,7 @@ export const QHHByProducerReport: React.FC<QHHByProducerReportProps> = ({
   }
 
   // Calculate summary statistics
-  const totalQHH = data.reduce((sum, item) => sum + item.qhh, 0)
+  const totalQHH = monthlySummary?.total_qhh || 0
   const topProducer = data[0] // Already sorted by QHH descending
   const averageQHH = totalQHH / data.length
 

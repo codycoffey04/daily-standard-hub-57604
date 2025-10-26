@@ -552,7 +552,7 @@ function getPreviousPeriodDates(year: number, month: number | null) {
 
 export function useSalesByProducer(year: number, month: number | null) {
   return useQuery({
-    queryKey: ['sales-by-producer', year, month],
+    queryKey: ['sales-by-producer-v2', year, month],
     queryFn: async (): Promise<SalesByProducerData[]> => {
       const { startDate, endDate } = getDateRange(year, month)
       

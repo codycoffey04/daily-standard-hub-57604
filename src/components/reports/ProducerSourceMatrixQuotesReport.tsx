@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { ProducerSourceMatrixQuotesChart } from '@/components/charts/ProducerSourceMatrixQuotesChart'
 import { useProducerSourceMatrix } from '@/hooks/useSummariesData'
+import { useMonthlySummary } from '@/hooks/useMonthlySummary'
 import { formatNumber } from '@/lib/utils'
 
 interface ProducerSourceMatrixQuotesReportProps {
@@ -16,6 +17,7 @@ export const ProducerSourceMatrixQuotesReport: React.FC<ProducerSourceMatrixQuot
   selectedMonth
 }) => {
   const { data, isLoading, error } = useProducerSourceMatrix(selectedYear, selectedMonth)
+  const { data: monthlySummary } = useMonthlySummary(selectedYear, selectedMonth)
 
   if (isLoading) {
     return (
@@ -60,7 +62,7 @@ export const ProducerSourceMatrixQuotesReport: React.FC<ProducerSourceMatrixQuot
   }
 
   // Calculate summary statistics for quotes
-  const totalQuotes = data.reduce((sum, item) => sum + item.quotes, 0)
+  const totalQuotes = monthlySummary?.total_quotes || 0
   const activeProducers = new Set(data.map(item => item.producer_name)).size
   const activeSources = new Set(data.map(item => item.source_name)).size
   const combinations = data.filter(item => item.quotes > 0).length

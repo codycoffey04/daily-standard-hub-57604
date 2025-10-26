@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { ProducerSourceMatrixQHHChart } from '@/components/charts/ProducerSourceMatrixQHHChart'
 import { useProducerSourceMatrix } from '@/hooks/useSummariesData'
+import { useMonthlySummary } from '@/hooks/useMonthlySummary'
 import { formatNumber } from '@/lib/utils'
 
 interface ProducerSourceMatrixQHHReportProps {
@@ -16,6 +17,7 @@ export const ProducerSourceMatrixQHHReport: React.FC<ProducerSourceMatrixQHHRepo
   selectedMonth
 }) => {
   const { data, isLoading, error } = useProducerSourceMatrix(selectedYear, selectedMonth)
+  const { data: monthlySummary } = useMonthlySummary(selectedYear, selectedMonth)
 
   if (isLoading) {
     return (
@@ -60,7 +62,7 @@ export const ProducerSourceMatrixQHHReport: React.FC<ProducerSourceMatrixQHHRepo
   }
 
   // Calculate summary statistics for QHH
-  const totalQHH = data.reduce((sum, item) => sum + item.qhh, 0)
+  const totalQHH = monthlySummary?.total_qhh || 0
   const activeProducers = new Set(data.map(item => item.producer_name)).size
   const activeSources = new Set(data.map(item => item.source_name)).size
   const combinations = data.filter(item => item.qhh > 0).length

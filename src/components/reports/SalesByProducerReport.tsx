@@ -4,6 +4,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useSalesByProducer, type SalesByProducerData } from '@/hooks/useSummariesData'
+import { useMonthlySummary } from '@/hooks/useMonthlySummary'
 import { Users, Target, TrendingUp, DollarSign, ArrowUp, ArrowDown, Minus } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -54,6 +55,7 @@ export const SalesByProducerReport: React.FC<SalesByProducerReportProps> = ({
   selectedMonth
 }) => {
   const { data: producersData, isLoading, error } = useSalesByProducer(selectedYear, selectedMonth)
+  const { data: monthlySummary } = useMonthlySummary(selectedYear, selectedMonth)
   
   const [sortField, setSortField] = useState<SortField>('framework_compliance_pct')
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc')
@@ -115,12 +117,12 @@ export const SalesByProducerReport: React.FC<SalesByProducerReportProps> = ({
       days_top: producersData.reduce((sum, p) => sum + (p.days_top ?? 0), 0),
       days_bottom: producersData.reduce((sum, p) => sum + (p.days_bottom ?? 0), 0),
       days_outside: producersData.reduce((sum, p) => sum + (p.days_outside ?? 0), 0),
-      total_qhh: producersData.reduce((sum, p) => sum + (p.total_qhh ?? 0), 0),
-      total_quotes: producersData.reduce((sum, p) => sum + (p.total_quotes ?? 0), 0),
+      total_qhh: monthlySummary?.total_qhh || 0,
+      total_quotes: monthlySummary?.total_quotes || 0,
       total_sold_items: producersData.reduce((sum, p) => sum + (p.total_sold_items ?? 0), 0),
       total_sold_premium: producersData.reduce((sum, p) => sum + (p.total_sold_premium ?? 0), 0),
     }
-  }, [producersData])
+  }, [producersData, monthlySummary])
 
   if (isLoading) {
     return (
