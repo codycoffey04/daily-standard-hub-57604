@@ -50,7 +50,18 @@ export const PacingCard: React.FC<PacingCardProps> = ({ metrics, className }) =>
   }
 
   const officeTarget = 69 // Office VC goal
-  const remainingItems = Math.max(0, officeTarget - metrics.office_total_items)
+  
+  // Validate office target and metrics
+  const hasValidOfficeTarget = officeTarget > 0 && 
+    metrics.office_total_items != null && 
+    !isNaN(metrics.office_total_items) &&
+    metrics.office_vc_pace != null &&
+    !isNaN(metrics.office_vc_pace)
+
+  const remainingItems = hasValidOfficeTarget 
+    ? Math.max(0, officeTarget - metrics.office_total_items)
+    : 0
+    
   const userContributionPct = officeTarget > 0 
     ? ((metrics.items / officeTarget) * 100).toFixed(1)
     : '0.0'
@@ -126,14 +137,23 @@ export const PacingCard: React.FC<PacingCardProps> = ({ metrics, className }) =>
               <span>Your Contribution</span>
               <span>{metrics.items} items ({userContributionPct}% of goal)</span>
             </div>
-            <div className="flex justify-between text-xs text-muted-foreground">
-              <span>Office Needs</span>
-              <span>{remainingItems} more</span>
-            </div>
-            <div className="flex justify-between text-xs text-muted-foreground">
-              <span>Office Pace</span>
-              <span>{metrics.office_vc_pace} items/month</span>
-            </div>
+            {hasValidOfficeTarget ? (
+              <div className="flex justify-between text-xs text-muted-foreground">
+                <span>Office Needs</span>
+                <span>{remainingItems} more</span>
+              </div>
+            ) : (
+              <div className="flex justify-between text-xs text-muted-foreground">
+                <span>Office Needs</span>
+                <span className="italic">Office target not set</span>
+              </div>
+            )}
+            {hasValidOfficeTarget && (
+              <div className="flex justify-between text-xs text-muted-foreground">
+                <span>Office Pace</span>
+                <span>{metrics.office_vc_pace} items/month</span>
+              </div>
+            )}
           </div>
         </div>
 
