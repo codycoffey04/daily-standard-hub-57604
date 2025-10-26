@@ -220,24 +220,24 @@ export const ExecutionFunnelReport: React.FC<ExecutionFunnelReportProps> = () =>
                         className="relative transition-all hover:scale-[1.02] cursor-pointer"
                         style={{
                           width: '180px',
-                          height: '140px',
+                          height: '160px',
                           background: gradient,
                           borderRadius: '8px',
                           boxShadow: '0 8px 16px -4px rgba(0, 0, 0, 0.15), 0 4px 8px -2px rgba(0, 0, 0, 0.1)'
                         }}
                       >
-                        <div className="text-white text-center z-10 flex flex-col h-full justify-between py-3 px-3">
+                        <div className="text-white text-center z-10 flex flex-col h-full justify-between py-2 px-3">
                           {/* Top: Stage label */}
                           <div className="text-base font-bold text-white/95 drop-shadow">Stage {stage.stage_number}</div>
                           
                           {/* Center: Large value and stage name */}
                           <div>
-                            <div className="text-4xl font-bold leading-tight mb-2 drop-shadow-md">
+                            <div className="text-3xl font-bold leading-tight mb-1 drop-shadow-md">
                               {index === 4 ? '$' : ''}{safeToLocaleString(stage.stage_value)}
                             </div>
                             
                             {/* Stage name with icon */}
-                            <div className="text-lg font-bold flex items-center justify-center gap-2 text-white drop-shadow">
+                            <div className="text-base font-bold flex items-center justify-center gap-2 text-white drop-shadow">
                               {icons[index]}
                               <span>{stage.stage_name}</span>
                             </div>
@@ -245,20 +245,20 @@ export const ExecutionFunnelReport: React.FC<ExecutionFunnelReportProps> = () =>
                           
                           {/* Bottom: Conversion rate or metric */}
                 {index > 0 && stage.conversion_rate != null && (
-                  <div className="text-base font-extrabold text-white drop-shadow-md">
+                  <div className="text-sm font-extrabold text-white drop-shadow-md">
                     {index === 3 ? (
                       // Stage 4: Items Sold - Show attach rate as multiplier
-                      <div className="flex flex-col items-center">
-                        <div>{(stage.conversion_rate / 100).toFixed(1)}x</div>
-                        <div className="text-xs font-normal">attach rate</div>
+                      <div className="flex flex-col items-center gap-0">
+                        <div className="text-base">{(stage.conversion_rate / 100).toFixed(1)}x</div>
+                        <div className="text-[10px] font-normal">attach rate</div>
                       </div>
                     ) : index === 4 ? (
                       // Stage 5: Premium - Show per household
-                      <div className="flex flex-col items-center">
-                        <div className="text-xs font-normal">per household</div>
-                        <div>${(funnelData[1]?.stage_value > 0 
-                          ? stage.stage_value / funnelData[1].stage_value 
-                          : 0).toLocaleString()}</div>
+                      <div className="flex flex-col items-center gap-0">
+                        <div className="text-[10px] font-normal">per household</div>
+                        <div className="text-base">${(funnelData[2]?.stage_value > 0 
+                          ? stage.stage_value / funnelData[2].stage_value 
+                          : 0).toFixed(0)}</div>
                       </div>
                     ) : (
                       // Stages 2 & 3: Show percentage
