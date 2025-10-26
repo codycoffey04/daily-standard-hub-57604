@@ -1,476 +1,171 @@
-import { useQuery } from '@tanstack/react-query'
-import { supabase } from '@/integrations/supabase/client'
+// ./hooks/useSummariesData.ts
+import { useQuery } from '@tanstack/react-query';
+import type { PostgrestError } from '@supabase/supabase-js';
+import { supabase } from '@/integrations/supabase/client';
 
-export interface QHHBySourceData {
-  source_name: string
-  qhh: number
+export type YearMonth = string; // 'YYYY-MM'
+export type ISODate = string;
+
+export interface MonthlySummary {
+  total_qhh: number;
+  total_quotes: number;
+  total_dials: number;
+  total_talk_time: number;
+  avg_quotes_per_household: number;
 }
 
-export interface QuotesByProducerData {
-  producer_name: string
-  quotes: number
-}
-
-export interface QuotesBySourceData {
-  source_name: string
-  quotes: number
-}
-
-export interface ItemsByProducerData {
-  producer_name: string
-  items: number
-}
-
-export interface ItemsBySourceData {
-  source_id: string
-  source_name: string
-  qhh: number
-  quotes: number
-  items: number
-  items_per_qhh: number | null
-  items_per_quote: number | null
-  qhh_rows_detail: number
-  detail_coverage_pct: number | null
-  bundle_rate: number | null
-  avg_quoted_premium: number | null
-  avg_sold_quote_premium: number | null
-}
-
-export interface ProducerSourceMatrixData {
-  producer_name: string
-  source_name: string
-  quotes: number
-  qhh: number
-  items: number
-}
-
-export interface CloseRateData {
-  source_name: string
-  close_rate: number
-  items: number
-  qhh: number
-}
-
-export interface SourceROIData {
-  source_id: string
-  source_name: string
-  qhh: number
-  quotes: number
-  items: number
-  spend: number | null
-  cost_per_qhh: number | null
-  cost_per_item: number | null
-  sold_premium_total: number | null
-  ltv_estimate: number | null
-  roi: number | null
-  recommendation: string | null
-}
-
-export interface SalesByProducerData {
-  producer_id: string
-  producer_name: string
-  days_worked: number
-  days_top: number
-  days_bottom: number
-  days_outside: number
-  framework_compliance_pct: number
-  avg_daily_qhh: number
-  avg_daily_items: number
-  total_qhh: number
-  total_quotes: number
-  total_items: number
-  total_sold_premium: number
-  total_sold_items: number
-  // For trend comparison
-  prev_framework_compliance_pct?: number
-  prev_total_items?: number
-  prev_total_sold_items?: number
-}
-
-function getDateRange(year: number, month: number | null) {
-  if (month === null) {
-    // Full year
-    return {
-      startDate: `${year}-01-01`,
-      endDate: `${year}-12-31`
-    }
-  } else {
-    // Specific month
-    const startDate = `${year}-${month.toString().padStart(2, '0')}-01`
-    const endDate = new Date(year, month, 0).toISOString().split('T')[0] // Last day of month
-    return { startDate, endDate }
-  }
-}
-
-export function useQHHBySource(year: number, month: number | null) {
-  return useQuery({
-    queryKey: ['qhh-by-source-v2', year, month],
-    queryFn: async (): Promise<QHHBySourceData[]> => {
-      // Calculate month_ym in 'YYYY-MM' format
-      const monthYm = month 
-        ? `${year}-${String(month).padStart(2, '0')}`
-        : `${year}-01`
-      
-      console.log('🔍 === QHH BY SOURCE RPC CALL (NEW) ===')
-      console.log('  Input - year:', year, 'month:', month)
-      console.log('  Calculated month_ym:', monthYm)
-      console.log('  Exact RPC params:', JSON.stringify({ 
-        month_ym: monthYm, 
-        metric_type: 'qhh',
-        lim: 50
-      }, null, 2))
-      
-      const { data, error } = await supabase.rpc(
-        'rpc_get_top_sources_by_month' as any,
-        {
-          month_ym: monthYm,
-          metric_type: 'qhh',
-          lim: 50
-        }
-      )
-      
-      console.log('📊 === QHH BY SOURCE RPC RESPONSE ===')
-      console.log('  Data:', data)
-      console.log('  Error:', error)
-      console.log('  Row count:', data?.length || 0)
-      
-      if (error) throw error
-      
-      // Transform to match QHHBySourceData interface
-      return (data || []).map((item: any) => ({
-        source_name: item.source_name,
-        qhh: item.metric_value
-      }))
-    }
-  })
-}
-
-export function useQHHByProducer(year: number, month: number | null) {
-  const { startDate, endDate } = getDateRange(year, month)
-  
-  return useQuery({
-    queryKey: ['qhh-by-producer', year, month],
+export function useMonthlySummary(targetMonth: YearMonth, opts?: { enabled?: boolean }) {
+  return useQuery<MonthlySummary, PostgrestError>({
+    queryKey: ['monthly-summary', targetMonth],
+    enabled: Boolean(targetMonth) && (opts?.enabled ?? true),
     queryFn: async () => {
-      const query = supabase
-        .from('daily_entries')
-        .select(`
-          producer_id,
-          producers!inner(display_name),
-          daily_entry_sources!inner(qhh)
-        `)
-        .gte('entry_date', startDate)
-        .lte('entry_date', endDate)
+      const { data, error } = await supabase.rpc('get_monthly_summary', {
+        target_month: targetMonth,
+      });
+      if (error) throw error;
 
-      const { data, error } = await query
-
-      if (error) throw error
-
-      // Group by producer and sum QHH
-      const producerMap = new Map<string, { producer: string, qhh: number }>()
-
-      data?.forEach((entry: any) => {
-        const producerName = entry.producers.display_name
-        entry.daily_entry_sources.forEach((source: any) => {
-          const existing = producerMap.get(producerName) || { producer: producerName, qhh: 0 }
-          existing.qhh += source.qhh || 0
-          producerMap.set(producerName, existing)
-        })
-      })
-
-      return Array.from(producerMap.values()).sort((a, b) => b.qhh - a.qhh)
-    }
-  })
+      // Defensive numeric coercion:
+      return {
+        total_qhh: Number(data?.total_qhh ?? 0),
+        total_quotes: Number(data?.total_quotes ?? 0),
+        total_dials: Number(data?.total_dials ?? 0),
+        total_talk_time: Number(data?.total_talk_time ?? 0),
+        avg_quotes_per_household: Number(data?.avg_quotes_per_household ?? 0),
+      };
+    },
+    staleTime: 0,
+    refetchOnMount: true,
+    refetchOnWindowFocus: true,
+    retry: 1,
+  });
 }
 
-export function useQuotesByProducer(year: number, month: number | null) {
-  return useQuery({
-    queryKey: ['quotes-by-producer', year, month],
-    queryFn: async (): Promise<QuotesByProducerData[]> => {
-      const { startDate, endDate } = getDateRange(year, month)
-      
-      const { data, error } = await supabase
-        .from('daily_entry_sources')
-        .select(`
-          quotes,
-          daily_entries!inner(
-            producer_id,
-            entry_date,
-            producers!inner(display_name)
-          )
-        `)
-        .gte('daily_entries.entry_date', startDate)
-        .lte('daily_entries.entry_date', endDate)
-      
-      if (error) throw error
-      
-      // Group by producer and sum quotes
-      const grouped = data.reduce((acc: Record<string, number>, item: any) => {
-        const producerName = item.daily_entries.producers.display_name
-        acc[producerName] = (acc[producerName] || 0) + item.quotes
-        return acc
-      }, {})
-      
-      return Object.entries(grouped)
-        .map(([producer_name, quotes]) => ({ producer_name, quotes }))
-        .sort((a, b) => b.quotes - a.quotes)
-    }
-  })
+export interface ProducerMTDRow {
+  producer_id: string;
+  producer_name: string;
+  qhh: number;
+  quotes: number;
+  items: number;
+  sales: number;
+  conversion: number; // backend-defined conversion metric
 }
 
-export function useQuotesBySource(year: number, month: number | null) {
-  return useQuery({
-    queryKey: ['quotes-by-source-v2', year, month],
-    queryFn: async (): Promise<QuotesBySourceData[]> => {
-      // Calculate month_ym in 'YYYY-MM' format
-      const monthYm = month 
-        ? `${year}-${String(month).padStart(2, '0')}`
-        : `${year}-01`
-      
-      console.log('🔍 === QUOTES BY SOURCE RPC CALL (NEW) ===')
-      console.log('  Calculated month_ym:', monthYm)
-      
-      const { data, error } = await supabase.rpc(
-        'rpc_get_top_sources_by_month' as any,
-        {
-          month_ym: monthYm,
-          metric_type: 'quotes',
-          lim: 50
-        }
-      )
-      
-      if (error) throw error
-      
-      // Transform to match QuotesBySourceData interface
-      return (data || []).map((item: any) => ({
-        source_name: item.source_name,
-        quotes: item.metric_value
-      }))
-    }
-  })
+export function useMTDProducerMetrics(dateWithinMonth: ISODate, opts?: { enabled?: boolean }) {
+  return useQuery<ProducerMTDRow[], PostgrestError>({
+    queryKey: ['mtd-producer-metrics', dateWithinMonth],
+    enabled: Boolean(dateWithinMonth) && (opts?.enabled ?? true),
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('mtd_producer_metrics', {
+        d: dateWithinMonth,
+      });
+      if (error) throw error;
+      return (data ?? []).map((r: any) => ({
+        producer_id: String(r.producer_id),
+        producer_name: String(r.producer_name),
+        qhh: Number(r.qhh ?? 0),
+        quotes: Number(r.quotes ?? 0),
+        items: Number(r.items ?? 0),
+        sales: Number(r.sales ?? 0),
+        conversion: Number(r.conversion ?? 0),
+      }));
+    },
+    staleTime: 0,
+    refetchOnMount: true,
+    refetchOnWindowFocus: true,
+    retry: 1,
+  });
 }
 
-export function useItemsByProducer(year: number, month: number | null) {
-  return useQuery({
-    queryKey: ['items-by-producer', year, month],
-    queryFn: async (): Promise<ItemsByProducerData[]> => {
-      const { startDate, endDate } = getDateRange(year, month)
-      
-      const { data, error } = await supabase
-        .from('daily_entries')
-        .select(`
-          items_total,
-          producers!inner(display_name)
-        `)
-        .gte('entry_date', startDate)
-        .lte('entry_date', endDate)
-      
-      if (error) throw error
-      
-      // Group by producer and sum items
-      const grouped = data.reduce((acc: Record<string, number>, item: any) => {
-        const producerName = item.producers.display_name
-        acc[producerName] = (acc[producerName] || 0) + item.items_total
-        return acc
-      }, {})
-      
-      return Object.entries(grouped)
-        .map(([producer_name, items]) => ({ producer_name, items }))
-        .sort((a, b) => b.items - a.items)
-    }
-  })
+export interface SourceRollupRow {
+  source_id: string | null;
+  source_name: string | null;
+  qhh: number;
+  quotes: number;
+  items: number;
+  bundle_rate?: number | null;
+  // any other ratios the RPC returns can be included here
 }
 
-export function useItemsBySource(year: number, month: number | null) {
-  return useQuery({
-    queryKey: ['items-by-source', year, month],
-    queryFn: async (): Promise<ItemsBySourceData[]> => {
-      const { startDate, endDate } = getDateRange(year, month)
-      
-      const { data, error } = await supabase.rpc(
-        'get_items_by_source' as any,
-        {
-          from_date: startDate,
-          to_date: endDate
-        }
-      )
-      
-      if (error) throw error
-      
-      return (data as ItemsBySourceData[]) || []
-    }
-  })
-}
-
-export function useProducerSourceMatrix(year: number, month: number | null) {
-  return useQuery({
-    queryKey: ['producer-source-matrix', year, month],
-    queryFn: async (): Promise<ProducerSourceMatrixData[]> => {
-      const { startDate, endDate } = getDateRange(year, month)
-      
-      const { data, error } = await supabase
-        .from('daily_entry_sources')
-        .select(`
-          quotes,
-          qhh,
-          items,
-          sources!inner(name),
-          daily_entries!inner(
-            entry_date,
-            producers!inner(display_name)
-          )
-        `)
-        .gte('daily_entries.entry_date', startDate)
-        .lte('daily_entries.entry_date', endDate)
-      
-      if (error) throw error
-      
-      // Group by producer-source combination
-      const grouped = data.reduce((acc: Record<string, any>, item: any) => {
-        const key = `${item.daily_entries.producers.display_name}|${item.sources.name}`
-        if (!acc[key]) {
-          acc[key] = {
-            producer_name: item.daily_entries.producers.display_name,
-            source_name: item.sources.name,
-            quotes: 0,
-            qhh: 0,
-            items: 0
-          }
-        }
-        acc[key].quotes += item.quotes
-        acc[key].qhh += item.qhh
-        acc[key].items += item.items
-        return acc
-      }, {})
-      
-      return Object.values(grouped)
-    }
-  })
-}
-
-export function useCloseRateAnalysis(year: number, month: number | null) {
-  return useQuery({
-    queryKey: ['close-rate-analysis', year, month],
-    queryFn: async (): Promise<CloseRateData[]> => {
-      const { startDate, endDate } = getDateRange(year, month)
-      
-      const { data, error } = await supabase
-        .from('daily_entry_sources')
-        .select(`
-          qhh,
-          items,
-          sources!inner(name),
-          daily_entries!inner(entry_date)
-        `)
-        .gte('daily_entries.entry_date', startDate)
-        .lte('daily_entries.entry_date', endDate)
-      
-      if (error) throw error
-      
-      // Group by source and calculate close rates
-      const grouped = data.reduce((acc: Record<string, { qhh: number, items: number }>, item: any) => {
-        const sourceName = item.sources.name
-        if (!acc[sourceName]) {
-          acc[sourceName] = { qhh: 0, items: 0 }
-        }
-        acc[sourceName].qhh += item.qhh
-        acc[sourceName].items += item.items
-        return acc
-      }, {})
-      
-      return Object.entries(grouped)
-        .map(([source_name, data]) => ({
-          source_name,
-          qhh: data.qhh,
-          items: data.items,
-          close_rate: data.qhh > 0 ? (data.items / data.qhh) * 100 : 0
-        }))
-        .sort((a, b) => b.close_rate - a.close_rate)
-    }
-  })
-}
-
-export function useSourceROI(
-  year: number, 
-  month: number | null,
-  meetingVCGoal: boolean = true
+/**
+ * Single canonical RPC for both "QHH by Source" and "Items by Source".
+ * Frontend can choose which metric to chart, but the **data foundation is identical**.
+ */
+export function useItemsAndQHHBySource(
+  fromDate: ISODate,
+  toDate: ISODate,
+  opts?: { enabled?: boolean }
 ) {
-  return useQuery({
-    queryKey: ['source-roi', year, month, meetingVCGoal],
-    queryFn: async (): Promise<SourceROIData[]> => {
-      const { startDate, endDate } = getDateRange(year, month)
-      
-      const { data, error } = await supabase.rpc('get_source_roi' as any, {
-        from_date: startDate,
-        to_date: endDate,
-        meeting_vc_goal: meetingVCGoal
-      })
-      
-      if (error) throw error
-      
-      return (data as SourceROIData[]) || []
-    }
-  })
+  return useQuery<SourceRollupRow[], PostgrestError>({
+    queryKey: ['items-qhh-by-source', fromDate, toDate],
+    enabled: Boolean(fromDate && toDate) && (opts?.enabled ?? true),
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('get_items_by_source', {
+        from_date: fromDate,
+        to_date: toDate,
+      });
+      if (error) throw error;
+
+      return (data ?? []).map((r: any) => ({
+        source_id: r.source_id ?? null,
+        source_name: r.source_name ?? null,
+        qhh: Number(r.qhh ?? 0),       // backend: COUNT(DISTINCT qh.lead_id)
+        quotes: Number(r.quotes ?? 0), // backend-defined
+        items: Number(r.items ?? 0),   // backend: SUM(items_sold)
+        bundle_rate:
+          r.bundle_rate === null || r.bundle_rate === undefined
+            ? null
+            : Number(r.bundle_rate),
+      }));
+    },
+    staleTime: 0,
+    refetchOnMount: true,
+    refetchOnWindowFocus: true,
+    retry: 1,
+  });
 }
 
-function getPreviousPeriodDates(year: number, month: number | null) {
-  if (month === null) {
-    // Previous year
-    return {
-      startDate: `${year - 1}-01-01`,
-      endDate: `${year - 1}-12-31`
-    }
-  } else {
-    // Previous month
-    const prevMonth = month === 1 ? 12 : month - 1
-    const prevYear = month === 1 ? year - 1 : year
-    const startDate = `${prevYear}-${prevMonth.toString().padStart(2, '0')}-01`
-    const endDate = new Date(prevYear, prevMonth, 0).toISOString().split('T')[0]
-    return { startDate, endDate }
-  }
+export type MetricType = 'qhh' | 'quotes' | 'items' | 'sales' | 'premium';
+
+export interface TopSourcesRow {
+  source_name: string;
+  metric_value: number;
+  percentage: number; // share of total for that month
 }
 
-export function useSalesByProducer(year: number, month: number | null) {
-  return useQuery({
-    queryKey: ['sales-by-producer', year, month],
-    queryFn: async (): Promise<SalesByProducerData[]> => {
-      const { startDate, endDate } = getDateRange(year, month)
-      
-      // Current period data
-      const { data: currentData, error: currentError } = await supabase.rpc(
-        'get_producer_comparison' as any,
-        {
-          from_date: startDate,
-          to_date: endDate
-        }
-      )
-      
-      if (currentError) throw currentError
-      
-      // Previous period data for trends
-      const prevDates = getPreviousPeriodDates(year, month)
-      const { data: prevData, error: prevError } = await supabase.rpc(
-        'get_producer_comparison' as any,
-        {
-          from_date: prevDates.startDate,
-          to_date: prevDates.endDate
-        }
-      )
-      
-      if (prevError) throw prevError
-      
-      // Merge current and previous data
-      const prevMap = new Map(
-        (prevData || []).map((p: any) => [p.producer_id, p])
-      )
-      
-      return (currentData || []).map((current: any) => {
-        const prev = prevMap.get(current.producer_id) as any
-        return {
-          ...current,
-          prev_framework_compliance_pct: prev?.framework_compliance_pct,
-          prev_total_items: prev?.total_items
-        }
-      })
-    }
-  })
+export function useTopSourcesByMonth(
+  monthYM: YearMonth,
+  metricType: MetricType,
+  limit: number,
+  opts?: { enabled?: boolean }
+) {
+  return useQuery<TopSourcesRow[], PostgrestError>({
+    queryKey: ['top-sources-by-month', monthYM, metricType, limit],
+    enabled: Boolean(monthYM && metricType && limit) && (opts?.enabled ?? true),
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('rpc_get_top_sources_by_month', {
+        month_ym: monthYM,
+        metric_type: metricType,
+        lim: limit,
+      });
+      if (error) throw error;
+
+      return (data ?? []).map((r: any) => ({
+        source_name: String(r.source_name),
+        metric_value: Number(r.metric_value ?? 0),
+        percentage: Number(r.percentage ?? 0),
+      }));
+    },
+    staleTime: 0,
+    refetchOnMount: true,
+    refetchOnWindowFocus: true,
+    retry: 1,
+  });
 }
+
+// Optional default export for compatibility with places that do `import * as useSummariesData`
+export default {
+  useMonthlySummary,
+  useMTDProducerMetrics,
+  useItemsAndQHHBySource,
+  useTopSourcesByMonth,
+};
