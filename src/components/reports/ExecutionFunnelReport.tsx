@@ -226,7 +226,7 @@ export const ExecutionFunnelReport: React.FC<ExecutionFunnelReportProps> = () =>
                           boxShadow: '0 8px 16px -4px rgba(0, 0, 0, 0.15), 0 4px 8px -2px rgba(0, 0, 0, 0.1)'
                         }}
                       >
-                        <div className="text-white text-center z-10 flex flex-col h-full justify-between py-2 px-3">
+                        <div className={`text-white text-center z-10 flex flex-col h-full ${index === 0 ? 'justify-center' : 'justify-between'} py-2 px-3`}>
                           {/* Top: Stage label */}
                           <div className="text-base font-bold text-white/95 drop-shadow">Stage {stage.stage_number}</div>
                           
@@ -250,12 +250,12 @@ export const ExecutionFunnelReport: React.FC<ExecutionFunnelReportProps> = () =>
                       // Stage 4: Items Sold - Show attach rate as multiplier
                       <div className="flex flex-col items-center gap-0">
                         <div className="text-base">{(stage.conversion_rate / 100).toFixed(1)}x</div>
-                        <div className="text-[10px] font-normal">attach rate</div>
+                        <div className="text-[10px] font-normal" style={{ color: '#FFFFFF' }}>attach rate</div>
                       </div>
                     ) : index === 4 ? (
                       // Stage 5: Premium - Show per household
                       <div className="flex flex-col items-center gap-0">
-                        <div className="text-[10px] font-normal">per household</div>
+                        <div className="text-[10px] font-normal" style={{ color: '#FFFFFF' }}>per household</div>
                         <div className="text-base">${(funnelData[2]?.stage_value > 0 
                           ? stage.stage_value / funnelData[2].stage_value 
                           : 0).toFixed(0)}</div>
