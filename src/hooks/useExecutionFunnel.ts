@@ -57,21 +57,60 @@ export const useExecutionFunnel = (
   return useQuery({
     queryKey: ['execution-funnel', fromDate, toDate, producerId, sourceId],
     queryFn: async (): Promise<ExecutionFunnelStage[]> => {
-      console.log('📊 Fetching execution funnel via RPC...', { fromDate, toDate, producerId, sourceId });
+      let data: any[] = [];
+      let error: any = null;
 
-      const { data, error } = await supabase.rpc('get_execution_funnel' as any, {
-        from_date: fromDate,
-        to_date: toDate,
-        producer_filter: producerId,
-        source_filter: sourceId
-      });
+      if (sourceId) {
+        // When filtering by source, join daily_entries with daily_entry_sources
+        let query = supabase
+          .from('daily_entries')
+          .select(`
+            id,
+            outbound_dials,
+            daily_entry_sources!inner(
+              qhh,
+              sales,
+              items
+            )
+          `)
+          .gte('entry_date', fromDate)
+          .lte('entry_date', toDate)
+          .eq('daily_entry_sources.source_id', sourceId);
+
+        if (producerId) query = query.eq('producer_id', producerId);
+
+        const response = await query;
+        error = response.error;
+        
+        if (response.data) {
+          // Flatten the nested structure for aggregation
+          data = response.data.map((entry: any) => ({
+            id: entry.id,
+            outbound_dials: entry.outbound_dials || 0,
+            qhh_total: entry.daily_entry_sources?.qhh || 0,
+            sales_total: entry.daily_entry_sources?.sales || 0,
+            items_total: entry.daily_entry_sources?.items || 0
+          }));
+        }
+      } else {
+        // When no source filter, query daily_entries directly
+        let query = supabase
+          .from('daily_entries')
+          .select('id, outbound_dials, qhh_total, sales_total, items_total')
+          .gte('entry_date', fromDate)
+          .lte('entry_date', toDate);
+
+        if (producerId) query = query.eq('producer_id', producerId);
+
+        const response = await query;
+        error = response.error;
+        data = response.data || [];
+      }
 
       if (error) {
         console.error('❌ Error fetching execution funnel:', error);
         throw error;
       }
-
-      console.log('✅ Execution funnel RPC returned:', data);
 
       if (!data || data.length === 0) {
         return [
@@ -83,33 +122,77 @@ export const useExecutionFunnel = (
         ];
       }
 
-      // Transform RPC response to ExecutionFunnelStage interface
-      // RPC returns: { stage: text, value: bigint, conversion_rate: numeric }
-      const stages: ExecutionFunnelStage[] = (data as any[]).map((row, index) => ({
-        stage_number: index + 1,
-        stage_name: row.stage,
-        stage_value: Number(row.value || 0),
-        conversion_rate: Number(row.conversion_rate || 0),
-        drop_off_count: 0,
-        drop_off_rate: 0
-      }));
+      // Get entry IDs for premium calculation
+      const entryIds = data.map(row => row.id).filter(Boolean);
+      
+      // Query premium from the premium_by_entry view
+      let totalPremium = 0;
+      if (entryIds.length > 0) {
+        const { data: premiumData, error: premiumError } = await supabase
+          .from('premium_by_entry' as any)
+          .select('total_premium')
+          .in('daily_entry_id', entryIds);
 
-      // Calculate drop-offs between stages
-      for (let i = 1; i < stages.length; i++) {
-        const prevValue = stages[i - 1].stage_value;
-        const currValue = stages[i].stage_value;
-        stages[i].drop_off_count = Math.max(0, prevValue - currValue);
-        stages[i].drop_off_rate = prevValue > 0 
-          ? ((prevValue - currValue) / prevValue) * 100 
-          : 0;
+        if (premiumError) {
+          console.error('❌ Error fetching premium:', premiumError);
+        } else {
+          totalPremium = (premiumData || []).reduce((sum, row: any) => sum + (Number(row.total_premium) || 0), 0);
+        }
       }
 
-      console.log('📊 Final funnel stages:', stages);
+      // Aggregate other totals
+      const totalDials = data.reduce((sum, row) => sum + (Number(row.outbound_dials) || 0), 0);
+      const totalQHH = data.reduce((sum, row) => sum + (Number(row.qhh_total) || 0), 0);
+      const totalSales = data.reduce((sum, row) => sum + (Number(row.sales_total) || 0), 0);
+      const totalItems = data.reduce((sum, row) => sum + (Number(row.items_total) || 0), 0);
+
+      // Build funnel stages
+      const stages: ExecutionFunnelStage[] = [
+        {
+          stage_number: 1,
+          stage_name: 'Dials',
+          stage_value: totalDials,
+          conversion_rate: 100,
+          drop_off_count: 0,
+          drop_off_rate: 0
+        },
+        {
+          stage_number: 2,
+          stage_name: 'QHH',
+          stage_value: totalQHH,
+          conversion_rate: totalDials > 0 ? (totalQHH / totalDials) * 100 : 0,
+          drop_off_count: totalDials - totalQHH,
+          drop_off_rate: totalDials > 0 ? ((totalDials - totalQHH) / totalDials) * 100 : 0
+        },
+        {
+          stage_number: 3,
+          stage_name: 'Sales',
+          stage_value: totalSales,
+          conversion_rate: totalQHH > 0 ? (totalSales / totalQHH) * 100 : 0,
+          drop_off_count: totalQHH - totalSales,
+          drop_off_rate: totalQHH > 0 ? ((totalQHH - totalSales) / totalQHH) * 100 : 0
+        },
+        {
+          stage_number: 4,
+          stage_name: 'Items Sold',
+          stage_value: totalItems,
+          conversion_rate: totalSales > 0 ? (totalItems / totalSales) * 100 : 0,
+          drop_off_count: totalSales - totalItems,
+          drop_off_rate: totalSales > 0 ? ((totalSales - totalItems) / totalSales) * 100 : 0
+        },
+        {
+          stage_number: 5,
+          stage_name: 'Premium',
+          stage_value: Math.round(totalPremium),
+          conversion_rate: totalItems > 0 ? (totalPremium / totalItems) : 0,
+          drop_off_count: 0,
+          drop_off_rate: 0
+        }
+      ];
+
       return stages;
     },
-    enabled: !!fromDate && !!toDate,
-    staleTime: 0,  // Always refetch
-    gcTime: 0      // Clear from cache immediately
+    enabled: !!fromDate && !!toDate
   })
 }
 
@@ -198,42 +281,94 @@ export const useExecutionEfficiency = (
   return useQuery({
     queryKey: ['execution-efficiency', fromDate, toDate, producerId, sourceId, commissionPct],
     queryFn: async (): Promise<ExecutionEfficiency[]> => {
-      console.log('📊 Fetching execution efficiency (using funnel RPC for base data)...');
+      let data: any[] = [];
+      let error: any = null;
 
-      // Reuse the funnel RPC to get base totals
-      const { data: funnelData, error: funnelError } = await supabase.rpc('get_execution_funnel' as any, {
-        from_date: fromDate,
-        to_date: toDate,
-        producer_filter: producerId,
-        source_filter: sourceId
-      });
+      if (sourceId) {
+        // When filtering by source, join daily_entries with daily_entry_sources
+        let query = supabase
+          .from('daily_entries')
+          .select(`
+            id,
+            outbound_dials,
+            daily_entry_sources!inner(
+              qhh,
+              sales,
+              items
+            )
+          `)
+          .gte('entry_date', fromDate)
+          .lte('entry_date', toDate)
+          .eq('daily_entry_sources.source_id', sourceId);
 
-      if (funnelError) {
-        console.error('❌ Error fetching efficiency data:', funnelError);
-        throw funnelError;
+        if (producerId) query = query.eq('producer_id', producerId);
+
+        const response = await query;
+        error = response.error;
+        
+        if (response.data) {
+          // Flatten the nested structure for aggregation
+          data = response.data.map((entry: any) => ({
+            id: entry.id,
+            outbound_dials: entry.outbound_dials || 0,
+            qhh_total: entry.daily_entry_sources?.qhh || 0,
+            sales_total: entry.daily_entry_sources?.sales || 0,
+            items_total: entry.daily_entry_sources?.items || 0
+          }));
+        }
+      } else {
+        // When no source filter, query daily_entries directly
+        let query = supabase
+          .from('daily_entries')
+          .select('id, outbound_dials, qhh_total, sales_total, items_total')
+          .gte('entry_date', fromDate)
+          .lte('entry_date', toDate);
+
+        if (producerId) query = query.eq('producer_id', producerId);
+
+        const response = await query;
+        error = response.error;
+        data = response.data || [];
       }
 
-      if (!funnelData || funnelData.length === 0) {
+      if (error) {
+        console.error('❌ Error fetching efficiency:', error);
+        throw error;
+      }
+
+      if (!data || data.length === 0) {
         return [
           { metric_name: 'Total Dials', metric_value: 0, metric_unit: 'dials' },
           { metric_name: 'Total QHH', metric_value: 0, metric_unit: 'households' },
           { metric_name: 'Total Sales', metric_value: 0, metric_unit: 'sales' },
           { metric_name: 'Total Items', metric_value: 0, metric_unit: 'items' },
           { metric_name: 'Total Premium', metric_value: 0, metric_unit: 'dollars' },
-          { metric_name: 'Premium per Dial', metric_value: 0, metric_unit: '$/dial' },
-          { metric_name: 'Commission per Dial', metric_value: 0, metric_unit: '$/dial' },
-          { metric_name: 'Items per Sale', metric_value: 0, metric_unit: 'items/sale' },
-          { metric_name: 'Premium per Item', metric_value: 0, metric_unit: '$/item' },
         ];
       }
 
-      // Extract totals from funnel stages
-      const stageMap = new Map((funnelData as any[]).map(s => [s.stage, Number(s.value || 0)]));
-      const totalDials = stageMap.get('Dials') || 0;
-      const totalQHH = stageMap.get('QHH') || 0;
-      const totalSales = stageMap.get('Sales') || 0;
-      const totalItems = stageMap.get('Items Sold') || 0;
-      const totalPremium = stageMap.get('Premium') || 0;
+      // Get entry IDs for premium calculation
+      const entryIds = data.map(row => row.id).filter(Boolean);
+      
+      // Query premium from the premium_by_entry view
+      let totalPremium = 0;
+      if (entryIds.length > 0) {
+        const { data: premiumData, error: premiumError } = await supabase
+          .from('premium_by_entry' as any)
+          .select('total_premium')
+          .in('daily_entry_id', entryIds);
+
+        if (premiumError) {
+          console.error('❌ Error fetching premium:', premiumError);
+        } else {
+          totalPremium = (premiumData || []).reduce((sum, row: any) => sum + (Number(row.total_premium) || 0), 0);
+        }
+      }
+
+      // Aggregate other totals
+      const totalDials = data.reduce((sum, row) => sum + (Number(row.outbound_dials) || 0), 0);
+      const totalQHH = data.reduce((sum, row) => sum + (Number(row.qhh_total) || 0), 0);
+      const totalSales = data.reduce((sum, row) => sum + (Number(row.sales_total) || 0), 0);
+      const totalItems = data.reduce((sum, row) => sum + (Number(row.items_total) || 0), 0);
 
       // Calculate efficiency metrics
       const metrics: ExecutionEfficiency[] = [
@@ -264,12 +399,9 @@ export const useExecutionEfficiency = (
         },
       ];
 
-      console.log('✅ Efficiency metrics calculated:', metrics);
       return metrics;
     },
-    enabled: !!fromDate && !!toDate,
-    staleTime: 0,
-    gcTime: 0
+    enabled: !!fromDate && !!toDate
   })
 }
 
