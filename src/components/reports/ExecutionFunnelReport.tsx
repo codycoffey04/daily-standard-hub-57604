@@ -243,13 +243,27 @@ export const ExecutionFunnelReport: React.FC<ExecutionFunnelReportProps> = () =>
                             </div>
                           </div>
                           
-                          {/* Bottom: Conversion rate */}
+                          {/* Bottom: Conversion rate or metric */}
                 {index > 0 && stage.conversion_rate != null && (
                   <div className="text-base font-extrabold text-white drop-shadow-md">
-                    {index === 4 
-                      ? `$${stage.conversion_rate.toFixed(0)}/policy`
-                      : `${stage.conversion_rate.toFixed(1)}%`
-                    }
+                    {index === 3 ? (
+                      // Stage 4: Items Sold - Show attach rate as multiplier
+                      <div className="flex flex-col items-center">
+                        <div>{(stage.conversion_rate / 100).toFixed(1)}x</div>
+                        <div className="text-xs font-normal">attach rate</div>
+                      </div>
+                    ) : index === 4 ? (
+                      // Stage 5: Premium - Show per household
+                      <div className="flex flex-col items-center">
+                        <div className="text-xs font-normal">per household</div>
+                        <div>${(funnelData[1]?.stage_value > 0 
+                          ? stage.stage_value / funnelData[1].stage_value 
+                          : 0).toLocaleString()}</div>
+                      </div>
+                    ) : (
+                      // Stages 2 & 3: Show percentage
+                      `${stage.conversion_rate.toFixed(1)}%`
+                    )}
                   </div>
                 )}
                         </div>
