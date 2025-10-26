@@ -57,21 +57,55 @@ export const useExecutionFunnel = (
   return useQuery({
     queryKey: ['execution-funnel', fromDate, toDate, producerId, sourceId],
     queryFn: async (): Promise<ExecutionFunnelStage[]> => {
-      // Choose table based on filters
-      const tableName = sourceId ? 'producer_day_source_rollup' : 'producer_day_rollup';
-      
-      let query = supabase
-        .from(tableName as any)
-        .select('dials, qhh, shh, items, policies_sold, written_premium')
-        .gte('entry_date', fromDate)
-        .lte('entry_date', toDate);
+      let data: any[] = [];
+      let error: any = null;
 
-      if (producerId) query = query.eq('producer_id', producerId);
-      if (sourceId && tableName === 'producer_day_source_rollup') {
-        query = query.eq('source_id', sourceId);
+      if (sourceId) {
+        // When filtering by source, join daily_entries with daily_entry_sources
+        let query = supabase
+          .from('daily_entries')
+          .select(`
+            outbound_dials,
+            daily_entry_sources!inner(
+              qhh,
+              sales,
+              items,
+              written_premium
+            )
+          `)
+          .gte('entry_date', fromDate)
+          .lte('entry_date', toDate)
+          .eq('daily_entry_sources.source_id', sourceId);
+
+        if (producerId) query = query.eq('producer_id', producerId);
+
+        const response = await query;
+        error = response.error;
+        
+        if (response.data) {
+          // Flatten the nested structure for aggregation
+          data = response.data.map((entry: any) => ({
+            outbound_dials: entry.outbound_dials || 0,
+            qhh_total: entry.daily_entry_sources?.qhh || 0,
+            sales_total: entry.daily_entry_sources?.sales || 0,
+            items_total: entry.daily_entry_sources?.items || 0,
+            written_premium: entry.daily_entry_sources?.written_premium || 0
+          }));
+        }
+      } else {
+        // When no source filter, query daily_entries directly
+        let query = supabase
+          .from('daily_entries')
+          .select('outbound_dials, qhh_total, sales_total, items_total, written_premium')
+          .gte('entry_date', fromDate)
+          .lte('entry_date', toDate);
+
+        if (producerId) query = query.eq('producer_id', producerId);
+
+        const response = await query;
+        error = response.error;
+        data = response.data || [];
       }
-
-      const { data, error } = await query;
 
       if (error) {
         console.error('❌ Error fetching execution funnel:', error);
@@ -82,18 +116,18 @@ export const useExecutionFunnel = (
         return [
           { stage_number: 1, stage_name: 'Dials', stage_value: 0, conversion_rate: 100, drop_off_count: 0, drop_off_rate: 0 },
           { stage_number: 2, stage_name: 'QHH', stage_value: 0, conversion_rate: 0, drop_off_count: 0, drop_off_rate: 0 },
-          { stage_number: 3, stage_name: 'SHH', stage_value: 0, conversion_rate: 0, drop_off_count: 0, drop_off_rate: 0 },
-          { stage_number: 4, stage_name: 'Policies', stage_value: 0, conversion_rate: 0, drop_off_count: 0, drop_off_rate: 0 },
+          { stage_number: 3, stage_name: 'Sales', stage_value: 0, conversion_rate: 0, drop_off_count: 0, drop_off_rate: 0 },
+          { stage_number: 4, stage_name: 'Items Sold', stage_value: 0, conversion_rate: 0, drop_off_count: 0, drop_off_rate: 0 },
           { stage_number: 5, stage_name: 'Premium', stage_value: 0, conversion_rate: 0, drop_off_count: 0, drop_off_rate: 0 },
         ];
       }
 
       // Aggregate totals
-      const totalDials = (data as any[]).reduce((sum, row) => sum + (Number(row.dials) || 0), 0);
-      const totalQHH = (data as any[]).reduce((sum, row) => sum + (Number(row.qhh) || 0), 0);
-      const totalSHH = (data as any[]).reduce((sum, row) => sum + (Number(row.shh) || 0), 0);
-      const totalPolicies = (data as any[]).reduce((sum, row) => sum + (Number(row.policies_sold) || 0), 0);
-      const totalPremium = (data as any[]).reduce((sum, row) => sum + (Number(row.written_premium) || 0), 0);
+      const totalDials = data.reduce((sum, row) => sum + (Number(row.outbound_dials) || 0), 0);
+      const totalQHH = data.reduce((sum, row) => sum + (Number(row.qhh_total) || 0), 0);
+      const totalSales = data.reduce((sum, row) => sum + (Number(row.sales_total) || 0), 0);
+      const totalItems = data.reduce((sum, row) => sum + (Number(row.items_total) || 0), 0);
+      const totalPremium = data.reduce((sum, row) => sum + (Number(row.written_premium) || 0), 0);
 
       // Build funnel stages
       const stages: ExecutionFunnelStage[] = [
@@ -115,25 +149,25 @@ export const useExecutionFunnel = (
         },
         {
           stage_number: 3,
-          stage_name: 'SHH',
-          stage_value: totalSHH,
-          conversion_rate: totalQHH > 0 ? (totalSHH / totalQHH) * 100 : 0,
-          drop_off_count: totalQHH - totalSHH,
-          drop_off_rate: totalQHH > 0 ? ((totalQHH - totalSHH) / totalQHH) * 100 : 0
+          stage_name: 'Sales',
+          stage_value: totalSales,
+          conversion_rate: totalQHH > 0 ? (totalSales / totalQHH) * 100 : 0,
+          drop_off_count: totalQHH - totalSales,
+          drop_off_rate: totalQHH > 0 ? ((totalQHH - totalSales) / totalQHH) * 100 : 0
         },
         {
           stage_number: 4,
-          stage_name: 'Policies',
-          stage_value: totalPolicies,
-          conversion_rate: totalSHH > 0 ? (totalPolicies / totalSHH) * 100 : 0,
-          drop_off_count: totalSHH - totalPolicies,
-          drop_off_rate: totalSHH > 0 ? ((totalSHH - totalPolicies) / totalSHH) * 100 : 0
+          stage_name: 'Items Sold',
+          stage_value: totalItems,
+          conversion_rate: totalSales > 0 ? (totalItems / totalSales) * 100 : 0,
+          drop_off_count: totalSales - totalItems,
+          drop_off_rate: totalSales > 0 ? ((totalSales - totalItems) / totalSales) * 100 : 0
         },
         {
           stage_number: 5,
           stage_name: 'Premium',
           stage_value: Math.round(totalPremium),
-          conversion_rate: totalPolicies > 0 ? (totalPremium / totalPolicies) : 0,
+          conversion_rate: totalItems > 0 ? (totalPremium / totalItems) : 0,
           drop_off_count: 0,
           drop_off_rate: 0
         }
@@ -230,21 +264,55 @@ export const useExecutionEfficiency = (
   return useQuery({
     queryKey: ['execution-efficiency', fromDate, toDate, producerId, sourceId, commissionPct],
     queryFn: async (): Promise<ExecutionEfficiency[]> => {
-      // Choose table based on filters
-      const tableName = sourceId ? 'producer_day_source_rollup' : 'producer_day_rollup';
-      
-      let query = supabase
-        .from(tableName as any)
-        .select('dials, qhh, shh, items, policies_sold, written_premium')
-        .gte('entry_date', fromDate)
-        .lte('entry_date', toDate);
+      let data: any[] = [];
+      let error: any = null;
 
-      if (producerId) query = query.eq('producer_id', producerId);
-      if (sourceId && tableName === 'producer_day_source_rollup') {
-        query = query.eq('source_id', sourceId);
+      if (sourceId) {
+        // When filtering by source, join daily_entries with daily_entry_sources
+        let query = supabase
+          .from('daily_entries')
+          .select(`
+            outbound_dials,
+            daily_entry_sources!inner(
+              qhh,
+              sales,
+              items,
+              written_premium
+            )
+          `)
+          .gte('entry_date', fromDate)
+          .lte('entry_date', toDate)
+          .eq('daily_entry_sources.source_id', sourceId);
+
+        if (producerId) query = query.eq('producer_id', producerId);
+
+        const response = await query;
+        error = response.error;
+        
+        if (response.data) {
+          // Flatten the nested structure for aggregation
+          data = response.data.map((entry: any) => ({
+            outbound_dials: entry.outbound_dials || 0,
+            qhh_total: entry.daily_entry_sources?.qhh || 0,
+            sales_total: entry.daily_entry_sources?.sales || 0,
+            items_total: entry.daily_entry_sources?.items || 0,
+            written_premium: entry.daily_entry_sources?.written_premium || 0
+          }));
+        }
+      } else {
+        // When no source filter, query daily_entries directly
+        let query = supabase
+          .from('daily_entries')
+          .select('outbound_dials, qhh_total, sales_total, items_total, written_premium')
+          .gte('entry_date', fromDate)
+          .lte('entry_date', toDate);
+
+        if (producerId) query = query.eq('producer_id', producerId);
+
+        const response = await query;
+        error = response.error;
+        data = response.data || [];
       }
-
-      const { data, error } = await query;
 
       if (error) {
         console.error('❌ Error fetching efficiency:', error);
@@ -255,25 +323,25 @@ export const useExecutionEfficiency = (
         return [
           { metric_name: 'Total Dials', metric_value: 0, metric_unit: 'dials' },
           { metric_name: 'Total QHH', metric_value: 0, metric_unit: 'households' },
-          { metric_name: 'Total SHH', metric_value: 0, metric_unit: 'households' },
-          { metric_name: 'Total Policies', metric_value: 0, metric_unit: 'policies' },
+          { metric_name: 'Total Sales', metric_value: 0, metric_unit: 'sales' },
+          { metric_name: 'Total Items', metric_value: 0, metric_unit: 'items' },
           { metric_name: 'Total Premium', metric_value: 0, metric_unit: 'dollars' },
         ];
       }
 
       // Aggregate totals
-      const totalDials = (data as any[]).reduce((sum, row) => sum + (Number(row.dials) || 0), 0);
-      const totalQHH = (data as any[]).reduce((sum, row) => sum + (Number(row.qhh) || 0), 0);
-      const totalSHH = (data as any[]).reduce((sum, row) => sum + (Number(row.shh) || 0), 0);
-      const totalPolicies = (data as any[]).reduce((sum, row) => sum + (Number(row.policies_sold) || 0), 0);
-      const totalPremium = (data as any[]).reduce((sum, row) => sum + (Number(row.written_premium) || 0), 0);
+      const totalDials = data.reduce((sum, row) => sum + (Number(row.outbound_dials) || 0), 0);
+      const totalQHH = data.reduce((sum, row) => sum + (Number(row.qhh_total) || 0), 0);
+      const totalSales = data.reduce((sum, row) => sum + (Number(row.sales_total) || 0), 0);
+      const totalItems = data.reduce((sum, row) => sum + (Number(row.items_total) || 0), 0);
+      const totalPremium = data.reduce((sum, row) => sum + (Number(row.written_premium) || 0), 0);
 
       // Calculate efficiency metrics
       const metrics: ExecutionEfficiency[] = [
         { metric_name: 'Total Dials', metric_value: totalDials, metric_unit: 'dials' },
         { metric_name: 'Total QHH', metric_value: totalQHH, metric_unit: 'households' },
-        { metric_name: 'Total SHH', metric_value: totalSHH, metric_unit: 'households' },
-        { metric_name: 'Total Policies', metric_value: totalPolicies, metric_unit: 'policies' },
+        { metric_name: 'Total Sales', metric_value: totalSales, metric_unit: 'sales' },
+        { metric_name: 'Total Items', metric_value: totalItems, metric_unit: 'items' },
         { metric_name: 'Total Premium', metric_value: Math.round(totalPremium), metric_unit: 'dollars' },
         { 
           metric_name: 'Premium per Dial',
@@ -286,14 +354,14 @@ export const useExecutionEfficiency = (
           metric_unit: '$/dial' 
         },
         { 
-          metric_name: 'Policies per SHH', 
-          metric_value: totalSHH > 0 ? Math.round((totalPolicies / totalSHH) * 100) / 100 : 0, 
-          metric_unit: 'policies/household' 
+          metric_name: 'Items per Sale', 
+          metric_value: totalSales > 0 ? Math.round((totalItems / totalSales) * 100) / 100 : 0, 
+          metric_unit: 'items/sale' 
         },
         { 
-          metric_name: 'Premium per Policy', 
-          metric_value: totalPolicies > 0 ? Math.round(totalPremium / totalPolicies) : 0, 
-          metric_unit: '$/policy' 
+          metric_name: 'Premium per Item', 
+          metric_value: totalItems > 0 ? Math.round(totalPremium / totalItems) : 0, 
+          metric_unit: '$/item' 
         },
       ];
 
