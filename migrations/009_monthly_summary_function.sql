@@ -33,7 +33,7 @@ BEGIN
     -- Totals
     COALESCE(SUM(de.qhh_total), 0)::integer as total_qhh,
     (
-      SELECT COUNT(*)::integer
+      SELECT COALESCE(SUM(qh.lines_quoted), 0)::integer
       FROM quoted_households qh
       JOIN daily_entries de2 ON de2.id = qh.daily_entry_id
       WHERE DATE_TRUNC('month', de2.entry_date) = DATE_TRUNC('month', de.entry_date)

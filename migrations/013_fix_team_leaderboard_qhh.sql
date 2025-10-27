@@ -42,8 +42,8 @@ BEGIN
     -- Get QHH (unique households) and Quotes from quoted_households
     SELECT 
       e.producer_id,
-      COUNT(DISTINCT qh.lead_id) as qhh,      -- Count UNIQUE households
-      COUNT(*) as quotes                        -- Count ALL quote records
+      COUNT(DISTINCT qh.lead_id) as qhh,           -- Count UNIQUE households
+      SUM(COALESCE(qh.lines_quoted, 0)) as quotes  -- SUM total lines quoted
     FROM public.daily_entries e
     INNER JOIN public.quoted_households qh ON qh.daily_entry_id = e.id
     WHERE e.entry_month = DATE_TRUNC('month', ref)::date 

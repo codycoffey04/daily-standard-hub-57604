@@ -45,11 +45,11 @@ BEGIN
   FROM public.producers p
   INNER JOIN public.daily_entries e ON e.producer_id = p.id
   LEFT JOIN public.entry_status es ON es.entry_id = e.id
-  -- Subquery for quotes count (COUNT of quoted_households per daily entry)
+  -- Subquery for quotes count (SUM of lines_quoted per daily entry)
   LEFT JOIN (
     SELECT 
       daily_entry_id,
-      COUNT(*) as quote_count
+      SUM(COALESCE(lines_quoted, 0)) as quote_count
     FROM public.quoted_households
     GROUP BY daily_entry_id
   ) quotes_agg ON quotes_agg.daily_entry_id = e.id

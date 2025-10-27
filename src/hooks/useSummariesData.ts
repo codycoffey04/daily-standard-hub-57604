@@ -222,10 +222,10 @@ export function useQuotesByProducer(year: number, month: number | null) {
         }
       }
 
-      // 2) Quotes = count of quoted_households rows
+      // 2) Quotes = sum of lines_quoted from quoted_households
       const { data: qhRows, error: qhErr } = await supabase
         .from('quoted_households')
-        .select('id, daily_entry_id')
+        .select('id, daily_entry_id, lines_quoted')
         .in('daily_entry_id', entryIds)
 
       if (qhErr) throw qhErr
@@ -234,7 +234,7 @@ export function useQuotesByProducer(year: number, month: number | null) {
       for (const row of (qhRows || [])) {
         const producerId = entryIdToProducer.get(row.daily_entry_id)
         if (!producerId) continue
-        quotesByProducer.set(producerId, (quotesByProducer.get(producerId) || 0) + 1)
+        quotesByProducer.set(producerId, (quotesByProducer.get(producerId) || 0) + (row.lines_quoted || 0))
       }
 
       // 3) Producer names
@@ -385,7 +385,7 @@ export function useProducerSourceMatrix(year: number, month: number | null) {
       // 2) QH rows (lead_id for QHH; items_sold and lead_source_id for metrics)
       const { data: qhRows, error: qhErr } = await supabase
         .from('quoted_households')
-        .select('id, lead_id, items_sold, lead_source_id, daily_entry_id')
+        .select('id, lead_id, items_sold, lead_source_id, daily_entry_id, lines_quoted')
         .in('daily_entry_id', entryIds)
 
       if (qhErr) throw qhErr
@@ -420,7 +420,7 @@ export function useProducerSourceMatrix(year: number, month: number | null) {
 
         const cell = matrix.get(key)!
         if (r.lead_id) cell.qhhSet.add(r.lead_id)
-        cell.quotes += 1
+        cell.quotes += (r.lines_quoted || 0)
         cell.items += Number(r.items_sold || 0)
       }
 

@@ -32,7 +32,7 @@ BEGIN
   WITH quotes_by_month AS (
     SELECT 
       DATE_TRUNC('month', de_cte.entry_date)::date as month_date,
-      COUNT(*)::integer as quote_count
+      COALESCE(SUM(qh.lines_quoted), 0)::integer as quote_count
     FROM quoted_households qh
     JOIN daily_entries de_cte ON de_cte.id = qh.daily_entry_id
     WHERE de_cte.entry_date >= from_date 

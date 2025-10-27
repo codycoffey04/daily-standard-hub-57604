@@ -50,7 +50,7 @@ BEGIN
   quotes_data AS (
     SELECT 
       e.producer_id,
-      COUNT(*) as quotes_count
+      SUM(COALESCE(qh.lines_quoted, 0)) as quotes_count
     FROM public.daily_entries e
     INNER JOIN public.quoted_households qh ON qh.daily_entry_id = e.id
     WHERE e.entry_month = DATE_TRUNC('month', ref)::date 
