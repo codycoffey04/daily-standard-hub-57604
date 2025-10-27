@@ -64,10 +64,10 @@ export const ProducerTrendsReport: React.FC<ProducerTrendsReportProps> = () => {
     if (!trendsData || trendsData.length === 0) return null
 
     const uniqueProducers = new Set(trendsData.map(d => d.producer_id)).size
-    const totalDials = trendsData.reduce((sum, d) => sum + d.outbound_dials, 0)
-    const totalQHH = trendsData.reduce((sum, d) => sum + d.qhh, 0)
-    const totalSales = trendsData.reduce((sum, d) => sum + d.sold_items, 0)
-    const totalPremium = trendsData.reduce((sum, d) => sum + d.sold_premium, 0)
+    const totalDials = trendsData.reduce((sum, d) => sum + (d.outbound_dials || 0), 0)
+    const totalQHH = trendsData.reduce((sum, d) => sum + (d.qhh || 0), 0)
+    const totalSales = trendsData.reduce((sum, d) => sum + (d.sold_items || 0), 0)
+    const totalPremium = trendsData.reduce((sum, d) => sum + (d.sold_premium || 0), 0)
     const avgQHH = trendsData.length > 0 ? totalQHH / trendsData.length : 0
     const avgSales = trendsData.length > 0 ? totalSales / trendsData.length : 0
 
