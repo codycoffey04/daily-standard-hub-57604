@@ -32,6 +32,7 @@ export const useMonthlySummary = (year: number, month: number | null) => {
     queryKey: ['monthly-summary-v4', year, month],
     staleTime: 0,
     gcTime: 0,
+    refetchOnMount: 'always',
     queryFn: async (): Promise<MonthlySummaryData> => {
       // Calculate month_ym in 'YYYY-MM' format
       const monthYm = month 

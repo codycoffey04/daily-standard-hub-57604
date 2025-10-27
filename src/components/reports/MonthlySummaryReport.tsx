@@ -3,8 +3,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Skeleton } from '@/components/ui/skeleton'
 import { EmptyState } from '@/components/ui/empty-state'
+import { Button } from '@/components/ui/button'
 import { useMonthlySummary, useTopSourcesByMonth } from '@/hooks/useMonthlySummary'
-import { TrendingUp, Users, Phone, Clock, Target, Award } from 'lucide-react'
+import { useQueryClient } from '@tanstack/react-query'
+import { TrendingUp, Users, Phone, Clock, Target, Award, RefreshCw } from 'lucide-react'
 import dayjs from 'dayjs'
 
 interface MonthlySummaryReportProps {
@@ -13,10 +15,17 @@ interface MonthlySummaryReportProps {
 }
 
 const MonthlySummaryReport: React.FC<MonthlySummaryReportProps> = ({ selectedYear, selectedMonth }) => {
+  const queryClient = useQueryClient()
+  
   console.log('📊 === MonthlySummaryReport RENDERING ===')
   console.log('  Props - selectedYear:', selectedYear, 'selectedMonth:', selectedMonth)
 
   const { data: summaryData, isLoading, error } = useMonthlySummary(selectedYear, selectedMonth)
+  
+  const handleRefresh = () => {
+    queryClient.invalidateQueries({ queryKey: ['monthly-summary-v4'] })
+    queryClient.invalidateQueries({ queryKey: ['top-sources-by-month-v2'] })
+  }
   
   console.log('  Hook returned - isLoading:', isLoading, 'hasData:', !!summaryData, 'hasError:', !!error)
 
@@ -129,6 +138,19 @@ const MonthlySummaryReport: React.FC<MonthlySummaryReportProps> = ({ selectedYea
 
   return (
     <div className="space-y-6">
+      {/* Refresh Button */}
+      <div className="flex justify-end">
+        <Button 
+          onClick={handleRefresh}
+          variant="outline" 
+          size="sm"
+          className="gap-2"
+        >
+          <RefreshCw className="w-4 h-4" />
+          Refresh Data
+        </Button>
+      </div>
+
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         <Card>
