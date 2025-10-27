@@ -9,6 +9,7 @@ import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { AppLayout } from "@/components/AppLayout";
 import { getRedirectPath } from "@/lib/auth";
 import { ThemeProvider } from "next-themes";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 // Pages
 import LoginPage from "./pages/LoginPage";
@@ -41,97 +42,99 @@ const App = () => (
   <QueryClientProvider client={queryClient}>
     <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
       <TooltipProvider>
-        <AuthProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
-          <Routes>
-            <Route path="/login" element={<LoginPage />} />
-            <Route 
-              path="/producer" 
-              element={
-                <ProtectedRoute>
-                  <AppLayout>
-                    <HomePage />
-                  </AppLayout>
-                </ProtectedRoute>
-              } 
-            />
-            <Route 
-              path="/team"
-              element={
-                <ProtectedRoute requiresOwnerManager>
-                  <AppLayout>
-                    <TeamPage />
-                  </AppLayout>
-                </ProtectedRoute>
-              } 
-            />
-            <Route 
-              path="/summaries" 
-              element={
-                <ProtectedRoute requiresOwnerManager>
-                  <AppLayout>
-                    <SummariesPage />
-                  </AppLayout>
-                </ProtectedRoute>
-              } 
-            />
-            <Route 
-              path="/accountability" 
-              element={
-                <ProtectedRoute>
-                  <AppLayout>
-                    <AccountabilityReviewsPage />
-                  </AppLayout>
-                </ProtectedRoute>
-              } 
-            />
-            <Route 
-              path="/admin/reviews" 
-              element={
-                <ProtectedRoute requiresOwnerManager>
-                  <AppLayout>
-                    <AdminReviewsPage />
-                  </AppLayout>
-                </ProtectedRoute>
-              } 
-            />
-            <Route 
-              path="/sources" 
-              element={
-                <ProtectedRoute requiresOwnerManager>
-                  <AppLayout>
-                    <SourcesPage />
-                  </AppLayout>
-                </ProtectedRoute>
-              } 
-            />
-            <Route 
-              path="/importer" 
-              element={
-                <ProtectedRoute requiresOwnerManager>
-                  <AppLayout>
-                    <ImporterPage />
-                  </AppLayout>
-                </ProtectedRoute>
-              } 
-            />
-            <Route 
-              path="/" 
-              element={
-                <ProtectedRoute>
-                  <RootRedirect />
-                </ProtectedRoute>
-              } 
-            />
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </BrowserRouter>
-      </AuthProvider>
-    </TooltipProvider>
-  </ThemeProvider>
-</QueryClientProvider>
+        <ErrorBoundary>
+          <AuthProvider>
+            <Toaster />
+            <Sonner />
+            <BrowserRouter>
+              <Routes>
+                <Route path="/login" element={<LoginPage />} />
+                <Route 
+                  path="/producer" 
+                  element={
+                    <ProtectedRoute>
+                      <AppLayout>
+                        <HomePage />
+                      </AppLayout>
+                    </ProtectedRoute>
+                  } 
+                />
+                <Route 
+                  path="/team"
+                  element={
+                    <ProtectedRoute requiresOwnerManager>
+                      <AppLayout>
+                        <TeamPage />
+                      </AppLayout>
+                    </ProtectedRoute>
+                  } 
+                />
+                <Route 
+                  path="/summaries" 
+                  element={
+                    <ProtectedRoute requiresOwnerManager>
+                      <AppLayout>
+                        <SummariesPage />
+                      </AppLayout>
+                    </ProtectedRoute>
+                  } 
+                />
+                <Route 
+                  path="/accountability" 
+                  element={
+                    <ProtectedRoute>
+                      <AppLayout>
+                        <AccountabilityReviewsPage />
+                      </AppLayout>
+                    </ProtectedRoute>
+                  } 
+                />
+                <Route 
+                  path="/admin/reviews" 
+                  element={
+                    <ProtectedRoute requiresOwnerManager>
+                      <AppLayout>
+                        <AdminReviewsPage />
+                      </AppLayout>
+                    </ProtectedRoute>
+                  } 
+                />
+                <Route 
+                  path="/sources" 
+                  element={
+                    <ProtectedRoute requiresOwnerManager>
+                      <AppLayout>
+                        <SourcesPage />
+                      </AppLayout>
+                    </ProtectedRoute>
+                  } 
+                />
+                <Route 
+                  path="/importer" 
+                  element={
+                    <ProtectedRoute requiresOwnerManager>
+                      <AppLayout>
+                        <ImporterPage />
+                      </AppLayout>
+                    </ProtectedRoute>
+                  } 
+                />
+                <Route 
+                  path="/" 
+                  element={
+                    <ProtectedRoute>
+                      <RootRedirect />
+                    </ProtectedRoute>
+                  } 
+                />
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </BrowserRouter>
+          </AuthProvider>
+        </ErrorBoundary>
+      </TooltipProvider>
+    </ThemeProvider>
+  </QueryClientProvider>
 );
 
 export default App;
