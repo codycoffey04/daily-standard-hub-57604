@@ -88,13 +88,15 @@ export const ProducerTrendsReport: React.FC<ProducerTrendsReportProps> = () => {
       Bottom: { variant: 'default' as const, className: 'bg-yellow-600 hover:bg-yellow-700', icon: Minus },
       Outside: { variant: 'default' as const, className: 'bg-red-600 hover:bg-red-700', icon: TrendingDown }
     }
-    const config = variants[status]
-    const Icon = config.icon
+    
+    // Add defensive check - use fallback if status is invalid
+    const config = variants[status] || variants['Outside']
+    const Icon = config?.icon || Minus
     
     return (
       <Badge variant={config.variant} className={config.className}>
         <Icon className="h-3 w-3 mr-1" />
-        {status}
+        {status || 'Unknown'}
       </Badge>
     )
   }
@@ -254,7 +256,11 @@ export const ProducerTrendsReport: React.FC<ProducerTrendsReportProps> = () => {
                       <TableCell className="text-right">{formatNumber(row.quotes)}</TableCell>
                       <TableCell className="text-right">{formatNumber(row.sold_items)}</TableCell>
                       <TableCell className="text-right">${formatNumber(Math.round(row.sold_premium))}</TableCell>
-                      <TableCell>{getFrameworkBadge(row.framework_status)}</TableCell>
+                      <TableCell>
+                        {row?.framework_status ? getFrameworkBadge(row.framework_status) : (
+                          <Badge variant="outline">-</Badge>
+                        )}
+                      </TableCell>
                       <TableCell className="text-center text-sm">
                         <span className="text-green-600 dark:text-green-400">{row.days_top}</span>
                         {' / '}
