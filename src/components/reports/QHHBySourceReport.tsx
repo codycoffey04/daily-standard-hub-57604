@@ -21,12 +21,12 @@ export const QHHBySourceReport: React.FC<QHHBySourceReportProps> = ({
   console.log('  Props - selectedYear:', selectedYear, 'selectedMonth:', selectedMonth)
   
   const { data, isLoading, error } = useQHHBySource(selectedYear, selectedMonth)
-  const { data: monthlySummary } = useMonthlySummary(selectedYear, selectedMonth)
+  const { data: monthlySummary, isLoading: isSummaryLoading } = useMonthlySummary(selectedYear, selectedMonth)
   
   console.log('  Hook returned - isLoading:', isLoading, 'hasData:', !!data, 'hasError:', !!error)
   if (data) console.log('  Data rows:', data.length)
 
-  if (isLoading) {
+  if (isLoading || isSummaryLoading) {
     return (
       <div className="space-y-6">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">

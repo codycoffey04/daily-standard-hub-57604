@@ -27,7 +27,7 @@ export const ItemsBySourceReport: React.FC<ItemsBySourceReportProps> = ({
   selectedMonth
 }) => {
   const { data, isLoading, error } = useItemsBySource(selectedYear, selectedMonth)
-  const { data: monthlySummary } = useMonthlySummary(selectedYear, selectedMonth)
+  const { data: monthlySummary, isLoading: isSummaryLoading } = useMonthlySummary(selectedYear, selectedMonth)
   const [sortColumn, setSortColumn] = useState<keyof ItemsBySourceData>('items')
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc')
 
@@ -54,7 +54,7 @@ export const ItemsBySourceReport: React.FC<ItemsBySourceReportProps> = ({
   }
 
   // Loading state
-  if (isLoading) {
+  if (isLoading || isSummaryLoading) {
     return (
       <div className="space-y-6">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

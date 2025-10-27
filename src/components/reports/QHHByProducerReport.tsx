@@ -17,9 +17,9 @@ export const QHHByProducerReport: React.FC<QHHByProducerReportProps> = ({
   selectedMonth
 }) => {
   const { data, isLoading, error } = useQHHByProducer(selectedYear, selectedMonth)
-  const { data: monthlySummary } = useMonthlySummary(selectedYear, selectedMonth)
+  const { data: monthlySummary, isLoading: isSummaryLoading } = useMonthlySummary(selectedYear, selectedMonth)
 
-  if (isLoading) {
+  if (isLoading || isSummaryLoading) {
     return (
       <div className="space-y-6">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

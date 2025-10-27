@@ -55,7 +55,7 @@ export const SalesByProducerReport: React.FC<SalesByProducerReportProps> = ({
   selectedMonth
 }) => {
   const { data: producersData, isLoading, error } = useSalesByProducer(selectedYear, selectedMonth)
-  const { data: monthlySummary } = useMonthlySummary(selectedYear, selectedMonth)
+  const { data: monthlySummary, isLoading: isSummaryLoading } = useMonthlySummary(selectedYear, selectedMonth)
   
   const [sortField, setSortField] = useState<SortField>('framework_compliance_pct')
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc')
@@ -124,7 +124,7 @@ export const SalesByProducerReport: React.FC<SalesByProducerReportProps> = ({
     }
   }, [producersData, monthlySummary])
 
-  if (isLoading) {
+  if (isLoading || isSummaryLoading) {
     return (
       <div className="space-y-6">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
