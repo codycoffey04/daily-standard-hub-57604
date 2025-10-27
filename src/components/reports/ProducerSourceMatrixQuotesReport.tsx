@@ -6,6 +6,7 @@ import { ProducerSourceMatrixQuotesChart } from '@/components/charts/ProducerSou
 import { useProducerSourceMatrix } from '@/hooks/useSummariesData'
 import { useMonthlySummary } from '@/hooks/useMonthlySummary'
 import { formatNumber } from '@/lib/utils'
+import { MonthlyTotalsCard } from '@/components/MonthlyTotalsCard'
 
 interface ProducerSourceMatrixQuotesReportProps {
   selectedYear: number
@@ -69,6 +70,8 @@ export const ProducerSourceMatrixQuotesReport: React.FC<ProducerSourceMatrixQuot
 
   return (
     <div className="space-y-6">
+      <MonthlyTotalsCard selectedYear={selectedYear} selectedMonth={selectedMonth} />
+      
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card>

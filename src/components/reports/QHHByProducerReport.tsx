@@ -6,6 +6,7 @@ import { SummaryBarChart } from '@/components/charts/SummaryBarChart'
 import { useQHHByProducer } from '@/hooks/useSummariesData'
 import { useMonthlySummary } from '@/hooks/useMonthlySummary'
 import { formatNumber } from '@/lib/utils'
+import { MonthlyTotalsCard } from '@/components/MonthlyTotalsCard'
 
 interface QHHByProducerReportProps {
   selectedYear: number
@@ -74,6 +75,8 @@ export const QHHByProducerReport: React.FC<QHHByProducerReportProps> = ({
 
   return (
     <div className="space-y-6">
+      <MonthlyTotalsCard selectedYear={selectedYear} selectedMonth={selectedMonth} />
+      
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card>

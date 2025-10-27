@@ -7,6 +7,7 @@ import { ChartLoading } from '@/components/ui/chart-loading'
 import { EmptyState } from '@/components/ui/empty-state'
 import { formatNumber } from '@/lib/utils'
 import { AlertCircle } from 'lucide-react'
+import { MonthlyTotalsCard } from '@/components/MonthlyTotalsCard'
 
 interface QHHBySourceReportProps {
   selectedYear: number
@@ -82,6 +83,8 @@ export const QHHBySourceReport: React.FC<QHHBySourceReportProps> = ({
 
   return (
     <div className="space-y-6">
+      <MonthlyTotalsCard selectedYear={selectedYear} selectedMonth={selectedMonth} />
+      
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">

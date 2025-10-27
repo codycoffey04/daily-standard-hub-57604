@@ -16,6 +16,7 @@ import { EmptyState } from '@/components/ui/empty-state'
 import { formatNumber } from '@/lib/utils'
 import { AlertCircle, ArrowUpDown, TrendingUp, Target, Package } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { MonthlyTotalsCard } from '@/components/MonthlyTotalsCard'
 
 interface ItemsBySourceReportProps {
   selectedYear: number
@@ -146,6 +147,8 @@ export const ItemsBySourceReport: React.FC<ItemsBySourceReportProps> = ({
 
   return (
     <div className="space-y-6">
+      <MonthlyTotalsCard selectedYear={selectedYear} selectedMonth={selectedMonth} />
+      
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card>

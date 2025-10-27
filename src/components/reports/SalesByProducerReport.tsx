@@ -7,6 +7,7 @@ import { useSalesByProducer, type SalesByProducerData } from '@/hooks/useSummari
 import { useMonthlySummary } from '@/hooks/useMonthlySummary'
 import { Users, Target, TrendingUp, DollarSign, ArrowUp, ArrowDown, Minus } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { MonthlyTotalsCard } from '@/components/MonthlyTotalsCard'
 
 interface SalesByProducerReportProps {
   selectedYear: number
@@ -174,6 +175,8 @@ export const SalesByProducerReport: React.FC<SalesByProducerReportProps> = ({
 
   return (
     <div className="space-y-6">
+      <MonthlyTotalsCard selectedYear={selectedYear} selectedMonth={selectedMonth} />
+      
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card>
