@@ -10,7 +10,6 @@ import { DateRangePicker } from '@/components/DateRangePicker'
 import { 
   useExecutionFunnel, 
   useExecutionBenchmarks, 
-  useExecutionEfficiency, 
   useProducersForExecution
 } from '@/hooks/useExecutionFunnel'
 import { useProducerExecutionLeaderboard } from '@/hooks/useProducerExecutionLeaderboard'
@@ -47,10 +46,60 @@ export const ExecutionFunnelReport: React.FC<ExecutionFunnelReportProps> = () =>
   // Fetch all data using RPC functions
   const { data: funnelData, isLoading: isFunnelLoading } = useExecutionFunnel(fromDateStr, toDateStr)
   const { data: benchmarks, isLoading: isBenchmarksLoading } = useExecutionBenchmarks(fromDateStr, toDateStr)
-  const { data: efficiency, isLoading: isEfficiencyLoading } = useExecutionEfficiency(fromDateStr, toDateStr, producerId, sourceId)
   const { data: leaderboard, isLoading: isLeaderboardLoading } = useProducerExecutionLeaderboard(fromDateStr, toDateStr, sourceId)
   const { data: producers, isLoading: isProducersLoading } = useProducersForExecution()
   const { data: sources, isLoading: isSourcesLoading } = useSourcesForSelection()
+
+  // Debug: Log funnel data to verify values
+  React.useEffect(() => {
+    if (funnelData) {
+      console.log('🔍 FUNNEL DATA:', {
+        stages: funnelData.map(s => ({ name: s.stage_name, value: s.stage_value })),
+        qhh: funnelData[1]?.stage_value
+      });
+    }
+  }, [funnelData]);
+
+  // Derive efficiency metrics from funnel data (single source of truth)
+  const derivedMetrics = useMemo(() => {
+    if (!funnelData || funnelData.length < 5) return [];
+    
+    const dials = funnelData[0]?.stage_value || 0;
+    const qhh = funnelData[1]?.stage_value || 0;
+    const shh = funnelData[2]?.stage_value || 0;  // Sales (Sold Households)
+    const items = funnelData[3]?.stage_value || 0; // Policies
+    const premium = funnelData[4]?.stage_value || 0;
+    
+    // Base metrics from funnel
+    const baseMetrics = [
+      { metric_name: 'Total Dials', metric_value: dials, metric_unit: 'dials' },
+      { metric_name: 'Total QHH', metric_value: qhh, metric_unit: 'households' },
+      { metric_name: 'Total Sales', metric_value: shh, metric_unit: 'sales' },
+      { metric_name: 'Total Items', metric_value: items, metric_unit: 'items' },
+      { metric_name: 'Total Premium', metric_value: premium, metric_unit: 'dollars' },
+    ];
+    
+    // Calculated efficiency metrics
+    const calculatedMetrics = [
+      { 
+        metric_name: 'Premium per Dial', 
+        metric_value: dials > 0 ? premium / dials : 0, 
+        metric_unit: '$/dial' 
+      },
+      { 
+        metric_name: 'Premium per Sale', 
+        metric_value: shh > 0 ? premium / shh : 0, 
+        metric_unit: '$/sale' 
+      },
+      { 
+        metric_name: 'Items per Sale', 
+        metric_value: shh > 0 ? items / shh : 0, 
+        metric_unit: 'items/sale' 
+      },
+    ];
+    
+    return [...baseMetrics, ...calculatedMetrics];
+  }, [funnelData]);
 
   // Guidance badge helper
   const getGuidanceBadge = (guidance: string) => {
@@ -149,28 +198,31 @@ export const ExecutionFunnelReport: React.FC<ExecutionFunnelReportProps> = () =>
         </CardContent>
       </Card>
 
-      {/* Efficiency Metrics Cards */}
-      {!isEfficiencyLoading && efficiency && efficiency.length > 0 && (
+      {/* Efficiency Metrics Cards - Derived from Funnel Data */}
+      {!isFunnelLoading && derivedMetrics && derivedMetrics.length > 0 && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-          {efficiency.filter(m => m.metric_value != null).map((metric) => (
+          {derivedMetrics.filter(m => m.metric_value != null).map((metric) => (
             <Card key={metric.metric_name}>
               <CardHeader className="pb-2">
                 <CardDescription>{metric.metric_name}</CardDescription>
                 <CardTitle className="text-3xl">
                   {(metric.metric_unit === '$' || metric.metric_unit === 'dollars' || metric.metric_unit?.startsWith('$/')) && '$'}
-                  {safeToLocaleString(metric.metric_value)}
+                  {metric.metric_unit?.startsWith('$/') || metric.metric_unit?.includes('/') 
+                    ? safeToFixed(metric.metric_value, 2)
+                    : safeToLocaleString(metric.metric_value)
+                  }
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 <p className="text-sm text-muted-foreground flex items-center gap-1">
-                  {metric.metric_unit === '$' ? (
+                  {metric.metric_unit === '$' || metric.metric_unit === 'dollars' ? (
                     <DollarSign className="h-4 w-4" />
                   ) : metric.metric_unit === 'minutes' ? (
                     <Clock className="h-4 w-4" />
                   ) : (
                     <Target className="h-4 w-4" />
                   )}
-                  Efficiency metric
+                  {metric.metric_unit?.includes('/') ? 'Efficiency ratio' : 'Total count'}
                 </p>
               </CardContent>
             </Card>
