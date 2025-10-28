@@ -102,10 +102,10 @@ export const ItemsBySourceReport: React.FC<ItemsBySourceReportProps> = ({
     )
   }
 
-  // Calculate summary totals from monthly summary (prevents double-counting)
-  const totalQHH = monthlySummary?.total_qhh || 0
-  const totalQuotes = monthlySummary?.total_quotes || 0
-  const totalItems = monthlySummary?.total_items || 0
+  // Calculate summary totals by summing source-level data
+  const totalQHH = data.reduce((sum, item) => sum + item.qhh, 0)
+  const totalQuotes = data.reduce((sum, item) => sum + item.quotes, 0)
+  const totalItems = data.reduce((sum, item) => sum + item.items, 0)
 
   // Prepare data for bar chart (top 10 by items)
   const top10Data = [...data]
