@@ -45,7 +45,7 @@ export const ExecutionFunnelReport: React.FC<ExecutionFunnelReportProps> = () =>
   const toDateStr = format(toDate, 'yyyy-MM-dd')
 
   // Fetch all data using RPC functions
-  const { data: funnelData, isLoading: isFunnelLoading } = useExecutionFunnel(fromDateStr, toDateStr, producerId, sourceId)
+  const { data: funnelData, isLoading: isFunnelLoading } = useExecutionFunnel(fromDateStr, toDateStr)
   const { data: benchmarks, isLoading: isBenchmarksLoading } = useExecutionBenchmarks(fromDateStr, toDateStr)
   const { data: efficiency, isLoading: isEfficiencyLoading } = useExecutionEfficiency(fromDateStr, toDateStr, producerId, sourceId)
   const { data: leaderboard, isLoading: isLeaderboardLoading } = useProducerExecutionLeaderboard(fromDateStr, toDateStr, sourceId)

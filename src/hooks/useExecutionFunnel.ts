@@ -50,18 +50,14 @@ export interface ProducerLeaderboard {
 
 export const useExecutionFunnel = (
   fromDate: string,
-  toDate: string,
-  producerId: string | null = null,
-  sourceId: string | null = null
+  toDate: string
 ) => {
   return useQuery({
-    queryKey: ['execution-funnel-v2', fromDate, toDate, producerId, sourceId],
+    queryKey: ['execution-funnel-v2', fromDate, toDate],
     queryFn: async (): Promise<ExecutionFunnelStage[]> => {
       const { data, error } = await supabase.rpc('get_execution_funnel' as any, {
         from_date: fromDate,
-        to_date: toDate,
-        producer_filter: producerId ?? null,
-        source_filter: sourceId ?? null
+        to_date: toDate
       })
 
       if (error) {
