@@ -52,23 +52,23 @@ export const ExecutionFunnelReport: React.FC<ExecutionFunnelReportProps> = () =>
 
   // Debug: Log funnel data to verify values
   React.useEffect(() => {
-    if (funnelData) {
+    if (funnelData?.stages) {
       console.log('🔍 FUNNEL DATA:', {
-        stages: funnelData.map(s => ({ name: s.stage_name, value: s.stage_value })),
-        qhh: funnelData[1]?.stage_value
+        stages: funnelData.stages.map(s => ({ name: s.stage_name, value: s.stage_value })),
+        qhh: funnelData.stages[1]?.stage_value
       });
     }
   }, [funnelData]);
 
   // Derive efficiency metrics from funnel data (single source of truth)
   const derivedMetrics = useMemo(() => {
-    if (!funnelData || funnelData.length < 5) return [];
+    if (!funnelData?.stages || funnelData.stages.length < 5) return [];
     
-    const dials = funnelData[0]?.stage_value || 0;
-    const qhh = funnelData[1]?.stage_value || 0;
-    const shh = funnelData[2]?.stage_value || 0;  // Sales (Sold Households)
-    const items = funnelData[3]?.stage_value || 0; // Policies
-    const premium = funnelData[4]?.stage_value || 0;
+    const dials = funnelData.stages[0]?.stage_value || 0;
+    const qhh = funnelData.stages[1]?.stage_value || 0;
+    const shh = funnelData.stages[2]?.stage_value || 0;  // Sales (Sold Households)
+    const items = funnelData.stages[3]?.stage_value || 0; // Policies
+    const premium = funnelData.stages[4]?.stage_value || 0;
     
     // Base metrics from funnel
     const baseMetrics = [
@@ -140,7 +140,7 @@ export const ExecutionFunnelReport: React.FC<ExecutionFunnelReportProps> = () =>
   }
 
   const isLoading = isFunnelLoading || isProducersLoading || isSourcesLoading
-  const hasData = funnelData && funnelData.length > 0 && funnelData[0].stage_value > 0
+  const hasData = funnelData?.stages && funnelData.stages.length > 0 && funnelData.stages[0].stage_value > 0
 
   return (
     <div className="space-y-6">
@@ -245,7 +245,7 @@ export const ExecutionFunnelReport: React.FC<ExecutionFunnelReportProps> = () =>
             <div className="space-y-4">
               {/* Horizontal Funnel: All 5 Stages - Uniform Size */}
               <div className="flex items-center gap-2 py-6 overflow-x-auto">
-                {funnelData.map((stage, index) => {
+                {funnelData.stages.map((stage, index) => {
                   // Colors for each stage
                   const colors = [
                     { hue: 220, sat: 70, light: 55 },  // Dials - Blue
@@ -308,8 +308,8 @@ export const ExecutionFunnelReport: React.FC<ExecutionFunnelReportProps> = () =>
                       // Stage 5: Premium - Show per household
                       <div className="flex flex-col items-center gap-0">
                         <div className="text-[10px] font-normal" style={{ color: '#FFFFFF' }}>per household</div>
-                        <div className="text-base">${(funnelData[2]?.stage_value > 0 
-                          ? stage.stage_value / funnelData[2].stage_value 
+                        <div className="text-base">${(funnelData.stages[2]?.stage_value > 0 
+                          ? stage.stage_value / funnelData.stages[2].stage_value 
                           : 0).toFixed(0)}</div>
                       </div>
                     ) : (

@@ -12,6 +12,11 @@ export interface ExecutionFunnelStage {
   drop_off_rate: number
 }
 
+export interface ExecutionFunnelData {
+  stages: ExecutionFunnelStage[]
+  qhh?: number
+}
+
 export interface ExecutionBenchmark {
   source_id: string
   source_name: string
@@ -54,7 +59,7 @@ export const useExecutionFunnel = (
 ) => {
   return useQuery({
     queryKey: ['execution-funnel-v2', fromDate, toDate],
-    queryFn: async (): Promise<ExecutionFunnelStage[]> => {
+    queryFn: async (): Promise<ExecutionFunnelData> => {
       const { data, error } = await supabase.rpc('get_execution_funnel' as any, {
         from_date: fromDate,
         to_date: toDate
@@ -65,6 +70,22 @@ export const useExecutionFunnel = (
         throw error
       }
 
+      // If data already has stages property, return as-is
+      if (data?.stages) {
+        return {
+          stages: data.stages.map((r: any) => ({
+            stage_number: Number(r.stage_number),
+            stage_name: String(r.stage_name),
+            stage_value: Number(r.stage_value) || 0,
+            conversion_rate: Number(r.conversion_rate) || 0,
+            drop_off_count: Number(r.drop_off_count) || 0,
+            drop_off_rate: Number(r.drop_off_rate) || 0
+          })),
+          qhh: data.qhh
+        }
+      }
+
+      // Otherwise, data is the stages array directly
       const stages = (data || []).map((r: any) => ({
         stage_number: Number(r.stage_number),
         stage_name: String(r.stage_name),
@@ -76,16 +97,18 @@ export const useExecutionFunnel = (
 
       // Empty fallback to preserve type if no rows
       if (!stages.length) {
-        return [
-          { stage_number: 1, stage_name: 'Dials', stage_value: 0, conversion_rate: 100, drop_off_count: 0, drop_off_rate: 0 },
-          { stage_number: 2, stage_name: 'QHH', stage_value: 0, conversion_rate: 0, drop_off_count: 0, drop_off_rate: 0 },
-          { stage_number: 3, stage_name: 'Sales', stage_value: 0, conversion_rate: 0, drop_off_count: 0, drop_off_rate: 0 },
-          { stage_number: 4, stage_name: 'Items Sold', stage_value: 0, conversion_rate: 0, drop_off_count: 0, drop_off_rate: 0 },
-          { stage_number: 5, stage_name: 'Premium', stage_value: 0, conversion_rate: 0, drop_off_count: 0, drop_off_rate: 0 }
-        ]
+        return {
+          stages: [
+            { stage_number: 1, stage_name: 'Dials', stage_value: 0, conversion_rate: 100, drop_off_count: 0, drop_off_rate: 0 },
+            { stage_number: 2, stage_name: 'QHH', stage_value: 0, conversion_rate: 0, drop_off_count: 0, drop_off_rate: 0 },
+            { stage_number: 3, stage_name: 'Sales', stage_value: 0, conversion_rate: 0, drop_off_count: 0, drop_off_rate: 0 },
+            { stage_number: 4, stage_name: 'Items Sold', stage_value: 0, conversion_rate: 0, drop_off_count: 0, drop_off_rate: 0 },
+            { stage_number: 5, stage_name: 'Premium', stage_value: 0, conversion_rate: 0, drop_off_count: 0, drop_off_rate: 0 }
+          ]
+        }
       }
 
-      return stages
+      return { stages }
     },
     enabled: !!fromDate && !!toDate
   })
