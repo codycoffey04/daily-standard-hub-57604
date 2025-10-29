@@ -70,45 +70,76 @@ export const useExecutionFunnel = (
         throw error
       }
 
-      // If data already has stages property, return as-is
-      if (data?.stages) {
-        return {
-          stages: data.stages.map((r: any) => ({
-            stage_number: Number(r.stage_number),
-            stage_name: String(r.stage_name),
-            stage_value: Number(r.stage_value) || 0,
-            conversion_rate: Number(r.conversion_rate) || 0,
-            drop_off_count: Number(r.drop_off_count) || 0,
-            drop_off_rate: Number(r.drop_off_rate) || 0
-          })),
-          qhh: data.qhh
-        }
-      }
-
-      // Otherwise, data is the stages array directly
-      const stages = (data || []).map((r: any) => ({
-        stage_number: Number(r.stage_number),
-        stage_name: String(r.stage_name),
-        stage_value: Number(r.stage_value) || 0,
-        conversion_rate: Number(r.conversion_rate) || 0,
-        drop_off_count: Number(r.drop_off_count) || 0,
-        drop_off_rate: Number(r.drop_off_rate) || 0
-      })) as ExecutionFunnelStage[]
-
-      // Empty fallback to preserve type if no rows
-      if (!stages.length) {
-        return {
+      // Handle empty response
+      if (!data || data.length === 0) {
+        return { 
           stages: [
             { stage_number: 1, stage_name: 'Dials', stage_value: 0, conversion_rate: 100, drop_off_count: 0, drop_off_rate: 0 },
             { stage_number: 2, stage_name: 'QHH', stage_value: 0, conversion_rate: 0, drop_off_count: 0, drop_off_rate: 0 },
             { stage_number: 3, stage_name: 'Sales', stage_value: 0, conversion_rate: 0, drop_off_count: 0, drop_off_rate: 0 },
-            { stage_number: 4, stage_name: 'Items Sold', stage_value: 0, conversion_rate: 0, drop_off_count: 0, drop_off_rate: 0 },
+            { stage_number: 4, stage_name: 'Items', stage_value: 0, conversion_rate: 0, drop_off_count: 0, drop_off_rate: 0 },
             { stage_number: 5, stage_name: 'Premium', stage_value: 0, conversion_rate: 0, drop_off_count: 0, drop_off_rate: 0 }
-          ]
+          ],
+          qhh: 0 
         }
       }
 
-      return { stages }
+      // RPC returns array with single row object: { dials, qhh, shh, policies, premium }
+      const row = data[0]
+
+      // Calculate conversion rates
+      const dialToQhh = row.dials > 0 ? (row.qhh / row.dials * 100) : 0
+      const qhhToShh = row.qhh > 0 ? (row.shh / row.qhh * 100) : 0
+      const shhToItems = row.shh > 0 ? (row.policies / row.shh) : 0
+      const shhToPremium = row.shh > 0 ? (row.premium / row.shh) : 0
+
+      const stages: ExecutionFunnelStage[] = [
+        {
+          stage_number: 1,
+          stage_name: 'Dials',
+          stage_value: Number(row.dials) || 0,
+          conversion_rate: 100,
+          drop_off_count: 0,
+          drop_off_rate: 0
+        },
+        {
+          stage_number: 2,
+          stage_name: 'QHH',
+          stage_value: Number(row.qhh) || 0,
+          conversion_rate: dialToQhh,
+          drop_off_count: row.dials - row.qhh,
+          drop_off_rate: row.dials > 0 ? ((row.dials - row.qhh) / row.dials * 100) : 0
+        },
+        {
+          stage_number: 3,
+          stage_name: 'Sales',
+          stage_value: Number(row.shh) || 0,
+          conversion_rate: qhhToShh,
+          drop_off_count: row.qhh - row.shh,
+          drop_off_rate: row.qhh > 0 ? ((row.qhh - row.shh) / row.qhh * 100) : 0
+        },
+        {
+          stage_number: 4,
+          stage_name: 'Items',
+          stage_value: Number(row.policies) || 0,
+          conversion_rate: shhToItems * 100, // Convert to percentage
+          drop_off_count: 0,
+          drop_off_rate: 0
+        },
+        {
+          stage_number: 5,
+          stage_name: 'Premium',
+          stage_value: Number(row.premium) || 0,
+          conversion_rate: shhToPremium, // Premium per sale (in dollars, not percentage)
+          drop_off_count: 0,
+          drop_off_rate: 0
+        }
+      ]
+
+      return { 
+        stages, 
+        qhh: Number(row.qhh) || 0 
+      }
     },
     enabled: !!fromDate && !!toDate
   })
