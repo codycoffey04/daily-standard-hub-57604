@@ -274,8 +274,7 @@ export function useQuotesBySource(year: number, month: number | null) {
         'get_top_sources_by_month' as any,
         {
           month_ym: monthYm,
-          metric_type: 'quotes',
-          lim: 50
+          metric_type: 'quotes'
         }
       )
       
