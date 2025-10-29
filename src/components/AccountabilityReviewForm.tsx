@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as z from 'zod'
@@ -49,6 +49,20 @@ interface AccountabilityReviewFormProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   onSuccess: () => void
+  mode?: 'create' | 'edit'
+  existingReview?: {
+    id: string
+    metrics_achieved: boolean | null
+    activities_achieved: string[]
+    activity_comments: string | null
+    call_recording_reviewed: string | null
+    sales_checklist: string | null
+    call_takeaways: string | null
+    weak_steps: string[]
+    course_corrections_addressed: boolean | null
+    quick_meeting_notes: string | null
+    expansion_topics: string | null
+  } | null
 }
 
 const weakStepsOptions = [
@@ -86,7 +100,9 @@ export const AccountabilityReviewForm: React.FC<AccountabilityReviewFormProps> =
   entry,
   open,
   onOpenChange,
-  onSuccess
+  onSuccess,
+  mode = 'create',
+  existingReview = null
 }) => {
   const { user } = useAuth()
   const { toast } = useToast()
@@ -97,7 +113,18 @@ export const AccountabilityReviewForm: React.FC<AccountabilityReviewFormProps> =
 
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
-    defaultValues: {
+    defaultValues: mode === 'edit' && existingReview ? {
+      metrics_achieved: existingReview.metrics_achieved ?? false,
+      activities_achieved: existingReview.activities_achieved ?? [],
+      activity_comments: existingReview.activity_comments ?? '',
+      call_recording_reviewed: existingReview.call_recording_reviewed ?? '',
+      sales_checklist: existingReview.sales_checklist ?? '',
+      call_takeaways: existingReview.call_takeaways ?? '',
+      weak_steps: existingReview.weak_steps ?? [],
+      course_corrections_addressed: existingReview.course_corrections_addressed ?? false,
+      quick_meeting_notes: existingReview.quick_meeting_notes ?? '',
+      expansion_topics: existingReview.expansion_topics ?? '',
+    } : {
       metrics_achieved: false,
       activities_achieved: [],
       activity_comments: '',
@@ -111,37 +138,80 @@ export const AccountabilityReviewForm: React.FC<AccountabilityReviewFormProps> =
     }
   })
 
+  // Reset form when switching between create/edit modes
+  useEffect(() => {
+    if (mode === 'edit' && existingReview) {
+      form.reset({
+        metrics_achieved: existingReview.metrics_achieved ?? false,
+        activities_achieved: existingReview.activities_achieved ?? [],
+        activity_comments: existingReview.activity_comments ?? '',
+        call_recording_reviewed: existingReview.call_recording_reviewed ?? '',
+        sales_checklist: existingReview.sales_checklist ?? '',
+        call_takeaways: existingReview.call_takeaways ?? '',
+        weak_steps: existingReview.weak_steps ?? [],
+        course_corrections_addressed: existingReview.course_corrections_addressed ?? false,
+        quick_meeting_notes: existingReview.quick_meeting_notes ?? '',
+        expansion_topics: existingReview.expansion_topics ?? '',
+      })
+    }
+  }, [mode, existingReview, form])
+
   const handleSubmit = async (data: FormData) => {
     if (!entry || !user) return
 
     try {
       setIsSubmitting(true)
 
-      const { error } = await supabase
-        .from('accountability_reviews')
-        .insert({
-          daily_entry_id: entry.id,
-          reviewer_id: user.id,
-          metrics_achieved: data.metrics_achieved,
-          activities_achieved: data.activities_achieved,
-          activity_comments: data.activity_comments || null,
-          call_recording_reviewed: data.call_recording_reviewed,
-          sales_checklist: data.sales_checklist || null,
-          call_takeaways: data.call_takeaways || null,
-          weak_steps: data.weak_steps,
-          course_corrections_addressed: data.course_corrections_addressed,
-          quick_meeting_notes: data.quick_meeting_notes || null,
-          expansion_topics: data.expansion_topics || null,
+      if (mode === 'edit' && existingReview) {
+        // UPDATE existing review
+        const { error } = await supabase
+          .from('accountability_reviews')
+          .update({
+            metrics_achieved: data.metrics_achieved,
+            activities_achieved: data.activities_achieved,
+            activity_comments: data.activity_comments || null,
+            call_recording_reviewed: data.call_recording_reviewed,
+            sales_checklist: data.sales_checklist || null,
+            call_takeaways: data.call_takeaways || null,
+            weak_steps: data.weak_steps,
+            course_corrections_addressed: data.course_corrections_addressed,
+            quick_meeting_notes: data.quick_meeting_notes || null,
+            expansion_topics: data.expansion_topics || null,
+          })
+          .eq('id', existingReview.id)
+
+        if (error) throw error
+
+        toast({
+          title: 'Review Updated',
+          description: `Accountability review updated for ${entry.producer.display_name}`,
         })
+      } else {
+        // INSERT new review
+        const { error } = await supabase
+          .from('accountability_reviews')
+          .insert({
+            daily_entry_id: entry.id,
+            reviewer_id: user.id,
+            metrics_achieved: data.metrics_achieved,
+            activities_achieved: data.activities_achieved,
+            activity_comments: data.activity_comments || null,
+            call_recording_reviewed: data.call_recording_reviewed,
+            sales_checklist: data.sales_checklist || null,
+            call_takeaways: data.call_takeaways || null,
+            weak_steps: data.weak_steps,
+            course_corrections_addressed: data.course_corrections_addressed,
+            quick_meeting_notes: data.quick_meeting_notes || null,
+            expansion_topics: data.expansion_topics || null,
+          })
 
-      if (error) {
-        throw error
+        if (error) throw error
+
+        toast({
+          title: 'Review Saved',
+          description: `Accountability review completed for ${entry.producer.display_name}`,
+        })
       }
-
-      toast({
-        title: 'Review Saved',
-        description: `Accountability review completed for ${entry.producer.display_name}`,
-      })
 
       form.reset()
       onOpenChange(false)
@@ -150,7 +220,7 @@ export const AccountabilityReviewForm: React.FC<AccountabilityReviewFormProps> =
       console.error('Error saving review:', error)
       toast({
         title: 'Error',
-        description: 'Failed to save accountability review. Please try again.',
+        description: `Failed to ${mode === 'edit' ? 'update' : 'save'} accountability review. Please try again.`,
         variant: 'destructive',
       })
     } finally {
@@ -165,7 +235,7 @@ export const AccountabilityReviewForm: React.FC<AccountabilityReviewFormProps> =
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-xl font-semibold">
-            Accountability Review - {entry.producer.display_name}
+            {mode === 'edit' ? 'Edit' : ''} Accountability Review - {entry.producer.display_name}
           </DialogTitle>
         </DialogHeader>
 
@@ -504,7 +574,10 @@ export const AccountabilityReviewForm: React.FC<AccountabilityReviewFormProps> =
                 Cancel
               </Button>
               <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting ? 'Saving...' : 'Save Review'}
+                {isSubmitting 
+                  ? (mode === 'edit' ? 'Updating...' : 'Saving...') 
+                  : (mode === 'edit' ? 'Update Review' : 'Save Review')
+                }
               </Button>
             </DialogFooter>
           </form>

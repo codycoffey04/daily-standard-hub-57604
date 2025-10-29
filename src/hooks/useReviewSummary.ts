@@ -14,6 +14,22 @@ export interface ReviewSummaryData {
   action_items: string | null
   follow_up_required: boolean | null
   follow_up_date: string | null
+  
+  // Raw review data for editing
+  raw_review: {
+    daily_entry_id: string
+    metrics_achieved: boolean | null
+    activities_achieved: string[]
+    activity_comments: string | null
+    call_recording_reviewed: string | null
+    sales_checklist: string | null
+    call_takeaways: string | null
+    weak_steps: string[]
+    course_corrections_addressed: boolean | null
+    quick_meeting_notes: string | null
+    expansion_topics: string | null
+    updated_at: string
+  }
 }
 
 export function useReviewSummary(
@@ -37,13 +53,19 @@ export function useReviewSummary(
         .select(`
           id,
           created_at,
+          updated_at,
+          daily_entry_id,
           reviewer_id,
+          metrics_achieved,
           call_recording_reviewed,
           weak_steps,
           activity_comments,
           activities_achieved,
           expansion_topics,
           quick_meeting_notes,
+          sales_checklist,
+          call_takeaways,
+          course_corrections_addressed,
           daily_entries!inner(
             entry_date,
             producers!inner(
@@ -90,7 +112,27 @@ export function useReviewSummary(
           : null,
         action_items: review.expansion_topics,
         follow_up_required: review.expansion_topics ? true : null,
-        follow_up_date: null
+        follow_up_date: null,
+        
+        // Store raw review data for editing
+        raw_review: {
+          daily_entry_id: review.daily_entry_id,
+          metrics_achieved: review.metrics_achieved,
+          activities_achieved: Array.isArray(review.activities_achieved) 
+            ? review.activities_achieved 
+            : [],
+          activity_comments: review.activity_comments,
+          call_recording_reviewed: review.call_recording_reviewed,
+          sales_checklist: review.sales_checklist,
+          call_takeaways: review.call_takeaways,
+          weak_steps: Array.isArray(review.weak_steps) 
+            ? review.weak_steps 
+            : [],
+          course_corrections_addressed: review.course_corrections_addressed,
+          quick_meeting_notes: review.quick_meeting_notes,
+          expansion_topics: review.expansion_topics,
+          updated_at: review.updated_at
+        }
       }))
 
       // Sort by review_date (entry_date) in descending order (newest first)
