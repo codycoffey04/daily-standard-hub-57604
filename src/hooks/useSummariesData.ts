@@ -551,47 +551,156 @@ function getPreviousPeriodDates(year: number, month: number | null) {
 }
 
 export function useSalesByProducer(year: number, month: number | null) {
+  const { startDate, endDate } = getDateRange(year, month)
+  const prevDates = getPreviousPeriodDates(year, month)
+
   return useQuery({
-    queryKey: ['sales-by-producer-v2', year, month],
+    queryKey: ['sales-by-producer-v3', year, month],
     queryFn: async (): Promise<SalesByProducerData[]> => {
-      const { startDate, endDate } = getDateRange(year, month)
-      
-      // Current period data
-      const { data: currentData, error: currentError } = await supabase.rpc(
-        'get_producer_comparison' as any,
+      // Fetch current period data using get_producer_trends
+      const { data: currentTrends, error: currentError } = await supabase.rpc(
+        'get_producer_trends' as any,
         {
+          producer_ids: null, // null = all producers
           from_date: startDate,
           to_date: endDate
         }
       )
       
       if (currentError) throw currentError
-      
-      // Previous period data for trends
-      const prevDates = getPreviousPeriodDates(year, month)
-      const { data: prevData, error: prevError } = await supabase.rpc(
-        'get_producer_comparison' as any,
+      if (!currentTrends || currentTrends.length === 0) return []
+
+      // Fetch previous period data for trend comparison
+      const { data: prevTrends, error: prevError } = await supabase.rpc(
+        'get_producer_trends' as any,
         {
+          producer_ids: null,
           from_date: prevDates.startDate,
           to_date: prevDates.endDate
         }
       )
       
       if (prevError) throw prevError
-      
-      // Merge current and previous data
-      const prevMap = new Map(
-        (prevData || []).map((p: any) => [p.producer_id, p])
-      )
-      
-      return (currentData || []).map((current: any) => {
-        const prev = prevMap.get(current.producer_id) as any
+
+      // Aggregate daily data by producer for current period
+      const producerMap = new Map<string, {
+        producer_id: string
+        producer_name: string
+        days_worked: number
+        days_top: number
+        days_bottom: number
+        days_outside: number
+        total_qhh: number
+        total_quotes: number
+        total_items: number
+        total_sold_items: number
+        total_sold_premium: number
+      }>()
+
+      for (const row of currentTrends) {
+        if (!producerMap.has(row.producer_id)) {
+          producerMap.set(row.producer_id, {
+            producer_id: row.producer_id,
+            producer_name: row.producer_name,
+            days_worked: 0,
+            days_top: 0,
+            days_bottom: 0,
+            days_outside: 0,
+            total_qhh: 0,
+            total_quotes: 0,
+            total_items: 0,
+            total_sold_items: 0,
+            total_sold_premium: 0
+          })
+        }
+
+        const p = producerMap.get(row.producer_id)!
+        p.days_worked += 1
+        p.days_top += row.days_top
+        p.days_bottom += row.days_bottom
+        p.days_outside += row.days_outside
+        p.total_qhh += row.qhh
+        p.total_quotes += row.quotes
+        p.total_items += row.items
+        p.total_sold_items += row.sold_items
+        p.total_sold_premium += Number(row.sold_premium) || 0
+      }
+
+      // Aggregate previous period data
+      const prevMap = new Map<string, {
+        framework_compliance_pct: number
+        total_items: number
+        total_sold_items: number
+      }>()
+
+      if (prevTrends && prevTrends.length > 0) {
+        const prevProducerMap = new Map<string, {
+          days_worked: number
+          days_top: number
+          total_items: number
+          total_sold_items: number
+        }>()
+
+        for (const row of prevTrends) {
+          if (!prevProducerMap.has(row.producer_id)) {
+            prevProducerMap.set(row.producer_id, {
+              days_worked: 0,
+              days_top: 0,
+              total_items: 0,
+              total_sold_items: 0
+            })
+          }
+
+          const p = prevProducerMap.get(row.producer_id)!
+          p.days_worked += 1
+          p.days_top += row.days_top
+          p.total_items += row.items
+          p.total_sold_items += row.sold_items
+        }
+
+        // Calculate previous period metrics
+        for (const [producer_id, p] of prevProducerMap.entries()) {
+          prevMap.set(producer_id, {
+            framework_compliance_pct: p.days_worked > 0 ? (p.days_top / p.days_worked) * 100 : 0,
+            total_items: p.total_items,
+            total_sold_items: p.total_sold_items
+          })
+        }
+      }
+
+      // Build final result with calculated metrics
+      const result: SalesByProducerData[] = Array.from(producerMap.values()).map(p => {
+        const prev = prevMap.get(p.producer_id)
+        const framework_compliance_pct = p.days_worked > 0 ? (p.days_top / p.days_worked) * 100 : 0
+        const avg_daily_qhh = p.days_worked > 0 ? p.total_qhh / p.days_worked : 0
+        const avg_daily_items = p.days_worked > 0 ? p.total_items / p.days_worked : 0
+
         return {
-          ...current,
+          producer_id: p.producer_id,
+          producer_name: p.producer_name,
+          days_worked: p.days_worked,
+          days_top: p.days_top,
+          days_bottom: p.days_bottom,
+          days_outside: p.days_outside,
+          framework_compliance_pct,
+          avg_daily_qhh,
+          avg_daily_items,
+          total_qhh: p.total_qhh,
+          total_quotes: p.total_quotes,
+          total_items: p.total_items,
+          total_sold_items: p.total_sold_items,
+          total_sold_premium: p.total_sold_premium,
+          // Previous period data for trend arrows
           prev_framework_compliance_pct: prev?.framework_compliance_pct,
-          prev_total_items: prev?.total_items
+          prev_total_items: prev?.total_items,
+          prev_total_sold_items: prev?.total_sold_items
         }
       })
+
+      // Sort by framework compliance (matching original behavior)
+      result.sort((a, b) => b.framework_compliance_pct - a.framework_compliance_pct)
+
+      return result
     }
   })
 }
