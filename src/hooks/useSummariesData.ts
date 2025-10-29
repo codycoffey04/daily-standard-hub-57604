@@ -267,11 +267,11 @@ export function useQuotesBySource(year: number, month: number | null) {
         ? `${year}-${String(month).padStart(2, '0')}`
         : `${year}-01`
       
-      console.log('🔍 === QUOTES BY SOURCE RPC CALL (NEW) ===')
+      console.log('🔍 === QUOTES BY SOURCE RPC CALL ===')
       console.log('  Calculated month_ym:', monthYm)
       
       const { data, error } = await supabase.rpc(
-        'rpc_get_top_sources_by_month' as any,
+        'get_top_sources_by_month' as any,
         {
           month_ym: monthYm,
           metric_type: 'quotes',
