@@ -53,7 +53,7 @@ export const ReviewSummaryReport: React.FC<ReviewSummaryReportProps> = ({
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-2xl font-bold text-foreground">Manager Review Summary</h2>
+        <h2 className="text-2xl font-bold text-foreground">Accountability Review Summary</h2>
         <p className="text-sm text-muted-foreground mt-1">
           {reviews.length} review{reviews.length !== 1 ? 's' : ''} found
         </p>

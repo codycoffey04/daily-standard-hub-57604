@@ -31,42 +31,39 @@ export function useReviewSummary(
         ? new Date(year, month, 0).toISOString().split('T')[0]
         : `${year}-12-31`
 
-      // Query 1: Fetch manager reviews without joins
+      // Query 1: Fetch accountability reviews with joins to daily_entries and producers
       const { data: reviews, error } = await supabase
-        .from('manager_reviews' as any)
+        .from('accountability_reviews')
         .select(`
           id,
           created_at,
-          review_date,
-          call_reviewed,
-          sales_process_gaps,
-          coaching_notes,
-          strengths_noted,
-          action_items,
-          follow_up_required,
-          follow_up_date,
           reviewer_id,
-          producer_id
+          call_recording_reviewed,
+          weak_steps,
+          activity_comments,
+          activities_achieved,
+          expansion_topics,
+          quick_meeting_notes,
+          daily_entries!inner(
+            entry_date,
+            producers!inner(
+              display_name
+            )
+          )
         `)
-        .gte('review_date', startDate)
-        .lte('review_date', endDate)
-        .order('review_date', { ascending: false })
+        .gte('daily_entries.entry_date', startDate)
+        .lte('daily_entries.entry_date', endDate)
+        .order('daily_entries.entry_date', { ascending: false })
 
       if (error) throw error
 
-      // Extract unique IDs
-      const producerIds = [...new Set((reviews || []).map((r: any) => r.producer_id).filter((id): id is string => !!id))]
-      const reviewerIds = [...new Set((reviews || []).map((r: any) => r.reviewer_id).filter((id): id is string => !!id))]
+      // Extract unique reviewer IDs
+      const reviewerIds = [...new Set((reviews || [])
+        .map((r: any) => r.reviewer_id)
+        .filter((id): id is string => !!id)
+      )]
       
-      // Query 2: Fetch producer profiles (by producer_id)
-      const { data: producerProfiles, error: producerError } = await supabase
-        .from('profiles')
-        .select('producer_id, display_name')
-        .in('producer_id', producerIds)
-
-      if (producerError) throw producerError
-
-      // Query 3: Fetch reviewer profiles (by id)
+      // Query 2: Fetch reviewer profiles
       const { data: reviewerProfiles, error: reviewerError } = await supabase
         .from('profiles')
         .select('id, display_name')
@@ -74,10 +71,7 @@ export function useReviewSummary(
 
       if (reviewerError) throw reviewerError
 
-      // Create lookup maps
-      const producerMap = new Map(
-        producerProfiles?.map(p => [p.producer_id, p.display_name]) || []
-      )
+      // Create reviewer lookup map
       const reviewerMap = new Map(
         reviewerProfiles?.map(p => [p.id, p.display_name]) || []
       )
@@ -86,16 +80,18 @@ export function useReviewSummary(
       const transformed: ReviewSummaryData[] = (reviews || []).map((review: any) => ({
         id: review.id,
         created_at: review.created_at,
-        review_date: review.review_date,
-        producer_name: producerMap.get(review.producer_id) || 'Unknown Producer',
+        review_date: review.daily_entries.entry_date,
+        producer_name: review.daily_entries.producers.display_name,
         reviewer_name: reviewerMap.get(review.reviewer_id) || 'Unknown Reviewer',
-        call_reviewed: review.call_reviewed,
-        sales_process_gaps: Array.isArray(review.sales_process_gaps) ? review.sales_process_gaps : [],
-        coaching_notes: review.coaching_notes,
-        strengths_noted: review.strengths_noted,
-        action_items: review.action_items,
-        follow_up_required: review.follow_up_required,
-        follow_up_date: review.follow_up_date
+        call_reviewed: review.call_recording_reviewed,
+        sales_process_gaps: Array.isArray(review.weak_steps) ? review.weak_steps : [],
+        coaching_notes: review.activity_comments || review.quick_meeting_notes || null,
+        strengths_noted: Array.isArray(review.activities_achieved) 
+          ? review.activities_achieved.join(', ') 
+          : null,
+        action_items: review.expansion_topics,
+        follow_up_required: review.expansion_topics ? true : null,
+        follow_up_date: null
       }))
 
       return transformed
