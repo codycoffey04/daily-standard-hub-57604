@@ -53,7 +53,6 @@ export function useReviewSummary(
         `)
         .gte('daily_entries.entry_date', startDate)
         .lte('daily_entries.entry_date', endDate)
-        .order('daily_entries.entry_date', { ascending: false })
 
       if (error) throw error
 
@@ -94,7 +93,10 @@ export function useReviewSummary(
         follow_up_date: null
       }))
 
-      return transformed
+      // Sort by review_date (entry_date) in descending order (newest first)
+      return transformed.sort((a, b) => 
+        new Date(b.review_date).getTime() - new Date(a.review_date).getTime()
+      )
     },
     enabled: true
   })
