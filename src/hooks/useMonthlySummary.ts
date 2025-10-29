@@ -92,8 +92,7 @@ export const useTopSourcesByMonth = (monthYm: string | null, metricType: 'quotes
 
       const { data, error } = await supabase.rpc('rpc_get_top_sources_by_month' as any, {
         month_ym: monthYm,
-        metric_type: metricType,
-        lim: 50
+        metric_type: metricType
       }) as { data: TopSourceData[] | null, error: any }
 
       if (error) {

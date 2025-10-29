@@ -271,7 +271,7 @@ export function useQuotesBySource(year: number, month: number | null) {
       console.log('  Calculated month_ym:', monthYm)
       
       const { data, error } = await supabase.rpc(
-        'get_top_sources_by_month' as any,
+        'rpc_get_top_sources_by_month' as any,
         {
           month_ym: monthYm,
           metric_type: 'quotes'
