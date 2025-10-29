@@ -8,18 +8,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
 
 import { supabase } from '@/integrations/supabase/client';
-
-type Producer = { id: string; display_name: string };
-type DailyEntry = {
-  id: string;
-  producer_id: string;
-  entry_month: string; // 'YYYY-MM'
-  outbound_dials: number | null;
-  talk_minutes: number | null;
-  qhh_total: number | null;
-  items_total: number | null;
-  sales_total: number | null;
-};
+import { useYTDPerformance } from '@/hooks/useYTDPerformance';
 
 type MetricKey = "qhh" | "items" | "sales" | "dials" | "talk";
 
@@ -55,12 +44,6 @@ type ProducerRollup = {
 };
 
 export default function YTDPerformanceReport() {
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  const [producers, setProducers] = useState<Producer[]>([]);
-  const [entries, setEntries] = useState<DailyEntry[]>([]);
-
   // Auto-derived month window
   const [fromYm, setFromYm] = useState<string | null>(null);
   const [toYm, setToYm] = useState<string | null>(null);
@@ -68,13 +51,11 @@ export default function YTDPerformanceReport() {
 
   const [metric, setMetric] = useState<MetricKey>("qhh");
 
+  // Fetch date range from daily_entries to determine YTD window
   useEffect(() => {
     let cancelled = false;
 
     async function run() {
-      setLoading(true);
-      setError(null);
-
       try {
         // 0) Latest month in the dataset -> defines the active "YTD" year
         const latestRes = await supabase
@@ -87,8 +68,6 @@ export default function YTDPerformanceReport() {
         const latestYm = latestRes.data?.[0]?.entry_month ?? null;
         if (!latestYm) {
           if (!cancelled) {
-            setProducers([]);
-            setEntries([]);
             setFromYm(null);
             setToYm(null);
             setMonths([]);
@@ -111,31 +90,13 @@ export default function YTDPerformanceReport() {
 
         const MONTHS = getMonthRange(earliestYmInYear, latestYm);
 
-        // 2) Active producers
-        const prodRes = await supabase
-          .from("producers")
-          .select("id, display_name")
-          .eq("active", true);
-        if (prodRes.error) throw prodRes.error;
-
-        // 3) Daily entries for computed month window
-        const deRes = await supabase
-          .from("daily_entries")
-          .select("id, producer_id, entry_month, outbound_dials, talk_minutes, qhh_total, items_total, sales_total")
-          .in("entry_month", MONTHS);
-        if (deRes.error) throw deRes.error;
-
         if (!cancelled) {
           setFromYm(earliestYmInYear);
           setToYm(latestYm);
           setMonths(MONTHS);
-          setProducers(prodRes.data ?? []);
-          setEntries(deRes.data ?? []);
         }
       } catch (e: any) {
-        if (!cancelled) setError(e?.message ?? "Failed to load YTD performance");
-      } finally {
-        if (!cancelled) setLoading(false);
+        console.error('Error determining YTD date range:', e);
       }
     }
 
@@ -143,14 +104,23 @@ export default function YTDPerformanceReport() {
     return () => { cancelled = true; };
   }, []);
 
+  // Fetch YTD performance data using the new hook
+  const { data: ytdData, isLoading, error: queryError } = useYTDPerformance(fromYm, toYm);
+
   const rollups = useMemo<ProducerRollup[]>(() => {
-    if (!months.length) return [];
+    if (!ytdData || !months.length) return [];
 
     const byProducer: Record<string, ProducerRollup> = {};
-    for (const p of producers) {
-      byProducer[p.id] = {
-        producerId: p.id,
-        producerName: p.display_name,
+
+    // Initialize structure for all producers in the data
+    const uniqueProducers = [...new Set(ytdData.map(d => d.producer_id))];
+    for (const prodId of uniqueProducers) {
+      const prodData = ytdData.find(d => d.producer_id === prodId);
+      if (!prodData) continue;
+
+      byProducer[prodId] = {
+        producerId: prodId,
+        producerName: prodData.producer_name,
         totals: zeroTotals(),
         byMonth: months.reduce((acc, ym) => {
           acc[ym] = zeroTotals();
@@ -159,31 +129,34 @@ export default function YTDPerformanceReport() {
       };
     }
 
-    // Aggregate from daily_entries
-    for (const e of entries) {
-      if (!months.includes(e.entry_month)) continue;
-      const p = byProducer[e.producer_id];
-      if (!p) continue;
+    // Aggregate from YTD performance data (already deduplicated by RPC function)
+    for (const row of ytdData) {
+      const p = byProducer[row.producer_id];
+      if (!p || !row.entry_month) continue;
 
-      const m = p.byMonth[e.entry_month];
-      const qhh = e.qhh_total ?? 0;
-      const items = e.items_total ?? 0;
-      const sales = e.sales_total ?? 0;
-      const dials = e.outbound_dials ?? 0;
-      const talk = e.talk_minutes ?? 0;
+      const m = p.byMonth[row.entry_month];
+      if (!m) continue;
 
-      m.qhh += qhh;       p.totals.qhh += qhh;
-      m.items += items;   p.totals.items += items;
-      m.sales += sales;   p.totals.sales += sales;
-      m.dials += dials;   p.totals.dials += dials;
-      m.talk += talk;     p.totals.talk += talk;
+      // Use values directly from RPC (QHH is already COUNT(DISTINCT lead_id))
+      m.qhh += row.qhh;
+      m.items += row.items;
+      m.sales += row.sales;
+      m.dials += row.dials;
+      m.talk += row.talk_minutes;
+
+      // Update totals
+      p.totals.qhh += row.qhh;
+      p.totals.items += row.items;
+      p.totals.sales += row.sales;
+      p.totals.dials += row.dials;
+      p.totals.talk += row.talk_minutes;
     }
 
     // Return ordered by producer name
     return Object.values(byProducer).sort((a, b) =>
       a.producerName.localeCompare(b.producerName)
     );
-  }, [producers, entries, months]);
+  }, [ytdData, months]);
 
   const teamTotals = useMemo<Totals>(() => {
     const t = zeroTotals();
@@ -208,7 +181,7 @@ export default function YTDPerformanceReport() {
     return { series, maxVal };
   }, [rollups, metric, months]);
 
-  if (loading) {
+  if (isLoading) {
     return (
       <Card>
         <CardHeader className="flex flex-row items-center gap-2">
@@ -229,11 +202,11 @@ export default function YTDPerformanceReport() {
     );
   }
 
-  if (error) {
+  if (queryError) {
     return (
       <Alert variant="destructive">
         <AlertTitle>Failed to load YTD Performance</AlertTitle>
-        <AlertDescription>{error}</AlertDescription>
+        <AlertDescription>{queryError.message}</AlertDescription>
       </Alert>
     );
   }
