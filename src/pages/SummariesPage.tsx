@@ -20,6 +20,7 @@ import MonthlySummaryReport from '@/components/reports/MonthlySummaryReport'
 import { ExecutionFunnelReport } from '@/components/reports/ExecutionFunnelReport'
 import YTDPerformanceReport from '@/components/reports/YTDPerformanceReport'
 import { CoachingEffectivenessReport } from '@/components/reports/CoachingEffectivenessReport'
+import { ZipCodePerformanceReport } from '@/components/reports/ZipCodePerformanceReport'
 import { reportCategories, getReportById } from '@/config/reportConfig'
 import { useIsMobile } from '@/hooks/use-mobile'
 import { cn } from '@/lib/utils'
@@ -84,6 +85,8 @@ const ReportContent: React.FC<ReportContentProps> = ({
       return <ExecutionFunnelReport selectedYear={selectedYear} selectedMonth={selectedMonth} />
     case 'ytd-performance':
       return <YTDPerformanceReport />
+    case 'zip-code-performance':
+      return <ZipCodePerformanceReport selectedYear={selectedYear} selectedMonth={selectedMonth} />
     case 'coaching-effectiveness':
       return <CoachingEffectivenessReport selectedYear={selectedYear} selectedMonth={selectedMonth} />
     default:

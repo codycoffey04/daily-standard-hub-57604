@@ -1,7 +1,7 @@
-import { 
-  BarChart3, 
-  TrendingUp, 
-  Users, 
+import {
+  BarChart3,
+  TrendingUp,
+  Users,
   Target,
   Database,
   PieChart,
@@ -9,7 +9,8 @@ import {
   UserCheck,
   ClipboardList,
   Award,
-  MessageSquare
+  MessageSquare,
+  MapPin
 } from 'lucide-react'
 
 export interface ReportConfig {
@@ -48,14 +49,22 @@ export const reportCategories: ReportCategory[] = [
         component: 'ExecutionFunnelReport',
         category: 'performance-metrics'
       },
-      {
-        id: 'ytd-performance',
-        title: 'YTD Performance',
-        icon: Target,
-        description: 'Year-to-date performance trends',
-        component: 'YTDPerformanceReport',
-        category: 'performance-metrics'
-      }
+    {
+      id: 'ytd-performance',
+      title: 'YTD Performance',
+      icon: Target,
+      description: 'Year-to-date performance trends',
+      component: 'YTDPerformanceReport',
+      category: 'performance-metrics'
+    },
+    {
+      id: 'zip-code-performance',
+      title: 'ZIP Code Performance',
+      icon: MapPin,
+      description: 'Analyze quote and sales performance by ZIP code',
+      component: 'ZipCodePerformanceReport',
+      category: 'performance-metrics'
+    }
     ]
   },
   {
