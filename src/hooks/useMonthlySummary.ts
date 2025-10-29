@@ -100,7 +100,8 @@ export const useTopSourcesByMonth = (monthYm: string | null, metricType: 'quotes
         throw error
       }
       
-      return data || []
+      // Filter out sources with zero values
+      return (data || []).filter(item => item.metric_value > 0)
     },
     enabled: !!monthYm
   })

@@ -280,11 +280,13 @@ export function useQuotesBySource(year: number, month: number | null) {
       
       if (error) throw error
       
-      // Transform to match QuotesBySourceData interface
-      return (data || []).map((item: any) => ({
-        source_name: item.source_name,
-        quotes: item.metric_value
-      }))
+      // Transform to match QuotesBySourceData interface, filtering out zero values
+      return (data || [])
+        .filter((item: any) => item.metric_value > 0)
+        .map((item: any) => ({
+          source_name: item.source_name,
+          quotes: item.metric_value
+        }))
     }
   })
 }
