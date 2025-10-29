@@ -1,3 +1,7 @@
+-- ⚠️ DEPRECATED: This function is no longer used in the codebase.
+-- YTDPerformanceReport now uses get_producer_trends instead to avoid TypeScript type generation issues.
+-- This migration is kept for historical reference but the function can be safely dropped.
+--
 -- Function to calculate YTD performance metrics with correct QHH deduplication
 -- This function ensures that each lead_id is only counted once per producer per month
 

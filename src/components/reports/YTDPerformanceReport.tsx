@@ -8,7 +8,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
 
 import { supabase } from '@/integrations/supabase/client';
-import { useYTDPerformance } from '@/hooks/useYTDPerformance';
+import { useProducerTrends } from '@/hooks/useProducerTrends';
 
 type MetricKey = "qhh" | "items" | "sales" | "dials" | "talk";
 
@@ -104,18 +104,31 @@ export default function YTDPerformanceReport() {
     return () => { cancelled = true; };
   }, []);
 
-  // Fetch YTD performance data using the new hook
-  const { data: ytdData, isLoading, error: queryError } = useYTDPerformance(fromYm, toYm);
+  // Convert month range to date range for get_producer_trends
+  const fromDate = fromYm ? `${fromYm}-01` : '';
+  const toDate = useMemo(() => {
+    if (!toYm) return '';
+    const [year, month] = toYm.split('-').map(Number);
+    const lastDay = new Date(year, month, 0).getDate();
+    return `${toYm}-${String(lastDay).padStart(2, '0')}`;
+  }, [toYm]);
+
+  // Fetch producer trends (daily data) and aggregate by month in TypeScript
+  const { data: trendsData, isLoading, error: queryError } = useProducerTrends(
+    null, // null = all producers
+    fromDate,
+    toDate
+  );
 
   const rollups = useMemo<ProducerRollup[]>(() => {
-    if (!ytdData || !months.length) return [];
+    if (!trendsData || !months.length) return [];
 
     const byProducer: Record<string, ProducerRollup> = {};
 
     // Initialize structure for all producers in the data
-    const uniqueProducers = [...new Set(ytdData.map(d => d.producer_id))];
+    const uniqueProducers = [...new Set(trendsData.map(d => d.producer_id))];
     for (const prodId of uniqueProducers) {
-      const prodData = ytdData.find(d => d.producer_id === prodId);
+      const prodData = trendsData.find(d => d.producer_id === prodId);
       if (!prodData) continue;
 
       byProducer[prodId] = {
@@ -129,26 +142,28 @@ export default function YTDPerformanceReport() {
       };
     }
 
-    // Aggregate from YTD performance data (already deduplicated by RPC function)
-    for (const row of ytdData) {
+    // Aggregate daily producer trends by month
+    for (const row of trendsData) {
       const p = byProducer[row.producer_id];
-      if (!p || !row.entry_month) continue;
+      if (!p || !row.entry_date) continue;
 
-      const m = p.byMonth[row.entry_month];
+      // Extract YYYY-MM from entry_date (YYYY-MM-DD)
+      const entryMonth = row.entry_date.substring(0, 7);
+      const m = p.byMonth[entryMonth];
       if (!m) continue;
 
-      // Use values directly from RPC (QHH is already COUNT(DISTINCT lead_id))
+      // Aggregate metrics (QHH is already daily total from daily_entries.qhh_total)
       m.qhh += row.qhh;
       m.items += row.items;
-      m.sales += row.sales;
-      m.dials += row.dials;
+      m.sales += row.sold_items; // Use sold_items for sales count
+      m.dials += row.outbound_dials;
       m.talk += row.talk_minutes;
 
       // Update totals
       p.totals.qhh += row.qhh;
       p.totals.items += row.items;
-      p.totals.sales += row.sales;
-      p.totals.dials += row.dials;
+      p.totals.sales += row.sold_items;
+      p.totals.dials += row.outbound_dials;
       p.totals.talk += row.talk_minutes;
     }
 
@@ -156,7 +171,7 @@ export default function YTDPerformanceReport() {
     return Object.values(byProducer).sort((a, b) =>
       a.producerName.localeCompare(b.producerName)
     );
-  }, [ytdData, months]);
+  }, [trendsData, months]);
 
   const teamTotals = useMemo<Totals>(() => {
     const t = zeroTotals();
