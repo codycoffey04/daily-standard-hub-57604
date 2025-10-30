@@ -84,20 +84,28 @@ export const useExecutionFunnel = (
         }
       }
 
-      // RPC returns array with single row object: { dials, qhh, shh, policies, premium }
-      const row = data[0]
+      // RPC returns array of stage rows: { stage: 'Dials', value: 123, conversion_rate: 100 }
+      // Parse the stage array into a usable structure
+      const stageMap = new Map(data.map((row: any) => [row.stage, row]))
+
+      // Extract values for each stage
+      const dials = Number((stageMap.get('Dials') as any)?.value) || 0
+      const qhh = Number((stageMap.get('QHH') as any)?.value) || 0
+      const shh = Number((stageMap.get('SHH') as any)?.value) || 0
+      const policies = Number((stageMap.get('Policies') as any)?.value) || 0
+      const premium = Number((stageMap.get('Premium') as any)?.value) || 0
 
       // Calculate conversion rates
-      const dialToQhh = row.dials > 0 ? (row.qhh / row.dials * 100) : 0
-      const qhhToShh = row.qhh > 0 ? (row.shh / row.qhh * 100) : 0
-      const shhToItems = row.shh > 0 ? (row.policies / row.shh) : 0
-      const shhToPremium = row.shh > 0 ? (row.premium / row.shh) : 0
+      const dialToQhh = dials > 0 ? (qhh / dials * 100) : 0
+      const qhhToShh = qhh > 0 ? (shh / qhh * 100) : 0
+      const shhToItems = shh > 0 ? (policies / shh) : 0
+      const shhToPremium = shh > 0 ? (premium / shh) : 0
 
       const stages: ExecutionFunnelStage[] = [
         {
           stage_number: 1,
           stage_name: 'Dials',
-          stage_value: Number(row.dials) || 0,
+          stage_value: dials,
           conversion_rate: 100,
           drop_off_count: 0,
           drop_off_rate: 0
@@ -105,23 +113,23 @@ export const useExecutionFunnel = (
         {
           stage_number: 2,
           stage_name: 'QHH',
-          stage_value: Number(row.qhh) || 0,
+          stage_value: qhh,
           conversion_rate: dialToQhh,
-          drop_off_count: row.dials - row.qhh,
-          drop_off_rate: row.dials > 0 ? ((row.dials - row.qhh) / row.dials * 100) : 0
+          drop_off_count: dials - qhh,
+          drop_off_rate: dials > 0 ? ((dials - qhh) / dials * 100) : 0
         },
         {
           stage_number: 3,
           stage_name: 'Sales',
-          stage_value: Number(row.shh) || 0,
+          stage_value: shh,
           conversion_rate: qhhToShh,
-          drop_off_count: row.qhh - row.shh,
-          drop_off_rate: row.qhh > 0 ? ((row.qhh - row.shh) / row.qhh * 100) : 0
+          drop_off_count: qhh - shh,
+          drop_off_rate: qhh > 0 ? ((qhh - shh) / qhh * 100) : 0
         },
         {
           stage_number: 4,
           stage_name: 'Items',
-          stage_value: Number(row.policies) || 0,
+          stage_value: policies,
           conversion_rate: shhToItems * 100, // Convert to percentage
           drop_off_count: 0,
           drop_off_rate: 0
@@ -129,7 +137,7 @@ export const useExecutionFunnel = (
         {
           stage_number: 5,
           stage_name: 'Premium',
-          stage_value: Number(row.premium) || 0,
+          stage_value: premium,
           conversion_rate: shhToPremium, // Premium per sale (in dollars, not percentage)
           drop_off_count: 0,
           drop_off_rate: 0
@@ -138,7 +146,7 @@ export const useExecutionFunnel = (
 
       return { 
         stages, 
-        qhh: Number(row.qhh) || 0 
+        qhh: qhh 
       }
     },
     enabled: !!fromDate && !!toDate
@@ -168,8 +176,9 @@ export const useExecutionBenchmarks = (
 
       // Make ONE RPC call for ALL sources
       const { data: benchmarkData, error: benchmarkError } = await supabase
-        .rpc('rpc_get_execution_benchmarks_by_source' as any, {
-          month_ym: monthYm,
+        .rpc('get_execution_benchmarks_by_source' as any, {
+          from_date: fromDate,
+          to_date: toDate,
           source_filter: null,  // ← NULL to get all sources at once
           min_pair_qhh: minPairQHH,
           min_pair_shh: minPairSHH,
@@ -181,38 +190,17 @@ export const useExecutionBenchmarks = (
         throw benchmarkError;
       }
 
-      if (!benchmarkData || (benchmarkData as any[]).length === 0) {
+      if (!benchmarkData) {
         console.log('ℹ️ No benchmark data returned (insufficient volume or no data)');
         return [];
       }
 
-      // Transform the data to match ExecutionBenchmark interface
-      const benchmarks: ExecutionBenchmark[] = (benchmarkData as any[]).map((row, index) => {
-        // Debug: log the first row to see actual field names
-        if (index === 0) {
-          console.log('🔍 First benchmark row structure:', row);
-          console.log('🔍 Available fields:', Object.keys(row));
-        }
-        
-        return {
-          source_id: row.source_id,
-          source_name: row.source_name,
-          total_producers: parseInt(row.total_producers) || 0,
-          // Try multiple possible field name patterns
-          quote_rate_normal: parseFloat(row.quote_rate_normal || row.quote_bench_normal || row.normal_quote_rate) || 0,
-          quote_rate_excellent: parseFloat(row.quote_rate_excellent || row.quote_bench_excellent || row.excellent_quote_rate) || 0,
-          close_rate_normal: parseFloat(row.close_rate_normal || row.close_bench_normal || row.normal_close_rate) || 0,
-          close_rate_excellent: parseFloat(row.close_rate_excellent || row.close_bench_excellent || row.excellent_close_rate) || 0,
-          attach_rate_normal: parseFloat(row.attach_rate_normal || row.attach_bench_normal || row.normal_attach_rate) || 0,
-          attach_rate_excellent: parseFloat(row.attach_rate_excellent || row.attach_bench_excellent || row.excellent_attach_rate) || 0,
-        };
-      });
-
-      console.log('✅ Fetched benchmarks for', benchmarks.length, 'sources in ONE call');
-      console.log('📊 Sample benchmark values:', benchmarks[0]);
-      console.log('Sources:', benchmarks.map(b => b.source_name).join(', '));
+      // The function returns a single row with global benchmarks, not per-source
+      // For now, return empty array since the UI expects per-source data
+      // TODO: Either update the SQL function or redesign the UI to show global benchmarks
+      console.log('✅ Fetched global benchmarks:', benchmarkData);
       
-      return benchmarks;
+      return [];
     },
     enabled: !!fromDate && !!toDate
   })

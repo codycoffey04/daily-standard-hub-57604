@@ -560,9 +560,6 @@ export function useSalesByProducer(year: number, month: number | null) {
 
   return useQuery({
     queryKey: ['sales-by-producer-v3', year, month],
-    staleTime: 0,
-    gcTime: 0,
-    refetchOnMount: 'always',
     queryFn: async (): Promise<SalesByProducerData[]> => {
       console.log('🔄 Calling get_producer_trends RPC:', {
         producer_ids: null,
