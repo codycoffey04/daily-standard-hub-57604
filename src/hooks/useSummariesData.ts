@@ -555,9 +555,21 @@ export function useSalesByProducer(year: number, month: number | null) {
   const { startDate, endDate } = getDateRange(year, month)
   const prevDates = getPreviousPeriodDates(year, month)
 
+  console.log('📊 useSalesByProducer called with:', { year, month })
+  console.log('📅 Calculated date range:', { startDate, endDate })
+
   return useQuery({
     queryKey: ['sales-by-producer-v3', year, month],
+    staleTime: 0,
+    gcTime: 0,
+    refetchOnMount: 'always',
     queryFn: async (): Promise<SalesByProducerData[]> => {
+      console.log('🔄 Calling get_producer_trends RPC:', {
+        producer_ids: null,
+        from_date: startDate,
+        to_date: endDate
+      })
+      
       // Fetch current period data using get_producer_trends
       const { data: currentTrends, error: currentError } = await supabase.rpc(
         'get_producer_trends' as any,
