@@ -8,13 +8,10 @@ import { ChartLoading } from '@/components/ui/chart-loading'
 import { EmptyState } from '@/components/ui/empty-state'
 import { DateRangePicker } from '@/components/DateRangePicker'
 import { getDateRange } from '@/hooks/useSummariesData'
-import { 
-  useExecutionFunnel, 
-  useExecutionBenchmarks, 
-  useProducersForExecution
-} from '@/hooks/useExecutionFunnel'
+import { useExecutionFunnel } from '@/hooks/useExecutionFunnel'
 import { useProducerExecutionLeaderboard } from '@/hooks/useProducerExecutionLeaderboard'
 import { useSourcesForSelection } from '@/hooks/useSourcesForSelection'
+import { useProducersForSelection } from '@/hooks/useProducersForSelection'
 import { DollarSign, Clock, Target, ArrowUpDown, Phone, Users, Home, FileCheck, ChevronRight } from 'lucide-react'
 
 // Helper functions for safe formatting
@@ -67,11 +64,32 @@ export const ExecutionFunnelReport: React.FC<ExecutionFunnelReportProps> = ({
   }, [selectedYear, selectedMonth])
 
   // Fetch all data using RPC functions
-  const { data: funnelData, isLoading: isFunnelLoading } = useExecutionFunnel(fromDateStr, toDateStr)
-  const { data: benchmarks, isLoading: isBenchmarksLoading } = useExecutionBenchmarks(fromDateStr, toDateStr)
-  const { data: leaderboard, isLoading: isLeaderboardLoading } = useProducerExecutionLeaderboard(fromDateStr, toDateStr, sourceId)
-  const { data: producers, isLoading: isProducersLoading } = useProducersForExecution()
+  const { data: funnelDataRaw, loading: isFunnelLoading } = useExecutionFunnel({ from_date: fromDateStr, to_date: toDateStr })
+  const { data: leaderboard, loading: isLeaderboardLoading } = useProducerExecutionLeaderboard({ 
+    from_date: fromDateStr, 
+    to_date: toDateStr, 
+    source_filter: sourceId,
+    min_dials: 50,
+    min_qhh: 10,
+    min_shh: 3
+  })
+  const { data: producers, isLoading: isProducersLoading } = useProducersForSelection()
   const { data: sources, isLoading: isSourcesLoading } = useSourcesForSelection()
+
+  // Transform raw totals into stages format for backward compatibility
+  const funnelData = React.useMemo(() => {
+    if (!funnelDataRaw) return null;
+    return {
+      stages: [
+        { stage_number: 1, stage_name: 'Dials', stage_value: funnelDataRaw.dials, conversion_rate: 100, drop_off_count: 0, drop_off_rate: 0 },
+        { stage_number: 2, stage_name: 'QHH', stage_value: funnelDataRaw.qhh, conversion_rate: funnelDataRaw.dials > 0 ? (funnelDataRaw.qhh / funnelDataRaw.dials * 100) : 0, drop_off_count: funnelDataRaw.dials - funnelDataRaw.qhh, drop_off_rate: funnelDataRaw.dials > 0 ? ((funnelDataRaw.dials - funnelDataRaw.qhh) / funnelDataRaw.dials * 100) : 0 },
+        { stage_number: 3, stage_name: 'SHH', stage_value: funnelDataRaw.householdsSold, conversion_rate: funnelDataRaw.qhh > 0 ? (funnelDataRaw.householdsSold / funnelDataRaw.qhh * 100) : 0, drop_off_count: funnelDataRaw.qhh - funnelDataRaw.householdsSold, drop_off_rate: funnelDataRaw.qhh > 0 ? ((funnelDataRaw.qhh - funnelDataRaw.householdsSold) / funnelDataRaw.qhh * 100) : 0 },
+        { stage_number: 4, stage_name: 'Items', stage_value: funnelDataRaw.policiesSold, conversion_rate: funnelDataRaw.householdsSold > 0 ? (funnelDataRaw.policiesSold / funnelDataRaw.householdsSold * 100) : 0, drop_off_count: 0, drop_off_rate: 0 },
+        { stage_number: 5, stage_name: 'Premium', stage_value: funnelDataRaw.linesQuoted, conversion_rate: funnelDataRaw.householdsSold > 0 ? (funnelDataRaw.linesQuoted / funnelDataRaw.householdsSold) : 0, drop_off_count: 0, drop_off_rate: 0 }
+      ],
+      qhh: funnelDataRaw.qhh
+    };
+  }, [funnelDataRaw]);
 
   // Debug: Log funnel data to verify values
   React.useEffect(() => {
@@ -407,34 +425,34 @@ export const ExecutionFunnelReport: React.FC<ExecutionFunnelReportProps> = ({
                     </TableHead>
                   </TableRow>
                 </TableHeader>
-                <TableBody>
+                  <TableBody>
                   {sortedLeaderboard.map((producer) => (
-                    <TableRow key={producer.producer_id}>
-                      <TableCell className="font-medium">{producer.producer_name}</TableCell>
-                      <TableCell className="text-right">{safeToLocaleString(producer.total_dials)}</TableCell>
-                      <TableCell className="text-right">{safeToLocaleString(producer.total_qhh)}</TableCell>
+                    <TableRow key={producer.producerId}>
+                      <TableCell className="font-medium">{producer.producerName}</TableCell>
+                      <TableCell className="text-right">{safeToLocaleString(producer.dials)}</TableCell>
+                      <TableCell className="text-right">{safeToLocaleString(producer.qhh)}</TableCell>
                       <TableCell className="text-center">
                         <div className="flex flex-col items-center gap-1">
-                          <div className="font-medium">{safeToFixed(producer.quote_rate, 2)}%</div>
-                          {getGuidanceBadge(producer.quote_guidance)}
+                          <div className="font-medium">{safeToFixed(producer.quoteRate, 2)}%</div>
+                          {producer.quoteGuidance && getGuidanceBadge(producer.quoteGuidance)}
                         </div>
                       </TableCell>
-                      <TableCell className="text-right">{safeToLocaleString(producer.total_shh)}</TableCell>
+                      <TableCell className="text-right">{safeToLocaleString(producer.policiesSold)}</TableCell>
                       <TableCell className="text-center">
                         <div className="flex flex-col items-center gap-1">
-                          <div className="font-medium">{safeToFixed(producer.close_rate, 2)}%</div>
-                          {getGuidanceBadge(producer.close_guidance)}
+                          <div className="font-medium">{safeToFixed(producer.closeRate, 2)}%</div>
+                          {producer.closeGuidance && getGuidanceBadge(producer.closeGuidance)}
                         </div>
                       </TableCell>
-                      <TableCell className="text-right">{safeToLocaleString(producer.total_items)}</TableCell>
+                      <TableCell className="text-right">{safeToLocaleString(producer.itemsSold)}</TableCell>
                       <TableCell className="text-center">
                         <div className="flex flex-col items-center gap-1">
-                          <div className="font-medium">{safeToFixed(producer.attach_rate, 2)}</div>
-                          {getGuidanceBadge(producer.attach_guidance)}
+                          <div className="font-medium">{safeToFixed(producer.attachRate, 2)}</div>
+                          {producer.attachGuidance && getGuidanceBadge(producer.attachGuidance)}
                         </div>
                       </TableCell>
                       <TableCell className="text-right font-semibold">
-                        {producer.total_premium != null ? `$${safeToLocaleString(producer.total_premium)}` : 'N/A'}
+                        {producer.totalPremium != null ? `$${safeToLocaleString(producer.totalPremium)}` : 'N/A'}
                       </TableCell>
                     </TableRow>
                   ))}
@@ -445,83 +463,7 @@ export const ExecutionFunnelReport: React.FC<ExecutionFunnelReportProps> = ({
         </CardContent>
       </Card>
 
-      {/* Benchmarks Table */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Performance Benchmarks by Source</CardTitle>
-          <CardDescription>Dynamic percentile-based thresholds (50th = Normal, 75th = Excellent)</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {isBenchmarksLoading ? (
-            <ChartLoading />
-          ) : (() => {
-              console.log('BENCHMARK DEBUG:', {
-                hasData: benchmarks && benchmarks.length > 0,
-                dataLength: benchmarks?.length,
-                actualData: benchmarks,
-                thresholds: { min_pair_qhh: 10, min_pair_shh: 0, min_pair_dials: 100 }
-              });
-              
-              return !benchmarks || benchmarks.length === 0 ? (
-                <EmptyState message="Insufficient data for benchmarks (requires minimum volume thresholds)" />
-              ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Source</TableHead>
-                  <TableHead className="text-center">Producers</TableHead>
-                  <TableHead className="text-right">Quote Rate (Normal)</TableHead>
-                  <TableHead className="text-right">Quote Rate (Excellent)</TableHead>
-                  <TableHead className="text-right">Close Rate (Normal)</TableHead>
-                  <TableHead className="text-right">Close Rate (Excellent)</TableHead>
-                  <TableHead className="text-right">Attach Rate (Normal)</TableHead>
-                  <TableHead className="text-right">Attach Rate (Excellent)</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {benchmarks.map((benchmark, idx) => {
-                  // DEBUG: Log raw values before formatting
-                  if (idx === 0) {
-                    console.log('🎨 DISPLAY DEBUG (first benchmark):', {
-                      source: benchmark.source_name,
-                      raw_object: benchmark,
-                      raw_quote_normal: benchmark.quote_rate_normal,
-                      raw_quote_excellent: benchmark.quote_rate_excellent,
-                      raw_close_normal: benchmark.close_rate_normal,
-                      raw_close_excellent: benchmark.close_rate_excellent,
-                      raw_attach_normal: benchmark.attach_rate_normal,
-                      raw_attach_excellent: benchmark.attach_rate_excellent,
-                      typeof_quote_normal: typeof benchmark.quote_rate_normal,
-                      displayed_quote_normal: safeToFixed(benchmark.quote_rate_normal, 2),
-                      displayed_quote_excellent: safeToFixed(benchmark.quote_rate_excellent, 2),
-                    });
-                  }
-                  
-                  return (
-                    <TableRow key={benchmark.source_id}>
-                      <TableCell className="font-medium">{benchmark.source_name}</TableCell>
-                      <TableCell className="text-center">{benchmark.total_producers}</TableCell>
-                      <TableCell className="text-right">{safeToFixed(benchmark.quote_rate_normal, 2)}%</TableCell>
-                      <TableCell className="text-right text-green-600 dark:text-green-400 font-semibold">
-                        {safeToFixed(benchmark.quote_rate_excellent, 2)}%
-                      </TableCell>
-                      <TableCell className="text-right">{safeToFixed(benchmark.close_rate_normal, 2)}%</TableCell>
-                      <TableCell className="text-right text-green-600 dark:text-green-400 font-semibold">
-                        {safeToFixed(benchmark.close_rate_excellent, 2)}%
-                      </TableCell>
-                      <TableCell className="text-right">{safeToFixed(benchmark.attach_rate_normal, 2)}</TableCell>
-                      <TableCell className="text-right text-green-600 dark:text-green-400 font-semibold">
-                        {safeToFixed(benchmark.attach_rate_excellent, 2)}
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
-              );
-            })()}
-        </CardContent>
-      </Card>
+      {/* Benchmarks Table - Removed since not available in new hooks */}
     </div>
   )
 }

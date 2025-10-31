@@ -114,11 +114,11 @@ export default function YTDPerformanceReport() {
   }, [toYm]);
 
   // Fetch producer trends (daily data) and aggregate by month in TypeScript
-  const { data: trendsData, isLoading, error: queryError } = useProducerTrends(
-    null, // null = all producers
-    fromDate,
-    toDate
-  );
+  const { data: trendsData, loading: isLoading, error: queryError } = useProducerTrends({
+    producer_ids: null, // null = all producers
+    from_date: fromDate,
+    to_date: toDate
+  });
 
   const rollups = useMemo<ProducerRollup[]>(() => {
     if (!trendsData || !months.length) return [];
@@ -126,14 +126,14 @@ export default function YTDPerformanceReport() {
     const byProducer: Record<string, ProducerRollup> = {};
 
     // Initialize structure for all producers in the data
-    const uniqueProducers = [...new Set(trendsData.map(d => d.producer_id))];
+    const uniqueProducers = [...new Set(trendsData.map(d => d.producerId))];
     for (const prodId of uniqueProducers) {
-      const prodData = trendsData.find(d => d.producer_id === prodId);
+      const prodData = trendsData.find(d => d.producerId === prodId);
       if (!prodData) continue;
 
       byProducer[prodId] = {
         producerId: prodId,
-        producerName: prodData.producer_name,
+        producerName: prodData.producerName,
         totals: zeroTotals(),
         byMonth: months.reduce((acc, ym) => {
           acc[ym] = zeroTotals();
@@ -144,27 +144,27 @@ export default function YTDPerformanceReport() {
 
     // Aggregate daily producer trends by month
     for (const row of trendsData) {
-      const p = byProducer[row.producer_id];
-      if (!p || !row.entry_date) continue;
+      const p = byProducer[row.producerId];
+      if (!p || !row.date) continue;
 
-      // Extract YYYY-MM from entry_date (YYYY-MM-DD)
-      const entryMonth = row.entry_date.substring(0, 7);
+      // Extract YYYY-MM from date (Date object)
+      const entryMonth = row.date.toISOString().substring(0, 7);
       const m = p.byMonth[entryMonth];
       if (!m) continue;
 
       // Aggregate metrics (QHH is already daily total from daily_entries.qhh_total)
       m.qhh += row.qhh;
-      m.items += row.items;
-      m.sales += row.sold_items; // Use sold_items for sales count
-      m.dials += row.outbound_dials;
-      m.talk += row.talk_minutes;
+      m.items += row.itemsSold;
+      m.sales += row.policiesSold; // Use policiesSold for sales count
+      m.dials += row.dials;
+      m.talk += row.talkMinutes || 0;
 
       // Update totals
       p.totals.qhh += row.qhh;
-      p.totals.items += row.items;
-      p.totals.sales += row.sold_items;
-      p.totals.dials += row.outbound_dials;
-      p.totals.talk += row.talk_minutes;
+      p.totals.items += row.itemsSold;
+      p.totals.sales += row.policiesSold;
+      p.totals.dials += row.dials;
+      p.totals.talk += row.talkMinutes || 0;
     }
 
     // Return ordered by producer name
