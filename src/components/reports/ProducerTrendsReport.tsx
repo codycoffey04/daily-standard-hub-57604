@@ -49,11 +49,11 @@ export const ProducerTrendsReport: React.FC<ProducerTrendsReportProps> = () => {
     retry: 1
   })
 
-  const { data: trendsData, loading: isLoading, error } = useProducerTrends({
-    producer_ids: selectedProducers,
-    from_date: dateFrom,
-    to_date: dateTo
-  })
+  const { data: trendsData, isLoading, error } = useProducerTrends(
+    selectedProducers,
+    dateFrom,
+    dateTo
+  )
 
   const handleDateRangeChange = (from: string, to: string) => {
     setDateFrom(from)
@@ -63,11 +63,11 @@ export const ProducerTrendsReport: React.FC<ProducerTrendsReportProps> = () => {
   const summaryStats = useMemo(() => {
     if (!trendsData || trendsData.length === 0) return null
 
-    const uniqueProducers = new Set(trendsData.map(d => d.producerId)).size
-    const totalDials = trendsData.reduce((sum, d) => sum + (d.dials || 0), 0)
+    const uniqueProducers = new Set(trendsData.map(d => d.producer_id)).size
+    const totalDials = trendsData.reduce((sum, d) => sum + (d.outbound_dials || 0), 0)
     const totalQHH = trendsData.reduce((sum, d) => sum + (d.qhh || 0), 0)
-    const totalSales = trendsData.reduce((sum, d) => sum + (d.itemsSold || 0), 0)
-    const totalPremium = trendsData.reduce((sum, d) => sum + (d.soldPremium || 0), 0)
+    const totalSales = trendsData.reduce((sum, d) => sum + (d.sold_items || 0), 0)
+    const totalPremium = trendsData.reduce((sum, d) => sum + (d.sold_premium || 0), 0)
     const avgQHH = trendsData.length > 0 ? totalQHH / trendsData.length : 0
     const avgSales = trendsData.length > 0 ? totalSales / trendsData.length : 0
 
@@ -246,27 +246,27 @@ export const ProducerTrendsReport: React.FC<ProducerTrendsReportProps> = () => {
                 </TableHeader>
                 <TableBody>
                   {trendsData.map((row, idx) => (
-                    <TableRow key={`${row.producerId}-${row.date.toISOString()}-${idx}`}>
-                      <TableCell className="font-medium">{formatCTDate(row.date.toISOString().split('T')[0])}</TableCell>
-                      <TableCell>{row.producerName}</TableCell>
-                      <TableCell className="text-right">{formatNumber(row.dials)}</TableCell>
-                      <TableCell className="text-right">{formatNumber(row.talkMinutes || 0)}</TableCell>
+                    <TableRow key={`${row.producer_id}-${row.entry_date}-${idx}`}>
+                      <TableCell className="font-medium">{formatCTDate(row.entry_date)}</TableCell>
+                      <TableCell>{row.producer_name}</TableCell>
+                      <TableCell className="text-right">{formatNumber(row.outbound_dials)}</TableCell>
+                      <TableCell className="text-right">{formatNumber(row.talk_minutes)}</TableCell>
                       <TableCell className="text-right">{formatNumber(row.qhh)}</TableCell>
-                      <TableCell className="text-right">{formatNumber(row.itemsSold)}</TableCell>
-                      <TableCell className="text-right">{formatNumber(row.quotes || 0)}</TableCell>
-                      <TableCell className="text-right">{formatNumber(row.policiesSold)}</TableCell>
-                      <TableCell className="text-right">${formatNumber(Math.round(row.soldPremium || 0))}</TableCell>
+                      <TableCell className="text-right">{formatNumber(row.items)}</TableCell>
+                      <TableCell className="text-right">{formatNumber(row.quotes)}</TableCell>
+                      <TableCell className="text-right">{formatNumber(row.sold_items)}</TableCell>
+                      <TableCell className="text-right">${formatNumber(Math.round(row.sold_premium))}</TableCell>
                       <TableCell>
-                        {row?.frameworkStatus ? getFrameworkBadge(row.frameworkStatus) : (
+                        {row?.framework_status ? getFrameworkBadge(row.framework_status) : (
                           <Badge variant="outline">-</Badge>
                         )}
                       </TableCell>
                       <TableCell className="text-center text-sm">
-                        <span className="text-green-600 dark:text-green-400">{row.daysTop || 0}</span>
+                        <span className="text-green-600 dark:text-green-400">{row.days_top}</span>
                         {' / '}
-                        <span className="text-yellow-600 dark:text-yellow-400">{row.daysBottom || 0}</span>
+                        <span className="text-yellow-600 dark:text-yellow-400">{row.days_bottom}</span>
                         {' / '}
-                        <span className="text-red-600 dark:text-red-400">{row.daysOutside || 0}</span>
+                        <span className="text-red-600 dark:text-red-400">{row.days_outside}</span>
                       </TableCell>
                     </TableRow>
                   ))}
