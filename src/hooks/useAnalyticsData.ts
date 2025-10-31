@@ -67,6 +67,8 @@ export const useConversionFunnelData = (dateRange: { from: Date; to: Date }) => 
         source_filter: null
       })
 
+      console.log('[get_execution_funnel] raw (current period)', JSON.stringify(currentFunnel))
+
       if (currentError) {
         console.error('❌ Error fetching current conversion funnel via RPC:', currentError)
         throw currentError
@@ -79,6 +81,8 @@ export const useConversionFunnelData = (dateRange: { from: Date; to: Date }) => 
         producer_filter: null,
         source_filter: null
       })
+
+      console.log('[get_execution_funnel] raw (previous period)', JSON.stringify(previousFunnel))
 
       if (previousError) {
         console.error('❌ Error fetching previous conversion funnel via RPC:', previousError)

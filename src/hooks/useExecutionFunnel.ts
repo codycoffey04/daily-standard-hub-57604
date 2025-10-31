@@ -65,6 +65,8 @@ export const useExecutionFunnel = (
         to_date: toDate
       })
 
+      console.log('[get_execution_funnel] raw', JSON.stringify(data))
+
       if (error) {
         console.error('❌ Error fetching execution funnel via RPC:', error)
         throw error

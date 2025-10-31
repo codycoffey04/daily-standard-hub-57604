@@ -68,6 +68,8 @@ export const useProducerExecutionLeaderboard = (
         min_pair_dials: 200
       }) as { data: ProducerLeaderboardRow[] | null, error: any };
 
+      console.log('[get_producer_execution_leaderboard] raw', JSON.stringify(data))
+
       if (error) {
         console.error('❌ Error fetching producer execution leaderboard:', error);
         throw error;

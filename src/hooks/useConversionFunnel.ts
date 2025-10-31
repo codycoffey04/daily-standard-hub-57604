@@ -42,6 +42,8 @@ export const useConversionFunnel = (
         source_filter: sourceId
       })
 
+      console.log('[get_conversion_funnel] raw', JSON.stringify(data))
+
       if (error) {
         console.error('❌ Error fetching conversion funnel:', error)
         throw error

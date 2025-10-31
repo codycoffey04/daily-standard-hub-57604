@@ -576,6 +576,8 @@ export function useSalesByProducer(year: number, month: number | null) {
           to_date: endDate
         }
       )
+
+      console.log('[get_producer_trends] raw (current period)', JSON.stringify(currentTrends))
       
       if (currentError) throw currentError
       if (!currentTrends || currentTrends.length === 0) return []
@@ -589,6 +591,8 @@ export function useSalesByProducer(year: number, month: number | null) {
           to_date: prevDates.endDate
         }
       )
+
+      console.log('[get_producer_trends] raw (previous period)', JSON.stringify(prevTrends))
       
       if (prevError) throw prevError
 

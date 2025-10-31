@@ -32,6 +32,8 @@ export function useProducerTrends(
         to_date: toDate
       })
 
+      console.log('[get_producer_trends] raw', JSON.stringify(data))
+
       if (error) throw error
       return (data || []) as ProducerTrendData[]
     },
