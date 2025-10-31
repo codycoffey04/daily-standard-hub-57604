@@ -126,15 +126,19 @@ export default function YTDPerformanceReport() {
     const byProducer: Record<string, ProducerRollup> = {};
 
     // Initialize structure for all producers in the data
-    const uniqueProducers = [...new Set(trendsData.map(d => d.producer_id))];
-    for (const prodId of uniqueProducers) {
-      const prodData = trendsData.find(d => d.producer_id === prodId);
-      if (!prodData) continue;
+    for (const prodData of trendsData) {
+      if (byProducer[prodData.producer_id]) continue;
 
-      byProducer[prodId] = {
-        producerId: prodId,
+      byProducer[prodData.producer_id] = {
+        producerId: prodData.producer_id,
         producerName: prodData.producer_name,
-        totals: zeroTotals(),
+        totals: {
+          qhh: prodData.qhh,
+          items: prodData.items_sold,
+          sales: prodData.policies_sold,
+          dials: 0, // Not available in aggregated data
+          talk: 0   // Not available in aggregated data
+        },
         byMonth: months.reduce((acc, ym) => {
           acc[ym] = zeroTotals();
           return acc;
@@ -142,30 +146,8 @@ export default function YTDPerformanceReport() {
       };
     }
 
-    // Aggregate daily producer trends by month
-    for (const row of trendsData) {
-      const p = byProducer[row.producer_id];
-      if (!p || !row.entry_date) continue;
-
-      // Extract YYYY-MM from entry_date (YYYY-MM-DD)
-      const entryMonth = row.entry_date.substring(0, 7);
-      const m = p.byMonth[entryMonth];
-      if (!m) continue;
-
-      // Aggregate metrics (QHH is already daily total from daily_entries.qhh_total)
-      m.qhh += row.qhh;
-      m.items += row.items;
-      m.sales += row.sold_items; // Use sold_items for sales count
-      m.dials += row.outbound_dials;
-      m.talk += row.talk_minutes;
-
-      // Update totals
-      p.totals.qhh += row.qhh;
-      p.totals.items += row.items;
-      p.totals.sales += row.sold_items;
-      p.totals.dials += row.outbound_dials;
-      p.totals.talk += row.talk_minutes;
-    }
+    // Note: Since get_producer_trends returns aggregated totals (no date breakdown),
+    // we can't populate byMonth. The chart will show flat lines or need different data source.
 
     // Return ordered by producer name
     return Object.values(byProducer).sort((a, b) =>

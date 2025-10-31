@@ -358,29 +358,29 @@ export const ExecutionFunnelReport: React.FC<ExecutionFunnelReportProps> = () =>
                 <TableHeader>
                   <TableRow>
                     <TableHead>Producer</TableHead>
-                    <TableHead className="text-right cursor-pointer" onClick={() => toggleSort('total_dials')}>
+                    <TableHead className="text-right cursor-pointer" onClick={() => toggleSort('dials')}>
                       Dials <ArrowUpDown className="inline h-3 w-3 ml-1" />
                     </TableHead>
-                    <TableHead className="text-right cursor-pointer" onClick={() => toggleSort('total_qhh')}>
+                    <TableHead className="text-right cursor-pointer" onClick={() => toggleSort('qhh')}>
                       QHH <ArrowUpDown className="inline h-3 w-3 ml-1" />
                     </TableHead>
-                    <TableHead className="text-center cursor-pointer" onClick={() => toggleSort('quote_rate')}>
-                      Quote Rate <ArrowUpDown className="inline h-3 w-3 ml-1" />
+                    <TableHead className="text-center">
+                      Quote Rate
                     </TableHead>
-                    <TableHead className="text-right cursor-pointer" onClick={() => toggleSort('total_shh')}>
+                    <TableHead className="text-right cursor-pointer" onClick={() => toggleSort('households_sold')}>
                       SHH <ArrowUpDown className="inline h-3 w-3 ml-1" />
                     </TableHead>
-                    <TableHead className="text-center cursor-pointer" onClick={() => toggleSort('close_rate')}>
-                      Close Rate <ArrowUpDown className="inline h-3 w-3 ml-1" />
+                    <TableHead className="text-center">
+                      Close Rate
                     </TableHead>
-                    <TableHead className="text-right cursor-pointer" onClick={() => toggleSort('total_items')}>
+                    <TableHead className="text-right cursor-pointer" onClick={() => toggleSort('items_sold')}>
                       Items <ArrowUpDown className="inline h-3 w-3 ml-1" />
                     </TableHead>
-                    <TableHead className="text-center cursor-pointer" onClick={() => toggleSort('attach_rate')}>
-                      Attach Rate <ArrowUpDown className="inline h-3 w-3 ml-1" />
+                    <TableHead className="text-center">
+                      Attach Rate
                     </TableHead>
-                    <TableHead className="text-right cursor-pointer" onClick={() => toggleSort('total_premium')}>
-                      Premium <ArrowUpDown className="inline h-3 w-3 ml-1" />
+                    <TableHead className="text-right cursor-pointer" onClick={() => toggleSort('rank_by_sales')}>
+                      Rank <ArrowUpDown className="inline h-3 w-3 ml-1" />
                     </TableHead>
                   </TableRow>
                 </TableHeader>
@@ -388,30 +388,33 @@ export const ExecutionFunnelReport: React.FC<ExecutionFunnelReportProps> = () =>
                   {sortedLeaderboard.map((producer) => (
                     <TableRow key={producer.producer_id}>
                       <TableCell className="font-medium">{producer.producer_name}</TableCell>
-                      <TableCell className="text-right">{safeToLocaleString(producer.total_dials)}</TableCell>
-                      <TableCell className="text-right">{safeToLocaleString(producer.total_qhh)}</TableCell>
+                      <TableCell className="text-right">{safeToLocaleString(producer.dials)}</TableCell>
+                      <TableCell className="text-right">{safeToLocaleString(producer.qhh)}</TableCell>
                       <TableCell className="text-center">
                         <div className="flex flex-col items-center gap-1">
-                          <div className="font-medium">{safeToFixed(producer.quote_rate, 2)}%</div>
-                          {getGuidanceBadge(producer.quote_guidance)}
+                          <div className="font-medium">
+                            {producer.dials > 0 ? safeToFixed((producer.qhh / producer.dials) * 100, 2) : '0.00'}%
+                          </div>
                         </div>
                       </TableCell>
-                      <TableCell className="text-right">{safeToLocaleString(producer.total_shh)}</TableCell>
+                      <TableCell className="text-right">{safeToLocaleString(producer.households_sold)}</TableCell>
                       <TableCell className="text-center">
                         <div className="flex flex-col items-center gap-1">
-                          <div className="font-medium">{safeToFixed(producer.close_rate, 2)}%</div>
-                          {getGuidanceBadge(producer.close_guidance)}
+                          <div className="font-medium">
+                            {producer.qhh > 0 ? safeToFixed((producer.households_sold / producer.qhh) * 100, 2) : '0.00'}%
+                          </div>
                         </div>
                       </TableCell>
-                      <TableCell className="text-right">{safeToLocaleString(producer.total_items)}</TableCell>
+                      <TableCell className="text-right">{safeToLocaleString(producer.items_sold)}</TableCell>
                       <TableCell className="text-center">
                         <div className="flex flex-col items-center gap-1">
-                          <div className="font-medium">{safeToFixed(producer.attach_rate, 2)}</div>
-                          {getGuidanceBadge(producer.attach_guidance)}
+                          <div className="font-medium">
+                            {producer.households_sold > 0 ? safeToFixed(producer.items_sold / producer.households_sold, 2) : '0.00'}
+                          </div>
                         </div>
                       </TableCell>
                       <TableCell className="text-right font-semibold">
-                        {producer.total_premium != null ? `$${safeToLocaleString(producer.total_premium)}` : 'N/A'}
+                        #{producer.rank_by_sales}
                       </TableCell>
                     </TableRow>
                   ))}

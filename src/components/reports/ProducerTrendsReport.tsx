@@ -63,22 +63,20 @@ export const ProducerTrendsReport: React.FC<ProducerTrendsReportProps> = () => {
   const summaryStats = useMemo(() => {
     if (!trendsData || trendsData.length === 0) return null
 
-    const uniqueProducers = new Set(trendsData.map(d => d.producer_id)).size
-    const totalDials = trendsData.reduce((sum, d) => sum + (d.outbound_dials || 0), 0)
+    const uniqueProducers = trendsData.length
     const totalQHH = trendsData.reduce((sum, d) => sum + (d.qhh || 0), 0)
-    const totalSales = trendsData.reduce((sum, d) => sum + (d.sold_items || 0), 0)
-    const totalPremium = trendsData.reduce((sum, d) => sum + (d.sold_premium || 0), 0)
+    const totalPolicies = trendsData.reduce((sum, d) => sum + (d.policies_sold || 0), 0)
+    const totalItems = trendsData.reduce((sum, d) => sum + (d.items_sold || 0), 0)
     const avgQHH = trendsData.length > 0 ? totalQHH / trendsData.length : 0
-    const avgSales = trendsData.length > 0 ? totalSales / trendsData.length : 0
+    const avgPolicies = trendsData.length > 0 ? totalPolicies / trendsData.length : 0
 
     return {
       uniqueProducers,
-      totalDials,
       totalQHH,
-      totalSales,
-      totalPremium,
+      totalPolicies,
+      totalItems,
       avgQHH,
-      avgSales
+      avgPolicies
     }
   }, [trendsData])
 
@@ -193,31 +191,31 @@ export const ProducerTrendsReport: React.FC<ProducerTrendsReportProps> = () => {
           
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Total Sales</CardTitle>
+              <CardTitle className="text-sm font-medium text-muted-foreground">Total Policies Sold</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{formatNumber(summaryStats.totalSales)}</div>
-              <p className="text-xs text-muted-foreground mt-1">Avg: {summaryStats.avgSales.toFixed(1)}/day</p>
+              <div className="text-2xl font-bold">{formatNumber(summaryStats.totalPolicies)}</div>
+              <p className="text-xs text-muted-foreground mt-1">Avg: {summaryStats.avgPolicies.toFixed(1)}/producer</p>
             </CardContent>
           </Card>
           
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Total Premium</CardTitle>
+              <CardTitle className="text-sm font-medium text-muted-foreground">Total Items</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">${formatNumber(Math.round(summaryStats.totalPremium))}</div>
+              <div className="text-2xl font-bold">{formatNumber(summaryStats.totalItems)}</div>
             </CardContent>
           </Card>
         </div>
       )}
 
-      {/* Data Table */}
+      {/* Producer Summary Table */}
       <Card>
         <CardHeader>
-          <CardTitle>Daily Trend Data</CardTitle>
+          <CardTitle>Producer Performance Summary</CardTitle>
           <p className="text-sm text-muted-foreground">
-            Showing {trendsData?.length || 0} entries from {formatCTDate(dateFrom)} to {formatCTDate(dateTo)}
+            Aggregated totals for {trendsData?.length || 0} producers from {formatCTDate(dateFrom)} to {formatCTDate(dateTo)}
           </p>
         </CardHeader>
         <CardContent>
@@ -231,42 +229,22 @@ export const ProducerTrendsReport: React.FC<ProducerTrendsReportProps> = () => {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Date</TableHead>
                     <TableHead>Producer</TableHead>
-                    <TableHead className="text-right">Dials</TableHead>
-                    <TableHead className="text-right">Talk Mins</TableHead>
                     <TableHead className="text-right">QHH</TableHead>
-                    <TableHead className="text-right">Items</TableHead>
-                    <TableHead className="text-right">Quotes</TableHead>
-                    <TableHead className="text-right">Sales</TableHead>
-                    <TableHead className="text-right">Premium</TableHead>
-                    <TableHead>Framework</TableHead>
-                    <TableHead className="text-center">Days T/B/O</TableHead>
+                    <TableHead className="text-right">Policies Sold</TableHead>
+                    <TableHead className="text-right">Items Sold</TableHead>
+                    <TableHead className="text-right">Attach Rate</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {trendsData.map((row, idx) => (
-                    <TableRow key={`${row.producer_id}-${row.entry_date}-${idx}`}>
-                      <TableCell className="font-medium">{formatCTDate(row.entry_date)}</TableCell>
-                      <TableCell>{row.producer_name}</TableCell>
-                      <TableCell className="text-right">{formatNumber(row.outbound_dials)}</TableCell>
-                      <TableCell className="text-right">{formatNumber(row.talk_minutes)}</TableCell>
+                  {trendsData.map((row) => (
+                    <TableRow key={row.producer_id}>
+                      <TableCell className="font-medium">{row.producer_name}</TableCell>
                       <TableCell className="text-right">{formatNumber(row.qhh)}</TableCell>
-                      <TableCell className="text-right">{formatNumber(row.items)}</TableCell>
-                      <TableCell className="text-right">{formatNumber(row.quotes)}</TableCell>
-                      <TableCell className="text-right">{formatNumber(row.sold_items)}</TableCell>
-                      <TableCell className="text-right">${formatNumber(Math.round(row.sold_premium))}</TableCell>
-                      <TableCell>
-                        {row?.framework_status ? getFrameworkBadge(row.framework_status) : (
-                          <Badge variant="outline">-</Badge>
-                        )}
-                      </TableCell>
-                      <TableCell className="text-center text-sm">
-                        <span className="text-green-600 dark:text-green-400">{row.days_top}</span>
-                        {' / '}
-                        <span className="text-yellow-600 dark:text-yellow-400">{row.days_bottom}</span>
-                        {' / '}
-                        <span className="text-red-600 dark:text-red-400">{row.days_outside}</span>
+                      <TableCell className="text-right">{formatNumber(row.policies_sold)}</TableCell>
+                      <TableCell className="text-right">{formatNumber(row.items_sold)}</TableCell>
+                      <TableCell className="text-right">
+                        {row.policies_sold > 0 ? (row.items_sold / row.policies_sold).toFixed(2) : '0.00'}
                       </TableCell>
                     </TableRow>
                   ))}

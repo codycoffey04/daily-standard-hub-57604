@@ -607,33 +607,22 @@ export function useSalesByProducer(year: number, month: number | null) {
         total_sold_premium: number
       }>()
 
+      // Since get_producer_trends returns aggregated totals (not daily rows),
+      // we'll use the returned data directly
       for (const row of currentTrends) {
-        if (!producerMap.has(row.producer_id)) {
-          producerMap.set(row.producer_id, {
-            producer_id: row.producer_id,
-            producer_name: row.producer_name,
-            days_worked: 0,
-            days_top: 0,
-            days_bottom: 0,
-            days_outside: 0,
-            total_qhh: 0,
-            total_quotes: 0,
-            total_items: 0,
-            total_sold_items: 0,
-            total_sold_premium: 0
-          })
-        }
-
-        const p = producerMap.get(row.producer_id)!
-        p.days_worked += 1
-        p.days_top += row.days_top
-        p.days_bottom += row.days_bottom
-        p.days_outside += row.days_outside
-        p.total_qhh += row.qhh
-        p.total_quotes += row.quotes
-        p.total_items += row.items
-        p.total_sold_items += row.sold_items
-        p.total_sold_premium += Number(row.sold_premium) || 0
+        producerMap.set(row.producer_id, {
+          producer_id: row.producer_id,
+          producer_name: row.producer_name,
+          days_worked: 1, // Not available in aggregated data
+          days_top: 0,    // Not available in aggregated data
+          days_bottom: 0, // Not available in aggregated data
+          days_outside: 0,// Not available in aggregated data
+          total_qhh: row.qhh,
+          total_quotes: 0, // Not available in aggregated data
+          total_items: row.items_sold,
+          total_sold_items: row.policies_sold,
+          total_sold_premium: 0 // Not available in aggregated data
+        })
       }
 
       // Aggregate previous period data
@@ -644,36 +633,11 @@ export function useSalesByProducer(year: number, month: number | null) {
       }>()
 
       if (prevTrends && prevTrends.length > 0) {
-        const prevProducerMap = new Map<string, {
-          days_worked: number
-          days_top: number
-          total_items: number
-          total_sold_items: number
-        }>()
-
         for (const row of prevTrends) {
-          if (!prevProducerMap.has(row.producer_id)) {
-            prevProducerMap.set(row.producer_id, {
-              days_worked: 0,
-              days_top: 0,
-              total_items: 0,
-              total_sold_items: 0
-            })
-          }
-
-          const p = prevProducerMap.get(row.producer_id)!
-          p.days_worked += 1
-          p.days_top += row.days_top
-          p.total_items += row.items
-          p.total_sold_items += row.sold_items
-        }
-
-        // Calculate previous period metrics
-        for (const [producer_id, p] of prevProducerMap.entries()) {
-          prevMap.set(producer_id, {
-            framework_compliance_pct: p.days_worked > 0 ? (p.days_top / p.days_worked) * 100 : 0,
-            total_items: p.total_items,
-            total_sold_items: p.total_sold_items
+          prevMap.set(row.producer_id, {
+            framework_compliance_pct: 0, // Not available in aggregated data
+            total_items: row.items_sold,
+            total_sold_items: row.policies_sold
           })
         }
       }
