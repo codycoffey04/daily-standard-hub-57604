@@ -18,15 +18,15 @@ export interface ExecutionFunnelData {
 }
 
 export interface ExecutionBenchmark {
-  source_id: string
-  source_name: string
-  total_producers: number
-  quote_rate_normal: number
-  quote_rate_excellent: number
-  close_rate_normal: number
-  close_rate_excellent: number
-  attach_rate_normal: number
-  attach_rate_excellent: number
+  sourceId: string
+  sourceName: string
+  totalPairs: number
+  quoteRateNormal: number
+  quoteRateExcellent: number
+  closeRateNormal: number
+  closeRateExcellent: number
+  attachRateNormal: number
+  attachRateExcellent: number
 }
 
 export interface ExecutionEfficiency {
@@ -195,12 +195,19 @@ export const useExecutionBenchmarks = (
         return [];
       }
 
-      // The function returns a single row with global benchmarks, not per-source
-      // For now, return empty array since the UI expects per-source data
-      // TODO: Either update the SQL function or redesign the UI to show global benchmarks
-      console.log('✅ Fetched global benchmarks:', benchmarkData);
-      
-      return [];
+      console.log('✅ Fetched execution benchmarks:', benchmarkData);
+
+      return benchmarkData.map((item: any) => ({
+        sourceId: item.source_id,
+        sourceName: item.source_name,
+        totalPairs: item.total_pairs,
+        quoteRateNormal: parseFloat(item.quote_rate_normal),
+        quoteRateExcellent: parseFloat(item.quote_rate_excellent),
+        closeRateNormal: parseFloat(item.close_rate_normal),
+        closeRateExcellent: parseFloat(item.close_rate_excellent),
+        attachRateNormal: parseFloat(item.attach_rate_normal),
+        attachRateExcellent: parseFloat(item.attach_rate_excellent)
+      }));
     },
     enabled: !!fromDate && !!toDate
   })

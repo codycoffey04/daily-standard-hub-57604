@@ -463,35 +463,35 @@ export const ExecutionFunnelReport: React.FC<ExecutionFunnelReportProps> = () =>
                   // DEBUG: Log raw values before formatting
                   if (idx === 0) {
                     console.log('🎨 DISPLAY DEBUG (first benchmark):', {
-                      source: benchmark.source_name,
+                      source: benchmark.sourceName,
                       raw_object: benchmark,
-                      raw_quote_normal: benchmark.quote_rate_normal,
-                      raw_quote_excellent: benchmark.quote_rate_excellent,
-                      raw_close_normal: benchmark.close_rate_normal,
-                      raw_close_excellent: benchmark.close_rate_excellent,
-                      raw_attach_normal: benchmark.attach_rate_normal,
-                      raw_attach_excellent: benchmark.attach_rate_excellent,
-                      typeof_quote_normal: typeof benchmark.quote_rate_normal,
-                      displayed_quote_normal: safeToFixed(benchmark.quote_rate_normal, 2),
-                      displayed_quote_excellent: safeToFixed(benchmark.quote_rate_excellent, 2),
+                      raw_quote_normal: benchmark.quoteRateNormal,
+                      raw_quote_excellent: benchmark.quoteRateExcellent,
+                      raw_close_normal: benchmark.closeRateNormal,
+                      raw_close_excellent: benchmark.closeRateExcellent,
+                      raw_attach_normal: benchmark.attachRateNormal,
+                      raw_attach_excellent: benchmark.attachRateExcellent,
+                      typeof_quote_normal: typeof benchmark.quoteRateNormal,
+                      displayed_quote_normal: safeToFixed(benchmark.quoteRateNormal, 2),
+                      displayed_quote_excellent: safeToFixed(benchmark.quoteRateExcellent, 2),
                     });
                   }
                   
                   return (
-                    <TableRow key={benchmark.source_id}>
-                      <TableCell className="font-medium">{benchmark.source_name}</TableCell>
-                      <TableCell className="text-center">{benchmark.total_producers}</TableCell>
-                      <TableCell className="text-right">{safeToFixed(benchmark.quote_rate_normal, 2)}%</TableCell>
+                    <TableRow key={benchmark.sourceId}>
+                      <TableCell className="font-medium">{benchmark.sourceName}</TableCell>
+                      <TableCell className="text-center">{benchmark.totalPairs}</TableCell>
+                      <TableCell className="text-right">{safeToFixed(benchmark.quoteRateNormal, 2)}%</TableCell>
                       <TableCell className="text-right text-green-600 dark:text-green-400 font-semibold">
-                        {safeToFixed(benchmark.quote_rate_excellent, 2)}%
+                        {safeToFixed(benchmark.quoteRateExcellent, 2)}%
                       </TableCell>
-                      <TableCell className="text-right">{safeToFixed(benchmark.close_rate_normal, 2)}%</TableCell>
+                      <TableCell className="text-right">{safeToFixed(benchmark.closeRateNormal, 2)}%</TableCell>
                       <TableCell className="text-right text-green-600 dark:text-green-400 font-semibold">
-                        {safeToFixed(benchmark.close_rate_excellent, 2)}%
+                        {safeToFixed(benchmark.closeRateExcellent, 2)}%
                       </TableCell>
-                      <TableCell className="text-right">{safeToFixed(benchmark.attach_rate_normal, 2)}</TableCell>
+                      <TableCell className="text-right">{safeToFixed(benchmark.attachRateNormal, 2)}</TableCell>
                       <TableCell className="text-right text-green-600 dark:text-green-400 font-semibold">
-                        {safeToFixed(benchmark.attach_rate_excellent, 2)}
+                        {safeToFixed(benchmark.attachRateExcellent, 2)}
                       </TableCell>
                     </TableRow>
                   );
