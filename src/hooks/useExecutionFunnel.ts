@@ -1,303 +1,44 @@
-import { useQuery } from '@tanstack/react-query'
-import { supabase } from '@/integrations/supabase/client'
+import { useEffect, useState } from 'react';
+import { rpc } from '@/utils/rpc';
+import { firstRow, toNum } from '@/utils/num';
 
-// ===== Types =====
+type RowSQL = {
+  dials: any; qhh: any; policies_sold: any; items_sold: any; lines_quoted: any; households_sold: any;
+};
 
-export interface ExecutionFunnelStage {
-  stage_number: number
-  stage_name: string
-  stage_value: number
-  conversion_rate: number
-  drop_off_count: number
-  drop_off_rate: number
-}
+export type ExecutionFunnel = {
+  dials: number; qhh: number; policiesSold: number; itemsSold: number; linesQuoted: number; householdsSold: number;
+};
 
-export interface ExecutionFunnelData {
-  stages: ExecutionFunnelStage[]
-  qhh?: number
-}
+export function useExecutionFunnel(params?: Record<string, any>) {
+  const [data, setData] = useState<ExecutionFunnel | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setErr] = useState<Error | null>(null);
 
-export interface ExecutionBenchmark {
-  source_id: string
-  source_name: string
-  total_producers: number
-  quote_rate_normal: number
-  quote_rate_excellent: number
-  close_rate_normal: number
-  close_rate_excellent: number
-  attach_rate_normal: number
-  attach_rate_excellent: number
-}
+  useEffect(() => { (async () => {
+    try {
+      setLoading(true);
+      const raw = await rpc<RowSQL[]>('get_execution_funnel', params);
+      console.log('[get_execution_funnel] raw', JSON.stringify(raw));
+      const r = firstRow(raw);
+      setData({
+        dials: toNum(r?.dials),
+        qhh: toNum(r?.qhh),
+        policiesSold: toNum(r?.policies_sold),
+        itemsSold: toNum(r?.items_sold),
+        linesQuoted: toNum(r?.lines_quoted),
+        householdsSold: toNum(r?.households_sold),
+      });
+      console.log('[useExecutionFunnel] parsed:', {
+        dials: toNum(r?.dials),
+        qhh: toNum(r?.qhh),
+        policiesSold: toNum(r?.policies_sold),
+        itemsSold: toNum(r?.items_sold),
+        linesQuoted: toNum(r?.lines_quoted),
+        householdsSold: toNum(r?.households_sold),
+      });
+    } catch (e: any) { setErr(e); } finally { setLoading(false); }
+  })(); }, [JSON.stringify(params)]);
 
-export interface ExecutionEfficiency {
-  metric_name: string
-  metric_value: number
-  metric_unit: string
-}
-
-export interface ProducerLeaderboard {
-  producer_id: string
-  producer_name: string
-  total_dials: number | null
-  total_qhh: number | null
-  quote_rate: number | null
-  quote_guidance: 'above_excellent' | 'normal_range' | 'needs_attention' | 'insufficient_volume' | 'no_benchmark'
-  total_shh: number | null
-  close_rate: number | null
-  close_guidance: 'above_excellent' | 'normal_range' | 'needs_attention' | 'insufficient_volume' | 'no_benchmark'
-  total_items: number | null
-  attach_rate: number | null
-  attach_guidance: 'above_excellent' | 'normal_range' | 'needs_attention' | 'insufficient_volume' | 'no_benchmark'
-  total_premium: number | null
-}
-
-// ===== Hook 1: Execution Funnel =====
-
-export const useExecutionFunnel = (
-  fromDate: string,
-  toDate: string
-) => {
-  return useQuery({
-    queryKey: ['execution-funnel-v2', fromDate, toDate],
-    queryFn: async (): Promise<ExecutionFunnelData> => {
-      const { data, error } = await supabase.rpc('get_execution_funnel' as any, {
-        from_date: fromDate,
-        to_date: toDate
-      })
-
-      console.log('[get_execution_funnel] raw', JSON.stringify(data))
-
-      if (error) {
-        console.error('❌ Error fetching execution funnel via RPC:', error)
-        throw error
-      }
-
-      // Handle empty response
-      if (!data || data.length === 0) {
-        return { 
-          stages: [
-            { stage_number: 1, stage_name: 'Dials', stage_value: 0, conversion_rate: 100, drop_off_count: 0, drop_off_rate: 0 },
-            { stage_number: 2, stage_name: 'QHH', stage_value: 0, conversion_rate: 0, drop_off_count: 0, drop_off_rate: 0 },
-            { stage_number: 3, stage_name: 'Sales', stage_value: 0, conversion_rate: 0, drop_off_count: 0, drop_off_rate: 0 },
-            { stage_number: 4, stage_name: 'Items', stage_value: 0, conversion_rate: 0, drop_off_count: 0, drop_off_rate: 0 },
-            { stage_number: 5, stage_name: 'Premium', stage_value: 0, conversion_rate: 0, drop_off_count: 0, drop_off_rate: 0 }
-          ],
-          qhh: 0 
-        }
-      }
-
-      // RPC returns array of stage rows: { stage: 'Dials', value: 123, conversion_rate: 100 }
-      // Parse the stage array into a usable structure
-      const stageMap = new Map(data.map((row: any) => [row.stage, row]))
-
-      // Extract values for each stage
-      const dials = Number((stageMap.get('Dials') as any)?.value) || 0
-      const qhh = Number((stageMap.get('QHH') as any)?.value) || 0
-      const shh = Number((stageMap.get('SHH') as any)?.value) || 0
-      const policies = Number((stageMap.get('Policies') as any)?.value) || 0
-      const premium = Number((stageMap.get('Premium') as any)?.value) || 0
-
-      // Calculate conversion rates
-      const dialToQhh = dials > 0 ? (qhh / dials * 100) : 0
-      const qhhToShh = qhh > 0 ? (shh / qhh * 100) : 0
-      const shhToItems = shh > 0 ? (policies / shh) : 0
-      const shhToPremium = shh > 0 ? (premium / shh) : 0
-
-      const stages: ExecutionFunnelStage[] = [
-        {
-          stage_number: 1,
-          stage_name: 'Dials',
-          stage_value: dials,
-          conversion_rate: 100,
-          drop_off_count: 0,
-          drop_off_rate: 0
-        },
-        {
-          stage_number: 2,
-          stage_name: 'QHH',
-          stage_value: qhh,
-          conversion_rate: dialToQhh,
-          drop_off_count: dials - qhh,
-          drop_off_rate: dials > 0 ? ((dials - qhh) / dials * 100) : 0
-        },
-        {
-          stage_number: 3,
-          stage_name: 'Sales',
-          stage_value: shh,
-          conversion_rate: qhhToShh,
-          drop_off_count: qhh - shh,
-          drop_off_rate: qhh > 0 ? ((qhh - shh) / qhh * 100) : 0
-        },
-        {
-          stage_number: 4,
-          stage_name: 'Items',
-          stage_value: policies,
-          conversion_rate: shhToItems * 100, // Convert to percentage
-          drop_off_count: 0,
-          drop_off_rate: 0
-        },
-        {
-          stage_number: 5,
-          stage_name: 'Premium',
-          stage_value: premium,
-          conversion_rate: shhToPremium, // Premium per sale (in dollars, not percentage)
-          drop_off_count: 0,
-          drop_off_rate: 0
-        }
-      ]
-
-      return { 
-        stages, 
-        qhh: qhh 
-      }
-    },
-    enabled: !!fromDate && !!toDate
-  })
-}
-
-// ===== Hook 2: Execution Benchmarks =====
-
-export const useExecutionBenchmarks = (
-  fromDate: string,
-  toDate: string,
-  minPairQHH: number = 10,
-  minPairSHH: number = 0,
-  minPairDials: number = 100
-) => {
-  return useQuery({
-    queryKey: ['execution-benchmarks-unified-v2', fromDate, toDate, minPairQHH, minPairSHH, minPairDials],
-    queryFn: async (): Promise<ExecutionBenchmark[]> => {
-      // Use toDate for month_ym (represents the period being analyzed)
-      const monthYm = toDate.substring(0, 7) // '2025-10-25' -> '2025-10'
-
-      console.log('📊 === EXECUTION BENCHMARKS RPC CALL (UNIFIED) ===')
-      console.log('  Date range - from:', fromDate, 'to:', toDate)
-      console.log('  Using month_ym:', monthYm)
-      console.log('  Thresholds:', { minPairQHH, minPairSHH, minPairDials })
-      console.log('  source_filter: null (ALL SOURCES)')
-
-      // Make ONE RPC call for ALL sources
-      const { data: benchmarkData, error: benchmarkError } = await supabase
-        .rpc('get_execution_benchmarks_by_source' as any, {
-          from_date: fromDate,
-          to_date: toDate,
-          source_filter: null,  // ← NULL to get all sources at once
-          min_pair_qhh: minPairQHH,
-          min_pair_shh: minPairSHH,
-          min_pair_dials: minPairDials
-        });
-
-      if (benchmarkError) {
-        console.error('❌ Error fetching benchmarks:', benchmarkError);
-        throw benchmarkError;
-      }
-
-      if (!benchmarkData) {
-        console.log('ℹ️ No benchmark data returned (insufficient volume or no data)');
-        return [];
-      }
-
-      // The function returns a single row with global benchmarks, not per-source
-      // For now, return empty array since the UI expects per-source data
-      // TODO: Either update the SQL function or redesign the UI to show global benchmarks
-      console.log('✅ Fetched global benchmarks:', benchmarkData);
-      
-      return [];
-    },
-    enabled: !!fromDate && !!toDate
-  })
-}
-
-// ===== Hook 3: Execution Efficiency =====
-
-export const useExecutionEfficiency = (
-  fromDate: string,
-  toDate: string,
-  producerId: string | null = null,
-  sourceId: string | null = null,
-  commissionPct: number = 0.12
-) => {
-  return useQuery({
-    queryKey: ['execution-efficiency-v2', fromDate, toDate, producerId, sourceId, commissionPct],
-    queryFn: async (): Promise<ExecutionEfficiency[]> => {
-      // Always query daily_entries — never daily_entry_sources
-      let query = supabase
-        .from('daily_entries')
-        .select('id, outbound_dials, qhh_total, sales_total, items_total')
-        .gte('entry_date', fromDate)
-        .lte('entry_date', toDate)
-
-      if (producerId) query = query.eq('producer_id', producerId)
-
-      const { data, error } = await query
-      if (error) {
-        console.error('❌ Error fetching efficiency base data:', error)
-        throw error
-      }
-
-      const rows = data || []
-      if (!rows.length) {
-        return [
-          { metric_name: 'Total Dials', metric_value: 0, metric_unit: 'dials' },
-          { metric_name: 'Total QHH', metric_value: 0, metric_unit: 'households' },
-          { metric_name: 'Total Sales', metric_value: 0, metric_unit: 'sales' },
-          { metric_name: 'Total Items', metric_value: 0, metric_unit: 'items' },
-          { metric_name: 'Total Premium', metric_value: 0, metric_unit: 'dollars' }
-        ]
-      }
-
-      const entryIds = rows.map(r => r.id).filter(Boolean)
-      let totalPremium = 0
-      if (entryIds.length) {
-        const { data: pData, error: pErr } = await supabase
-          .from('premium_by_entry' as any)
-          .select('total_premium')
-          .in('daily_entry_id', entryIds)
-
-        if (pErr) {
-          console.error('❌ Error fetching premium:', pErr)
-        } else {
-          totalPremium = (pData || []).reduce((sum, r: any) => sum + (Number(r.total_premium) || 0), 0)
-        }
-      }
-
-      const totalDials  = rows.reduce((s, r) => s + (Number(r.outbound_dials) || 0), 0)
-      const totalQHH    = rows.reduce((s, r) => s + (Number(r.qhh_total) || 0), 0)
-      const totalSales  = rows.reduce((s, r) => s + (Number(r.sales_total) || 0), 0)
-      const totalItems  = rows.reduce((s, r) => s + (Number(r.items_total) || 0), 0)
-
-      const metrics: ExecutionEfficiency[] = [
-        { metric_name: 'Total Dials', metric_value: totalDials, metric_unit: 'dials' },
-        { metric_name: 'Total QHH', metric_value: totalQHH, metric_unit: 'households' },
-        { metric_name: 'Total Sales', metric_value: totalSales, metric_unit: 'sales' },
-        { metric_name: 'Total Items', metric_value: totalItems, metric_unit: 'items' },
-        { metric_name: 'Total Premium', metric_value: Math.round(totalPremium), metric_unit: 'dollars' },
-        { metric_name: 'Premium per Dial', metric_value: totalDials > 0 ? Math.round((totalPremium / totalDials) * 100) / 100 : 0, metric_unit: '$/dial' },
-        { metric_name: 'Commission per Dial', metric_value: totalDials > 0 ? Math.round((totalPremium * commissionPct / totalDials) * 100) / 100 : 0, metric_unit: '$/dial' },
-        { metric_name: 'Items per Sale', metric_value: totalSales > 0 ? Math.round((totalItems / totalSales) * 100) / 100 : 0, metric_unit: 'items/sale' },
-        { metric_name: 'Premium per Item', metric_value: totalItems > 0 ? Math.round(totalPremium / totalItems) : 0, metric_unit: '$/item' }
-      ]
-
-      return metrics
-    },
-    enabled: !!fromDate && !!toDate
-  })
-}
-
-// ===== Hook 4: Producers for Filter =====
-
-export const useProducersForExecution = () => {
-  return useQuery({
-    queryKey: ['producers-for-execution-filter-v2'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('producers')
-        .select('id, display_name')
-        .eq('active', true)
-        .order('display_name')
-
-      if (error) throw error
-      return data || []
-    }
-  })
+  return { data, loading, error };
 }

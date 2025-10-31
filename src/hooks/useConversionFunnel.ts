@@ -1,72 +1,63 @@
-import { useQuery } from '@tanstack/react-query'
-import { supabase } from '@/integrations/supabase/client'
+import { useEffect, useState } from 'react';
+import { rpc } from '@/utils/rpc';
+import { toNum } from '@/utils/num';
+import { supabase } from '@/integrations/supabase/client';
 
-export interface ConversionFunnelStage {
-  stage_number: number
-  stage_name: string
-  stage_value: number
-  conversion_rate: number
-  drop_off_count: number
-  drop_off_rate: number
+type SQL = Partial<{
+  stage_no: any; stage_number: any; stage_name: string;
+  value: any; stage_value: any;
+  conversion_rate: any; drop_off_count: any; drop_off_rate: any;
+}>;
+
+export type Stage = {
+  stageNo: number; stageName: string; count: number;
+  conversionRate?: number; dropOffCount?: number; dropOffRate?: number;
+};
+
+export function useConversionFunnel(params?: Record<string, any>) {
+  const [data, setData] = useState<Stage[] | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setErr] = useState<Error | null>(null);
+
+  useEffect(() => { (async () => {
+    try {
+      setLoading(true);
+      const raw = await rpc<SQL[]>('get_conversion_funnel', params);
+      console.log('[get_conversion_funnel] raw', JSON.stringify(raw));
+      const mapped = (raw ?? []).map(r => ({
+        stageNo: toNum(r.stage_no ?? r.stage_number),
+        stageName: r.stage_name ?? '',
+        count: toNum(r.value ?? r.stage_value),
+        conversionRate: r.conversion_rate !== undefined ? toNum(r.conversion_rate) : undefined,
+        dropOffCount: r.drop_off_count !== undefined ? toNum(r.drop_off_count) : undefined,
+        dropOffRate: r.drop_off_rate !== undefined ? toNum(r.drop_off_rate) : undefined,
+      })).sort((a, b) => a.stageNo - b.stageNo);
+      setData(mapped);
+      console.log('[useConversionFunnel] parsed:', mapped.slice(0, 2));
+    } catch (e: any) { setErr(e); } finally { setLoading(false); }
+  })(); }, [JSON.stringify(params)]);
+
+  return { data, loading, error };
 }
 
-export const useConversionFunnel = (
-  year: number,
-  month: number | null,
-  producerId: string | null = null,
-  sourceId: string | null = null
-) => {
-  return useQuery({
-    queryKey: ['conversion-funnel', year, month, producerId, sourceId],
-    queryFn: async (): Promise<ConversionFunnelStage[]> => {
-      let fromDate: string
-      let toDate: string
+export function useProducers() {
+  const [data, setData] = useState<Array<{ id: string; display_name: string }> | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setErr] = useState<Error | null>(null);
 
-      if (month !== null) {
-        // Specific month
-        fromDate = `${year}-${String(month).padStart(2, '0')}-01`
-        const lastDay = new Date(year, month, 0).getDate()
-        toDate = `${year}-${String(month).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`
-      } else {
-        // Full year
-        fromDate = `${year}-01-01`
-        toDate = `${year}-12-31`
-      }
-
-      console.log('📊 Fetching conversion funnel:', { fromDate, toDate, producerId, sourceId })
-
-      const { data, error } = await supabase.rpc('get_conversion_funnel' as any, {
-        from_date: fromDate,
-        to_date: toDate,
-        producer_filter: producerId,
-        source_filter: sourceId
-      })
-
-      console.log('[get_conversion_funnel] raw', JSON.stringify(data))
-
-      if (error) {
-        console.error('❌ Error fetching conversion funnel:', error)
-        throw error
-      }
-
-      console.log('✅ Conversion funnel data:', data)
-      return (data as unknown as ConversionFunnelStage[]) || []
-    }
-  })
-}
-
-export const useProducers = () => {
-  return useQuery({
-    queryKey: ['producers-for-filter'],
-    queryFn: async () => {
-      const { data, error } = await supabase
+  useEffect(() => { (async () => {
+    try {
+      setLoading(true);
+      const { data: producerData, error: producerError } = await supabase
         .from('producers')
         .select('id, display_name')
         .eq('active', true)
-        .order('display_name')
+        .order('display_name');
 
-      if (error) throw error
-      return data || []
-    }
-  })
+      if (producerError) throw producerError;
+      setData(producerData || []);
+    } catch (e: any) { setErr(e); } finally { setLoading(false); }
+  })(); }, []);
+
+  return { data, loading, error };
 }

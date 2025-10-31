@@ -24,8 +24,13 @@ export const ConversionFunnelReport: React.FC<ConversionFunnelReportProps> = ({
   const [producerId, setProducerId] = useState<string | null>(null)
   const [sourceId, setSourceId] = useState<string | null>(null)
 
-  const { data: funnelData, isLoading: isFunnelLoading } = useConversionFunnel(year, month, producerId, sourceId)
-  const { data: producers, isLoading: isProducersLoading } = useProducers()
+  const { data: funnelData, loading: isFunnelLoading } = useConversionFunnel({ 
+    from_date: month !== null ? `${year}-${String(month).padStart(2, '0')}-01` : `${year}-01-01`,
+    to_date: month !== null ? `${year}-${String(month).padStart(2, '0')}-${new Date(year, month, 0).getDate()}` : `${year}-12-31`,
+    producer_filter: producerId,
+    source_filter: sourceId
+  })
+  const { data: producers, loading: isProducersLoading } = useProducers()
   const { data: sources, isLoading: isSourcesLoading } = useSourcesForSelection()
 
   // Calculate conversion metrics
@@ -39,10 +44,10 @@ export const ConversionFunnelReport: React.FC<ConversionFunnelReportProps> = ({
       }
     }
 
-    const dials = funnelData[0]?.stage_value || 0
-    const conversations = funnelData[1]?.stage_value || 0
-    const qhh = funnelData[2]?.stage_value || 0
-    const sales = funnelData[3]?.stage_value || 0
+    const dials = funnelData[0]?.count || 0
+    const conversations = funnelData[1]?.count || 0
+    const qhh = funnelData[2]?.count || 0
+    const sales = funnelData[3]?.count || 0
 
     return {
       overallConversion: dials > 0 ? (sales / dials) * 100 : 0,
@@ -59,30 +64,30 @@ export const ConversionFunnelReport: React.FC<ConversionFunnelReportProps> = ({
     const insightsList: string[] = []
     
     // Find biggest drop-off (excluding first stage)
-    const stagesWithDropoff = funnelData.filter(s => s.stage_number > 1)
+    const stagesWithDropoff = funnelData.filter(s => s.stageNo > 1)
     if (stagesWithDropoff.length > 0) {
       const maxDropOff = stagesWithDropoff.reduce((max, stage) => 
-        stage.drop_off_rate > max.drop_off_rate ? stage : max
+        (stage.dropOffRate || 0) > (max.dropOffRate || 0) ? stage : max
       )
-      if (maxDropOff.drop_off_rate > 0) {
-        insightsList.push(`Biggest drop-off: ${maxDropOff.stage_name} (-${maxDropOff.drop_off_rate.toFixed(1)}%)`)
+      if ((maxDropOff.dropOffRate || 0) > 0) {
+        insightsList.push(`Biggest drop-off: ${maxDropOff.stageName} (-${maxDropOff.dropOffRate?.toFixed(1)}%)`)
       }
     }
     
     // Find best conversion (excluding first stage)
     if (stagesWithDropoff.length > 0) {
       const bestConversion = stagesWithDropoff.reduce((max, stage) => 
-        stage.conversion_rate > max.conversion_rate ? stage : max
+        (stage.conversionRate || 0) > (max.conversionRate || 0) ? stage : max
       )
-      insightsList.push(`Best conversion: ${bestConversion.stage_name} (${bestConversion.conversion_rate.toFixed(1)}%)`)
+      insightsList.push(`Best conversion: ${bestConversion.stageName} (${bestConversion.conversionRate?.toFixed(1)}%)`)
     }
     
     // Overall efficiency
     const firstStage = funnelData[0]
     const lastStage = funnelData[funnelData.length - 1]
-    if (firstStage.stage_value > 0) {
-      const efficiency = (lastStage.stage_value / firstStage.stage_value) * 100
-      insightsList.push(`Overall efficiency: ${lastStage.stage_value} out of ${firstStage.stage_value.toLocaleString()} dials become sales (${efficiency.toFixed(2)}%)`)
+    if (firstStage.count > 0) {
+      const efficiency = (lastStage.count / firstStage.count) * 100
+      insightsList.push(`Overall efficiency: ${lastStage.count} out of ${firstStage.count.toLocaleString()} dials become sales (${efficiency.toFixed(2)}%)`)
     }
     
     return insightsList
@@ -96,7 +101,7 @@ export const ConversionFunnelReport: React.FC<ConversionFunnelReportProps> = ({
   }
 
   const isLoading = isFunnelLoading || isProducersLoading || isSourcesLoading
-  const hasData = funnelData && funnelData.length > 0 && funnelData[0].stage_value > 0
+  const hasData = funnelData && funnelData.length > 0 && funnelData[0].count > 0
 
   return (
     <div className="space-y-6">
@@ -229,11 +234,11 @@ export const ConversionFunnelReport: React.FC<ConversionFunnelReportProps> = ({
           ) : (
             <div className="relative w-full max-w-3xl mx-auto py-8">
               {funnelData.map((stage, index) => {
-                const widthPercent = (stage.stage_value / funnelData[0].stage_value) * 100
+                const widthPercent = (stage.count / funnelData[0].count) * 100
                 const hue = 200 + index * 25 // Blue to green gradient
                 
                 return (
-                  <div key={stage.stage_number} className="mb-3">
+                  <div key={stage.stageNo} className="mb-3">
                     <div 
                       className="relative mx-auto transition-all hover:scale-[1.02] cursor-pointer group"
                       style={{
@@ -248,17 +253,17 @@ export const ConversionFunnelReport: React.FC<ConversionFunnelReportProps> = ({
                       }}
                     >
                       <div className="text-white text-center z-10 px-4">
-                        <div className="font-semibold text-sm mb-1">{stage.stage_name}</div>
-                        <div className="text-3xl font-bold mb-1">{stage.stage_value.toLocaleString()}</div>
-                        {index > 0 && (
-                          <div className="text-sm opacity-90">{stage.conversion_rate.toFixed(1)}% converted</div>
+                        <div className="font-semibold text-sm mb-1">{stage.stageName}</div>
+                        <div className="text-3xl font-bold mb-1">{stage.count.toLocaleString()}</div>
+                        {index > 0 && stage.conversionRate !== undefined && (
+                          <div className="text-sm opacity-90">{stage.conversionRate.toFixed(1)}% converted</div>
                         )}
                       </div>
                       
                       {/* Tooltip on hover */}
-                      {index > 0 && (
+                      {index > 0 && stage.dropOffCount !== undefined && stage.dropOffRate !== undefined && (
                         <div className="absolute -bottom-8 left-1/2 transform -translate-x-1/2 bg-popover text-popover-foreground px-3 py-1 rounded shadow-lg text-xs opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
-                          Drop-off: {stage.drop_off_count.toLocaleString()} ({stage.drop_off_rate.toFixed(1)}%)
+                          Drop-off: {stage.dropOffCount.toLocaleString()} ({stage.dropOffRate.toFixed(1)}%)
                         </div>
                       )}
                     </div>
@@ -294,17 +299,17 @@ export const ConversionFunnelReport: React.FC<ConversionFunnelReportProps> = ({
               </TableHeader>
               <TableBody>
                 {funnelData.map((stage) => (
-                  <TableRow key={stage.stage_number}>
-                    <TableCell className="font-medium">{stage.stage_name}</TableCell>
-                    <TableCell className="text-right">{stage.stage_value.toLocaleString()}</TableCell>
-                    <TableCell className={`text-right font-semibold ${stage.stage_number > 1 ? getConversionColor(stage.conversion_rate) : ''}`}>
-                      {stage.conversion_rate.toFixed(1)}%
+                  <TableRow key={stage.stageNo}>
+                    <TableCell className="font-medium">{stage.stageName}</TableCell>
+                    <TableCell className="text-right">{stage.count.toLocaleString()}</TableCell>
+                    <TableCell className={`text-right font-semibold ${stage.stageNo > 1 && stage.conversionRate ? getConversionColor(stage.conversionRate) : ''}`}>
+                      {stage.conversionRate?.toFixed(1) || '0.0'}%
                     </TableCell>
                     <TableCell className="text-right">
-                      {stage.drop_off_count > 0 ? stage.drop_off_count.toLocaleString() : '-'}
+                      {stage.dropOffCount && stage.dropOffCount > 0 ? stage.dropOffCount.toLocaleString() : '-'}
                     </TableCell>
                     <TableCell className="text-right">
-                      {stage.drop_off_rate > 0 ? `${stage.drop_off_rate.toFixed(1)}%` : '-'}
+                      {stage.dropOffRate && stage.dropOffRate > 0 ? `${stage.dropOffRate.toFixed(1)}%` : '-'}
                     </TableCell>
                   </TableRow>
                 ))}
