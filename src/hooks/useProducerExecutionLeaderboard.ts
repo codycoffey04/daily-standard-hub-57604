@@ -14,9 +14,9 @@ interface ProducerLeaderboardRow {
   producer_name: string;
   dials: number;
   qhh: number;
-  policies_sold: number;
   households_sold: number;
   items_sold: number;
+  total_premium: number;
   rank_by_sales: number;
 }
 
@@ -55,21 +55,29 @@ export const useProducerExecutionLeaderboard = (
 
       console.log('[get_producer_execution_leaderboard] raw:', data);
 
-      // Map and coerce numeric fields
+      // Map and coerce numeric fields from database response
       const parsed = (data || []).map((row: any) => ({
         producer_id: row.producer_id,
         producer_name: row.producer_name,
-        dials: toNum(row.dials),
-        qhh: toNum(row.qhh),
-        policies_sold: toNum(row.policies_sold),
-        households_sold: toNum(row.households_sold),
-        items_sold: toNum(row.items_sold),
-        rank_by_sales: toNum(row.rank_by_sales)
+        dials: toNum(row.total_dials),
+        qhh: toNum(row.total_qhh),
+        households_sold: toNum(row.total_shh),
+        items_sold: toNum(row.total_items),
+        total_premium: toNum(row.total_premium),
+        rank_by_sales: 0  // Will be calculated below
       }));
 
-      console.log('[useProducerExecutionLeaderboard] parsed:', parsed);
+      // Sort by total_premium descending and assign ranks
+      const ranked = parsed
+        .sort((a, b) => b.total_premium - a.total_premium)
+        .map((producer, index) => ({
+          ...producer,
+          rank_by_sales: index + 1  // Rank 1 = highest premium
+        }));
 
-      return parsed;
+      console.log('[useProducerExecutionLeaderboard] ranked:', ranked);
+
+      return ranked;
     },
     enabled: !!fromDate && !!toDate,
     staleTime: 30000,
