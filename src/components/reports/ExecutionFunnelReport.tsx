@@ -1,12 +1,11 @@
 import React, { useState, useMemo } from 'react'
-import { subDays, format } from 'date-fns'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
 import { ChartLoading } from '@/components/ui/chart-loading'
 import { EmptyState } from '@/components/ui/empty-state'
-import { DateRangePicker } from '@/components/DateRangePicker'
+import { getDateRange } from '@/hooks/useSummariesData'
 import { 
   useExecutionFunnel, 
   useExecutionBenchmarks, 
@@ -30,18 +29,19 @@ interface ExecutionFunnelReportProps {
   selectedMonth: number | null
 }
 
-export const ExecutionFunnelReport: React.FC<ExecutionFunnelReportProps> = () => {
-  // Date range: default to last 90 days
-  const [fromDate, setFromDate] = useState<Date>(subDays(new Date(), 90))
-  const [toDate, setToDate] = useState<Date>(new Date())
+export const ExecutionFunnelReport: React.FC<ExecutionFunnelReportProps> = ({
+  selectedYear,
+  selectedMonth
+}) => {
+  // Use month/year selection from parent (SummariesPage)
+  const { startDate: fromDateStr, endDate: toDateStr } = useMemo(() => {
+    return getDateRange(selectedYear, selectedMonth)
+  }, [selectedYear, selectedMonth])
+
   const [producerId, setProducerId] = useState<string | null>(null)
   const [sourceId, setSourceId] = useState<string | null>(null)
   const [sortField, setSortField] = useState<string>('total_premium')
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc')
-
-  // Format dates for API
-  const fromDateStr = format(fromDate, 'yyyy-MM-dd')
-  const toDateStr = format(toDate, 'yyyy-MM-dd')
 
   // Fetch all data using RPC functions
   const { data: funnelData, isLoading: isFunnelLoading } = useExecutionFunnel(fromDateStr, toDateStr)
@@ -151,16 +151,7 @@ export const ExecutionFunnelReport: React.FC<ExecutionFunnelReportProps> = () =>
           <CardDescription>Analyze sales execution with benchmarks and efficiency metrics</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-            <div className="col-span-1 md:col-span-2">
-              <DateRangePicker
-                fromDate={fromDate}
-                toDate={toDate}
-                onFromDateChange={setFromDate}
-                onToDateChange={setToDate}
-              />
-            </div>
-            
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <label className="text-sm font-medium">Producer</label>
               <Select value={producerId || 'all'} onValueChange={(v) => setProducerId(v === 'all' ? null : v)}>

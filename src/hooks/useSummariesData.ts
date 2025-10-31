@@ -87,7 +87,7 @@ export interface SalesByProducerData {
   prev_total_sold_items?: number
 }
 
-function getDateRange(year: number, month: number | null) {
+export function getDateRange(year: number, month: number | null) {
   if (month === null) {
     // Full year
     return {
