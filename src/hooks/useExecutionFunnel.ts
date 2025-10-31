@@ -84,14 +84,14 @@ export const useExecutionFunnel = (
         }
       }
 
-      // RPC returns single row: { dials, qhh, policies_sold, items_sold, lines_quoted, households_sold }
+      // RPC returns single row: { dials, qhh, policies_sold, items_sold, lines_quoted, households_sold, premium_total }
       const row = data[0]
       
       const dials = Number(row.dials) || 0
       const qhh = Number(row.qhh) || 0
       const households_sold = Number(row.households_sold) || 0
       const items_sold = Number(row.items_sold) || 0
-      const premium = 0 // Premium not in this function, set to 0
+      const premium = Number(row.premium_total) || 0
 
       // Calculate conversion rates
       const dialToQhh = dials > 0 ? (qhh / dials * 100) : 0
