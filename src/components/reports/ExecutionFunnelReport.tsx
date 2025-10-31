@@ -89,10 +89,10 @@ export const ExecutionFunnelReport: React.FC<ExecutionFunnelReportProps> = () =>
     
     const dials = funnelData.stages[0]?.stage_value || 0;
     const qhh = funnelData.stages[1]?.stage_value || 0;
-    const shh = funnelData.stages[2]?.stage_value || 0;  // Sales (Sold Households)
-    const items = funnelData.stages[3]?.stage_value || 0; // Policies
+    const policies = funnelData?.policies_sold ?? 0;  // Policies sold (for Sales stage)
+    const items = funnelData.stages[3]?.stage_value || 0; // Items sold
     const premium = funnelData.stages[4]?.stage_value || 0;
-    const policies = funnelData?.policies_sold ?? 0;  // Actual policies sold count
+    const shh = funnelData.stages[2]?.stage_value || 0;  // Households sold (keep for calculations)
     
     // Base metrics from funnel
     const baseMetrics = [
@@ -117,7 +117,7 @@ export const ExecutionFunnelReport: React.FC<ExecutionFunnelReportProps> = () =>
       },
       { 
         metric_name: 'Items per Sale', 
-        metric_value: shh > 0 ? items / shh : 0, 
+        metric_value: policies > 0 ? items / policies : 0, 
         metric_unit: 'items/sale' 
       },
     ];
@@ -309,7 +309,10 @@ export const ExecutionFunnelReport: React.FC<ExecutionFunnelReportProps> = () =>
                           {/* Center: Large value and stage name */}
                           <div>
                             <div className="text-3xl font-bold leading-tight mb-1 drop-shadow-md">
-                              {index === 4 ? '$' : ''}{safeToLocaleString(stage.stage_value)}
+                              {index === 4 ? '$' : ''}
+                              {safeToLocaleString(
+                                index === 2 ? (funnelData?.policies_sold ?? 0) : stage.stage_value
+                              )}
                             </div>
                             
                             {/* Stage name with icon */}
@@ -336,8 +339,11 @@ export const ExecutionFunnelReport: React.FC<ExecutionFunnelReportProps> = () =>
                           ? stage.stage_value / funnelData.stages[2].stage_value 
                           : 0).toFixed(0)}</div>
                       </div>
+                    ) : index === 2 ? (
+                      // Stage 3: Show policies/QHH conversion
+                      `${((funnelData?.policies_sold ?? 0) / (funnelData.stages[1]?.stage_value || 1) * 100).toFixed(1)}%`
                     ) : (
-                      // Stages 2 & 3: Show percentage
+                      // Stage 2: Show percentage
                       `${stage.conversion_rate.toFixed(1)}%`
                     )}
                   </div>
