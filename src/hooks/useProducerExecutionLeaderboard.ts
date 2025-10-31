@@ -42,7 +42,10 @@ export const useProducerExecutionLeaderboard = (
         source_filter: sourceId,
         min_dials: minDials,
         min_qhh: minQHH,
-        min_shh: minSHH
+        min_shh: minSHH,
+        min_pair_qhh: 30,
+        min_pair_shh: 10,
+        min_pair_dials: 200
       }) as { data: any[] | null, error: any };
 
       if (error) {
