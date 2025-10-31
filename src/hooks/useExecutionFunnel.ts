@@ -84,22 +84,21 @@ export const useExecutionFunnel = (
         }
       }
 
-      // RPC returns array of stage rows: { stage: 'Dials', value: 123, conversion_rate: 100 }
-      // Parse the stage array into a usable structure
-      const stageMap = new Map(data.map((row: any) => [row.stage, row]))
-
-      // Extract values for each stage
-      const dials = Number((stageMap.get('Dials') as any)?.value) || 0
-      const qhh = Number((stageMap.get('QHH') as any)?.value) || 0
-      const shh = Number((stageMap.get('SHH') as any)?.value) || 0
-      const policies = Number((stageMap.get('Policies') as any)?.value) || 0
-      const premium = Number((stageMap.get('Premium') as any)?.value) || 0
+      // RPC returns single row: { dials, qhh, policies_sold, items_sold, lines_quoted, households_sold }
+      const row = data[0]
+      
+      const dials = Number(row.dials) || 0
+      const qhh = Number(row.qhh) || 0
+      const households_sold = Number(row.households_sold) || 0
+      const items_sold = Number(row.items_sold) || 0
+      const premium = 0 // Premium not in this function, set to 0
 
       // Calculate conversion rates
       const dialToQhh = dials > 0 ? (qhh / dials * 100) : 0
-      const qhhToShh = qhh > 0 ? (shh / qhh * 100) : 0
-      const shhToItems = shh > 0 ? (policies / shh) : 0
-      const shhToPremium = shh > 0 ? (premium / shh) : 0
+      const qhhToShh = qhh > 0 ? (households_sold / qhh * 100) : 0
+      const shhToItems = households_sold > 0 ? (items_sold / households_sold) : 0
+
+      console.log('🔍 FUNNEL DATA:', { dials, qhh, households_sold, items_sold })
 
       const stages: ExecutionFunnelStage[] = [
         {
@@ -121,16 +120,16 @@ export const useExecutionFunnel = (
         {
           stage_number: 3,
           stage_name: 'Sales',
-          stage_value: shh,
+          stage_value: households_sold,
           conversion_rate: qhhToShh,
-          drop_off_count: qhh - shh,
-          drop_off_rate: qhh > 0 ? ((qhh - shh) / qhh * 100) : 0
+          drop_off_count: qhh - households_sold,
+          drop_off_rate: qhh > 0 ? ((qhh - households_sold) / qhh * 100) : 0
         },
         {
           stage_number: 4,
           stage_name: 'Items',
-          stage_value: policies,
-          conversion_rate: shhToItems * 100, // Convert to percentage
+          stage_value: items_sold,
+          conversion_rate: shhToItems * 100,
           drop_off_count: 0,
           drop_off_rate: 0
         },
@@ -138,7 +137,7 @@ export const useExecutionFunnel = (
           stage_number: 5,
           stage_name: 'Premium',
           stage_value: premium,
-          conversion_rate: shhToPremium, // Premium per sale (in dollars, not percentage)
+          conversion_rate: 0,
           drop_off_count: 0,
           drop_off_rate: 0
         }
