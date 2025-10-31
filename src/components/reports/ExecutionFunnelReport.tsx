@@ -1,10 +1,12 @@
-import React, { useState, useMemo } from 'react'
+import React, { useState, useMemo, useEffect } from 'react'
+import { format } from 'date-fns'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
 import { ChartLoading } from '@/components/ui/chart-loading'
 import { EmptyState } from '@/components/ui/empty-state'
+import { DateRangePicker } from '@/components/DateRangePicker'
 import { getDateRange } from '@/hooks/useSummariesData'
 import { 
   useExecutionFunnel, 
@@ -33,15 +35,36 @@ export const ExecutionFunnelReport: React.FC<ExecutionFunnelReportProps> = ({
   selectedYear,
   selectedMonth
 }) => {
-  // Use month/year selection from parent (SummariesPage)
-  const { startDate: fromDateStr, endDate: toDateStr } = useMemo(() => {
-    return getDateRange(selectedYear, selectedMonth)
-  }, [selectedYear, selectedMonth])
+  // Calculate default date range from parent's selected month/year
+  const getDefaultDateRange = () => {
+    const { startDate, endDate } = getDateRange(selectedYear, selectedMonth)
+    return {
+      fromDate: new Date(startDate),
+      toDate: new Date(endDate)
+    }
+  }
+
+  const defaultRange = getDefaultDateRange()
+
+  // Date state: initialized from parent props, but can be overridden by user
+  const [fromDate, setFromDate] = useState<Date>(defaultRange.fromDate)
+  const [toDate, setToDate] = useState<Date>(defaultRange.toDate)
 
   const [producerId, setProducerId] = useState<string | null>(null)
   const [sourceId, setSourceId] = useState<string | null>(null)
   const [sortField, setSortField] = useState<string>('total_premium')
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc')
+
+  // Format dates for API calls
+  const fromDateStr = format(fromDate, 'yyyy-MM-dd')
+  const toDateStr = format(toDate, 'yyyy-MM-dd')
+
+  // Sync with parent's month/year selection when it changes
+  useEffect(() => {
+    const newRange = getDefaultDateRange()
+    setFromDate(newRange.fromDate)
+    setToDate(newRange.toDate)
+  }, [selectedYear, selectedMonth])
 
   // Fetch all data using RPC functions
   const { data: funnelData, isLoading: isFunnelLoading } = useExecutionFunnel(fromDateStr, toDateStr)
@@ -151,7 +174,16 @@ export const ExecutionFunnelReport: React.FC<ExecutionFunnelReportProps> = ({
           <CardDescription>Analyze sales execution with benchmarks and efficiency metrics</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+            <div className="col-span-1 md:col-span-2">
+              <DateRangePicker
+                fromDate={fromDate}
+                toDate={toDate}
+                onFromDateChange={setFromDate}
+                onToDateChange={setToDate}
+              />
+            </div>
+            
             <div className="space-y-2">
               <label className="text-sm font-medium">Producer</label>
               <Select value={producerId || 'all'} onValueChange={(v) => setProducerId(v === 'all' ? null : v)}>
