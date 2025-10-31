@@ -50,12 +50,28 @@ export const ExecutionFunnelReport: React.FC<ExecutionFunnelReportProps> = () =>
   const { data: producers, isLoading: isProducersLoading } = useProducersForExecution()
   const { data: sources, isLoading: isSourcesLoading } = useSourcesForSelection()
 
+  // NEW: chart-only data projection - do NOT mutate funnelData.stages
+  const chartStages = useMemo(
+    () => (funnelData?.stages ?? []).map(s => ({
+      name: s.stage_name,
+      value: s.stage_value,
+    })),
+    [funnelData]
+  );
+
+  // Dev guard: warn if any stage_value went missing (indicates mutation)
+  if (process.env.NODE_ENV !== 'production') {
+    const missing = funnelData?.stages?.find(s => typeof s.stage_value === 'undefined');
+    if (missing) console.warn('ExecutionFunnel stages mutated; stage_value missing:', missing);
+  }
+
   // Debug: Log funnel data to verify values
   React.useEffect(() => {
     if (funnelData?.stages) {
       console.log('🔍 FUNNEL DATA:', {
         stages: funnelData.stages.map(s => ({ name: s.stage_name, value: s.stage_value })),
-        qhh: funnelData.stages[1]?.stage_value
+        qhh: funnelData.stages[1]?.stage_value,
+        premium: funnelData.stages[4]?.stage_value
       });
     }
   }, [funnelData]);

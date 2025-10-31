@@ -87,11 +87,15 @@ export const useExecutionFunnel = (
       // RPC returns single row: { dials, qhh, policies_sold, items_sold, lines_quoted, households_sold, premium_total }
       const row = data[0]
       
-      const dials = Number(row.dials) || 0
-      const qhh = Number(row.qhh) || 0
-      const households_sold = Number(row.households_sold) || 0
-      const items_sold = Number(row.items_sold) || 0
-      const premium = Number(row.premium_total) || 0
+      // Robust numeric coercion
+      const toNum = (v: unknown) =>
+        v == null ? 0 : (typeof v === 'number' ? v : parseFloat(String(v)));
+      
+      const dials = toNum(row.dials)
+      const qhh = toNum(row.qhh)
+      const households_sold = toNum(row.households_sold)
+      const items_sold = toNum(row.items_sold)
+      const premium = toNum(row.premium_total)
 
       // Calculate conversion rates
       const dialToQhh = dials > 0 ? (qhh / dials * 100) : 0
@@ -143,7 +147,12 @@ export const useExecutionFunnel = (
         }
       ]
 
-      return { 
+      // Dev guard: catch accidental mutation of query data
+      if (process.env.NODE_ENV !== 'production') {
+        stages.forEach(Object.freeze);
+      }
+
+      return {
         stages, 
         qhh: qhh 
       }
