@@ -36,17 +36,18 @@ export const useProducerExecutionLeaderboard = (
       console.log('🎯 Source filter:', sourceId || 'All sources');
       console.log('📊 Thresholds - Dials:', minDials, 'QHH:', minQHH, 'SHH:', minSHH);
       
-      console.log('[LEADERBOARD] Calling RPC with params:', {
+      const rpcParams = {
         from_date: fromDate,
         to_date: toDate,
         source_filter: sourceId,
         min_dials: minDials,
         min_qhh: minQHH,
         min_shh: minSHH,
-        min_pair_qhh: 30,
-        min_pair_shh: 10,
-        min_pair_dials: 200
-      });
+        min_pair_qhh: 10,
+        min_pair_shh: 0,
+        min_pair_dials: 100
+      };
+      console.log('[LEADERBOARD] Exact RPC params:', JSON.stringify(rpcParams, null, 2));
       
       const { data, error } = await supabase.rpc('get_producer_execution_leaderboard' as any, {
         from_date: fromDate,
@@ -55,10 +56,12 @@ export const useProducerExecutionLeaderboard = (
         min_dials: minDials,
         min_qhh: minQHH,
         min_shh: minSHH,
-        min_pair_qhh: 30,
-        min_pair_shh: 10,
-        min_pair_dials: 200
+        min_pair_qhh: 10,
+        min_pair_shh: 0,
+        min_pair_dials: 100
       }) as { data: any[] | null, error: any };
+
+      console.log('[LEADERBOARD] RPC response - data:', data, 'error:', error);
 
       if (error) {
         console.error('❌ Error fetching producer execution leaderboard:', error);
