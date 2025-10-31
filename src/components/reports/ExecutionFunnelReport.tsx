@@ -85,12 +85,13 @@ export const ExecutionFunnelReport: React.FC<ExecutionFunnelReportProps> = () =>
     const shh = funnelData.stages[2]?.stage_value || 0;  // Sales (Sold Households)
     const items = funnelData.stages[3]?.stage_value || 0; // Policies
     const premium = funnelData.stages[4]?.stage_value || 0;
+    const policies = funnelData?.policies_sold ?? 0;  // Actual policies sold count
     
     // Base metrics from funnel
     const baseMetrics = [
       { metric_name: 'Total Dials', metric_value: dials, metric_unit: 'dials' },
       { metric_name: 'Total QHH', metric_value: qhh, metric_unit: 'households' },
-      { metric_name: 'Total Sales', metric_value: shh, metric_unit: 'sales' },
+      { metric_name: 'Total Sales', metric_value: policies, metric_unit: 'sales' },
       { metric_name: 'Total Items', metric_value: items, metric_unit: 'items' },
       { metric_name: 'Total Premium', metric_value: premium, metric_unit: 'dollars' },
     ];
@@ -104,7 +105,7 @@ export const ExecutionFunnelReport: React.FC<ExecutionFunnelReportProps> = () =>
       },
       { 
         metric_name: 'Premium per Sale', 
-        metric_value: shh > 0 ? premium / shh : 0, 
+        metric_value: policies > 0 ? premium / policies : 0, 
         metric_unit: '$/sale' 
       },
       { 

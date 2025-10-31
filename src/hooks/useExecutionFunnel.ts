@@ -15,6 +15,7 @@ export interface ExecutionFunnelStage {
 export interface ExecutionFunnelData {
   stages: ExecutionFunnelStage[]
   qhh?: number
+  policies_sold?: number
 }
 
 export interface ExecutionBenchmark {
@@ -80,7 +81,8 @@ export const useExecutionFunnel = (
             { stage_number: 4, stage_name: 'Items', stage_value: 0, conversion_rate: 0, drop_off_count: 0, drop_off_rate: 0 },
             { stage_number: 5, stage_name: 'Premium', stage_value: 0, conversion_rate: 0, drop_off_count: 0, drop_off_rate: 0 }
           ],
-          qhh: 0 
+          qhh: 0,
+          policies_sold: 0
         }
       }
 
@@ -96,6 +98,7 @@ export const useExecutionFunnel = (
       const households_sold = toNum(row.households_sold)
       const items_sold = toNum(row.items_sold)
       const premium = toNum(row.premium_total)
+      const policies_sold = toNum(row.policies_sold)
 
       // Calculate conversion rates
       const dialToQhh = dials > 0 ? (qhh / dials * 100) : 0
@@ -154,7 +157,8 @@ export const useExecutionFunnel = (
 
       return {
         stages, 
-        qhh: qhh 
+        qhh: qhh,
+        policies_sold: policies_sold
       }
     },
     enabled: !!fromDate && !!toDate
