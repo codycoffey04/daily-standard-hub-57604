@@ -46,7 +46,14 @@ export const ExecutionFunnelReport: React.FC<ExecutionFunnelReportProps> = () =>
   // Fetch all data using RPC functions
   const { data: funnelData, isLoading: isFunnelLoading } = useExecutionFunnel(fromDateStr, toDateStr)
   const { data: benchmarks, isLoading: isBenchmarksLoading } = useExecutionBenchmarks(fromDateStr, toDateStr)
-  const { data: leaderboard, isLoading: isLeaderboardLoading } = useProducerExecutionLeaderboard(fromDateStr, toDateStr, sourceId)
+  const { data: leaderboard, isLoading: isLeaderboardLoading } = useProducerExecutionLeaderboard(
+    fromDateStr, 
+    toDateStr, 
+    sourceId,
+    0,  // minDials: 0 (show all producers)
+    0,  // minQHH: 0 (show all producers)
+    0   // minSHH: 0 (show all producers)
+  )
   const { data: producers, isLoading: isProducersLoading } = useProducersForExecution()
   const { data: sources, isLoading: isSourcesLoading } = useSourcesForSelection()
 
