@@ -8,10 +8,13 @@ function toNum(v: unknown, fallback = 0): number {
   return Number.isFinite(n) ? n : fallback;
 }
 
-// ACTUAL RPC RETURN: Aggregated totals per producer (NOT daily rows)
+// ACTUAL RPC RETURN: Daily rows per producer with date, dials, talk time, etc.
 export interface ProducerTrendData {
+  entry_date: string
   producer_id: string
   producer_name: string
+  outbound_dials: number
+  talk_minutes: number
   qhh: number
   policies_sold: number
   items_sold: number
@@ -37,11 +40,14 @@ export function useProducerTrends(
       
       // Map and coerce numeric fields
       const parsed = (data || []).map((row: any) => ({
+        entry_date: row.entry_date,
         producer_id: row.producer_id,
         producer_name: row.producer_name,
+        outbound_dials: toNum(row.outbound_dials),
+        talk_minutes: toNum(row.talk_minutes),
         qhh: toNum(row.qhh),
-        policies_sold: toNum(row.policies_sold),
-        items_sold: toNum(row.items_sold)
+        policies_sold: toNum(row.sold_items),
+        items_sold: toNum(row.items)
       }))
       
       console.log('[useProducerTrends] parsed:', parsed)

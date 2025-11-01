@@ -89,29 +89,42 @@ export default function YTDPerformanceReport({ selectedYear, selectedMonth }: YT
 
     const byProducer: Record<string, ProducerRollup> = {};
 
-    // Initialize structure for all producers in the data
-    for (const prodData of trendsData) {
-      if (byProducer[prodData.producer_id]) continue;
+    // Process ALL daily rows (not just the first one per producer)
+    for (const dailyRow of trendsData) {
+      // Initialize producer if not exists
+      if (!byProducer[dailyRow.producer_id]) {
+        byProducer[dailyRow.producer_id] = {
+          producerId: dailyRow.producer_id,
+          producerName: dailyRow.producer_name,
+          totals: zeroTotals(),
+          byMonth: months.reduce((acc, ym) => {
+            acc[ym] = zeroTotals();
+            return acc;
+          }, {} as Record<string, Totals>),
+        };
+      }
 
-      byProducer[prodData.producer_id] = {
-        producerId: prodData.producer_id,
-        producerName: prodData.producer_name,
-        totals: {
-          qhh: prodData.qhh,
-          items: prodData.items_sold,
-          sales: prodData.policies_sold,
-          dials: 0, // Not available in aggregated data
-          talk: 0   // Not available in aggregated data
-        },
-        byMonth: months.reduce((acc, ym) => {
-          acc[ym] = zeroTotals();
-          return acc;
-        }, {} as Record<string, Totals>),
-      };
+      const rollup = byProducer[dailyRow.producer_id];
+      
+      // Extract year-month from entry_date (format: "YYYY-MM-DD")
+      const ym = dailyRow.entry_date.substring(0, 7); // "2025-01-15" -> "2025-01"
+      
+      // Accumulate into totals
+      rollup.totals.qhh += dailyRow.qhh;
+      rollup.totals.items += dailyRow.items_sold;
+      rollup.totals.sales += dailyRow.policies_sold;
+      rollup.totals.dials += dailyRow.outbound_dials;
+      rollup.totals.talk += dailyRow.talk_minutes;
+      
+      // Accumulate into monthly breakdown
+      if (rollup.byMonth[ym]) {
+        rollup.byMonth[ym].qhh += dailyRow.qhh;
+        rollup.byMonth[ym].items += dailyRow.items_sold;
+        rollup.byMonth[ym].sales += dailyRow.policies_sold;
+        rollup.byMonth[ym].dials += dailyRow.outbound_dials;
+        rollup.byMonth[ym].talk += dailyRow.talk_minutes;
+      }
     }
-
-    // Note: Since get_producer_trends returns aggregated totals (no date breakdown),
-    // we can't populate byMonth. The chart will show flat lines or need different data source.
 
     // Return ordered by producer name
     return Object.values(byProducer).sort((a, b) =>
