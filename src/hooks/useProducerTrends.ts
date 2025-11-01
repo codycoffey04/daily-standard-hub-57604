@@ -36,9 +36,7 @@ export function useProducerTrends(
 
       if (error) throw error
       
-      console.log('[get_producer_trends] raw:', data)
-      
-      // Map and coerce numeric fields
+      // Map RPC results - sold_households now includes both QH and SFOQ
       const parsed = (data || []).map((row: any) => ({
         entry_date: row.entry_date ? String(row.entry_date) : '',
         producer_id: row.producer_id,
@@ -46,11 +44,9 @@ export function useProducerTrends(
         outbound_dials: toNum(row.outbound_dials),
         talk_minutes: toNum(row.talk_minutes),
         qhh: toNum(row.qhh),
-        policies_sold: toNum(row.sold_households),  // Count of households with sales (15)
-        items_sold: toNum(row.sold_items)           // Total items sold across all households (26)
+        policies_sold: toNum(row.sold_households),  // Now includes QH + SFOQ
+        items_sold: toNum(row.sold_items)
       }))
-      
-      console.log('[useProducerTrends] parsed:', parsed)
       
       return parsed
     },
