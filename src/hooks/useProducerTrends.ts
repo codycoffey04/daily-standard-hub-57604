@@ -8,18 +8,15 @@ function toNum(v: unknown, fallback = 0): number {
   return Number.isFinite(n) ? n : fallback;
 }
 
-// RPC return row type
+// RPC return row type (daily rows from get_producer_trends)
 type RpcRow = {
   producer_id?: string
   producer_name: string
   entry_date?: string
-  // Authoritative columns from get_producer_trends:
   sold_items?: number | string | null
   sold_households?: number | string | null
-  // Legacy fallback columns (for backward compatibility):
   items_sold?: number | string | null
   policies_sold?: number | string | null
-  // Other metrics we ignore for YTD:
   outbound_dials?: number | string | null
   talk_minutes?: number | string | null
   qhh?: number | string | null
@@ -42,7 +39,7 @@ export function useProducerTrends(
   toDate: string
 ) {
   return useQuery({
-    queryKey: ['producer-trends', producerIds?.join(',') ?? 'all', fromDate, toDate],
+    queryKey: ['producer-trends-agg', producerIds?.join(',') ?? 'all', fromDate, toDate],
     queryFn: async (): Promise<ProducerTrendsData> => {
       const { data, error } = await supabase.rpc('get_producer_trends' as any, {
         producer_ids: producerIds,
@@ -57,14 +54,16 @@ export function useProducerTrends(
 
       const rows: RpcRow[] = Array.isArray(data) ? data : []
 
-      // Aggregate by producer first (RPC returns daily rows)
+      console.log(`[YTD Debug] RPC returned ${rows.length} daily rows`)
+
+      // Aggregate daily rows by producer_name
       const producerMap = new Map<string, { name: string; items: number; households: number }>()
 
       for (const row of rows) {
-        const name = row.producer_name ?? 'Unknown'
+        // Trim producer name to avoid duplicates from whitespace
+        const name = (row.producer_name ?? 'Unknown').trim()
         
-        // Map from authoritative columns (sold_items, sold_households)
-        // with fallback to legacy names for backward compatibility
+        // Use authoritative columns with legacy fallback
         const items = toNum(row.sold_items ?? row.items_sold)
         const households = toNum(row.sold_households ?? row.policies_sold)
 
@@ -77,7 +76,9 @@ export function useProducerTrends(
         producer.households += households
       }
 
-      // Convert to array and sort by name
+      console.log(`[YTD Debug] Aggregated into ${producerMap.size} unique producers`)
+
+      // Convert to array and sort alphabetically
       const byProducer: ProducerTrendsByProducer[] = Array.from(producerMap.values())
         .map(p => ({
           producerName: p.name,
@@ -86,7 +87,7 @@ export function useProducerTrends(
         }))
         .sort((a, b) => a.producerName.localeCompare(b.producerName))
 
-      // Compute team totals from aggregated producers
+      // Compute totals from aggregated producers (not daily rows)
       const totals = byProducer.reduce(
         (acc, p) => {
           acc.items += p.items
@@ -96,13 +97,11 @@ export function useProducerTrends(
         { items: 0, households: 0 }
       )
 
-      if (process.env.NODE_ENV !== 'production') {
-        console.debug('[YTD Debug] get_producer_trends raw rows:', data)
-        console.debug('[YTD Debug] normalized byProducer:', byProducer)
-        console.debug('[YTD Debug] computed totals:', totals)
-      }
+      console.log('[YTD Debug] get_producer_trends raw rows:', data)
+      console.log('[YTD Debug] normalized byProducer:', byProducer)
+      console.log('[YTD Debug] computed totals:', totals)
 
-      // Freeze in dev to catch accidental mutations downstream
+      // Freeze in dev to catch accidental mutations
       if (process.env.NODE_ENV !== 'production') {
         Object.freeze(byProducer)
         Object.freeze(totals)
