@@ -81,6 +81,8 @@ export function useProducerTrends(
     // Bump key to invalidate any stale cache from prior implementations
     queryKey: ['producer-trends-ytd-v1', producerIds?.join(',') ?? 'all', fromDate, toDate],
     queryFn: async (): Promise<ProducerTrendsData> => {
+      console.log('[YTD HOOK] Called with fromDate:', fromDate, 'toDate:', toDate)
+      
       const { data, error } = await supabase.rpc('get_producer_trends' as any, {
         producer_ids: producerIds && producerIds.length ? producerIds : null,
         from_date: fromDate,
@@ -108,9 +110,9 @@ export function useProducerTrends(
       )
 
       if (process.env.NODE_ENV !== 'production') {
-        console.debug('[YTD Debug] daily row count:', dailyRows.length)
-        console.debug('[YTD Debug] aggregated byProducer:', byProducer)
-        console.debug('[YTD Debug] totals:', totals)
+        console.log('[YTD Debug] daily row count:', dailyRows.length)
+        console.log('[YTD Debug] aggregated byProducer:', byProducer)
+        console.log('[YTD Debug] totals:', totals)
       }
 
       // Freeze in dev to catch accidental mutation downstream
