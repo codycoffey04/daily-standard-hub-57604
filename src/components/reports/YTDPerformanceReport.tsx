@@ -1,66 +1,43 @@
-import * as React from "react";
-import { useMemo } from "react";
-import { Info, LineChart } from "lucide-react";
+import * as React from 'react'
+import { useMemo } from 'react'
+import { Info, LineChart } from 'lucide-react'
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Skeleton } from "@/components/ui/skeleton";
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
+import { Skeleton } from '@/components/ui/skeleton'
 
-import { useProducerTrends } from '@/hooks/useProducerTrends';
-import { today } from '@/lib/timezone';
-
-// YTD Report now focuses solely on Items Sold and Sales (Households)
-// Removed: qhh, dials, talk (those belong in Execution Dashboard)
+import { useProducerTrends } from '@/hooks/useProducerTrends'
+import { today } from '@/lib/timezone'
 
 interface YTDPerformanceReportProps {
   selectedYear: number
-  // selectedMonth removed - YTD always uses full year to date
 }
 
 export default function YTDPerformanceReport({ selectedYear }: YTDPerformanceReportProps) {
-  // Calculate YTD range: Jan 1 to Today (current year) or Dec 31 (past year)
+  // YTD range: Jan 1 → today (if current year) or Dec 31 (past year)
   const [fromDate, toDate] = useMemo(() => {
     const currentYear = new Date().getFullYear()
     const startDate = `${selectedYear}-01-01`
-    
+
     let endDate: string
     if (selectedYear === currentYear) {
       endDate = today()
-    } else if (selectedYear < currentYear) {
-      endDate = `${selectedYear}-12-31`
     } else {
       endDate = `${selectedYear}-12-31`
     }
-    
-    return [startDate, endDate]
-  }, [selectedYear]);
 
-  // Fetch producer trends - hook now returns pre-aggregated { byProducer, totals }
+    return [startDate, endDate]
+  }, [selectedYear])
+
+  // Fetch aggregated producer trends
   const { data: trends, isLoading, error: queryError } = useProducerTrends(
-    null, // null = all producers
+    null,            // null = all producers
     fromDate,
     toDate
-  );
+  )
 
-  // Use trends totals directly (no manual aggregation, no merging with funnel data)
+  // Use totals directly (no merging with any other sources)
   const trendsTotals = trends?.totals ?? { items: 0, households: 0 }
-
-  // Dev guard: catch pollution from execution funnel or other sources
-  if (process.env.NODE_ENV !== 'production' && trends) {
-    const forbiddenKeys = ['qhh', 'dials', 'talk', 'premium', 'policies_sold', 'items_sold']
-    const actualKeys = Object.keys(trendsTotals)
-    const hasForbidden = actualKeys.some(k => forbiddenKeys.includes(k))
-    
-    if (hasForbidden) {
-      console.error('[YTD Guard] trendsTotals polluted by non-trends keys:', actualKeys)
-      throw new Error('[YTD Guard] trendsTotals contains forbidden keys - check for object merges/spreads')
-    }
-    
-    console.debug('[YTD Debug] trendsTotals for display:', {
-      items: trendsTotals.items,
-      households: trendsTotals.households
-    })
-  }
 
   if (isLoading) {
     return (
@@ -80,16 +57,16 @@ export default function YTDPerformanceReport({ selectedYear }: YTDPerformanceRep
           </div>
         </CardContent>
       </Card>
-    );
+    )
   }
 
   if (queryError) {
     return (
       <Alert variant="destructive">
         <AlertTitle>Failed to load YTD Performance</AlertTitle>
-        <AlertDescription>{queryError.message}</AlertDescription>
+        <AlertDescription>{(queryError as Error).message}</AlertDescription>
       </Alert>
-    );
+    )
   }
 
   if (!trends || trends.byProducer.length === 0) {
@@ -101,7 +78,7 @@ export default function YTDPerformanceReport({ selectedYear }: YTDPerformanceRep
           No performance data found for {selectedYear}.
         </AlertDescription>
       </Alert>
-    );
+    )
   }
 
   return (
@@ -109,14 +86,12 @@ export default function YTDPerformanceReport({ selectedYear }: YTDPerformanceRep
       <CardHeader className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           <LineChart className="h-5 w-5 text-muted-foreground" />
-          <CardTitle>
-            YTD Sales Performance {selectedYear}
-          </CardTitle>
+          <CardTitle>YTD Sales Performance {selectedYear}</CardTitle>
         </div>
       </CardHeader>
 
       <CardContent className="space-y-6">
-        {/* Team Totals - Only Items and Households */}
+        {/* Team Totals - Items & Households */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <Card className="border-2 border-primary/20">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -139,12 +114,12 @@ export default function YTDPerformanceReport({ selectedYear }: YTDPerformanceRep
           </Card>
         </div>
 
-        {/* Per-Producer Breakdown */}
+        {/* Per-Producer Breakdown (aggregated) */}
         <div>
           <h3 className="text-sm font-medium mb-3">Performance by Producer</h3>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
             {trends.byProducer.map((producer) => (
-              <Card key={producer.producerName} className="border-dashed">
+              <Card key={producer.producerId ?? producer.producerName} className="border-dashed">
                 <CardHeader>
                   <CardTitle className="text-base">{producer.producerName}</CardTitle>
                 </CardHeader>
@@ -166,11 +141,11 @@ export default function YTDPerformanceReport({ selectedYear }: YTDPerformanceRep
         </div>
       </CardContent>
     </Card>
-  );
+  )
 }
 
-/* ---------- UI bits ---------- */
+/* ---------- UI helpers ---------- */
 
 function formatNumber(n: number) {
-  return new Intl.NumberFormat().format(n);
+  return new Intl.NumberFormat().format(n)
 }
