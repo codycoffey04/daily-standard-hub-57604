@@ -83,8 +83,8 @@ const ReportContent: React.FC<ReportContentProps> = ({
       return <CommonWeakPointsReport selectedYear={selectedYear} selectedMonth={selectedMonth} />
     case 'conversion-funnel':
       return <ExecutionFunnelReport selectedYear={selectedYear} selectedMonth={selectedMonth} />
-    case 'ytd-performance':
-      return <YTDPerformanceReport selectedYear={selectedYear} selectedMonth={selectedMonth} />
+      case 'ytd-performance':
+        return <YTDPerformanceReport selectedYear={selectedYear} />
     case 'zip-code-performance':
       return <ZipCodePerformanceReport selectedYear={selectedYear} selectedMonth={selectedMonth} />
     case 'coaching-effectiveness':

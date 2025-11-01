@@ -9,6 +9,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 import { supabase } from '@/integrations/supabase/client';
 import { useProducerTrends } from '@/hooks/useProducerTrends';
+import { today } from '@/lib/timezone';
 
 type MetricKey = "qhh" | "items" | "sales" | "dials" | "talk";
 
@@ -45,37 +46,61 @@ type ProducerRollup = {
 
 interface YTDPerformanceReportProps {
   selectedYear: number
-  selectedMonth: number | null
+  // selectedMonth removed - YTD always uses full year to date
 }
 
-export default function YTDPerformanceReport({ selectedYear, selectedMonth }: YTDPerformanceReportProps) {
+export default function YTDPerformanceReport({ selectedYear }: YTDPerformanceReportProps) {
   const [metric, setMetric] = useState<MetricKey>("qhh");
 
-  // Calculate YTD range based on selected year/month
+  // Calculate YTD range: Jan 1 to Today (current year) or Dec 31 (past year)
   const [fromYm, toYm, months] = useMemo(() => {
-    const startYm = `${selectedYear}-01` // Always start at January
+    const currentYear = new Date().getFullYear()
+    const currentMonth = new Date().getMonth() + 1 // 1-12
     
-    // If month is selected, end at that month; otherwise end at December
+    const startYm = `${selectedYear}-01`
+    
     let endYm: string
-    if (selectedMonth !== null) {
-      endYm = `${selectedYear}-${String(selectedMonth).padStart(2, '0')}`
-    } else {
+    let endMonth: number
+    
+    if (selectedYear === currentYear) {
+      // Current year: Use today's month
+      endYm = `${selectedYear}-${String(currentMonth).padStart(2, '0')}`
+      endMonth = currentMonth
+    } else if (selectedYear < currentYear) {
+      // Past year: Use December
       endYm = `${selectedYear}-12`
+      endMonth = 12
+    } else {
+      // Future year: Use December (shouldn't happen, but handle it)
+      endYm = `${selectedYear}-12`
+      endMonth = 12
     }
     
-    const monthsList = getMonthRange(startYm, endYm)
+    // Generate all months from Jan to end month
+    const monthsList: string[] = []
+    for (let m = 1; m <= endMonth; m++) {
+      monthsList.push(`${selectedYear}-${String(m).padStart(2, '0')}`)
+    }
     
     return [startYm, endYm, monthsList]
-  }, [selectedYear, selectedMonth])
+  }, [selectedYear])
 
   // Convert month range to date range for get_producer_trends
-  const fromDate = fromYm ? `${fromYm}-01` : '';
+  const fromDate = `${selectedYear}-01-01`;
   const toDate = useMemo(() => {
-    if (!toYm) return '';
-    const [year, month] = toYm.split('-').map(Number);
-    const lastDay = new Date(year, month, 0).getDate();
-    return `${toYm}-${String(lastDay).padStart(2, '0')}`;
-  }, [toYm]);
+    const currentYear = new Date().getFullYear()
+    
+    if (selectedYear === currentYear) {
+      // Current year: Use today's date
+      return today()
+    } else if (selectedYear < currentYear) {
+      // Past year: Use Dec 31
+      return `${selectedYear}-12-31`
+    } else {
+      // Future year: Use Dec 31
+      return `${selectedYear}-12-31`
+    }
+  }, [selectedYear]);
 
   // Fetch producer trends (daily data) and aggregate by month in TypeScript
   const { data: trendsData, isLoading, error: queryError } = useProducerTrends(
@@ -203,7 +228,7 @@ export default function YTDPerformanceReport({ selectedYear, selectedMonth }: YT
         <Info className="h-4 w-4" />
         <AlertTitle>No YTD data found</AlertTitle>
         <AlertDescription>
-          No performance data found for {selectedYear}{selectedMonth ? ` through ${ymLabel(toYm)}` : ''}.
+          No performance data found for {selectedYear}.
         </AlertDescription>
       </Alert>
     );
@@ -215,7 +240,7 @@ export default function YTDPerformanceReport({ selectedYear, selectedMonth }: YT
         <div className="flex items-center gap-2">
           <LineChart className="h-5 w-5 text-muted-foreground" />
           <CardTitle>
-            YTD Performance ({ymLabel(fromYm)}–{ymLabel(toYm)})
+            YTD Performance {selectedYear}
           </CardTitle>
         </div>
         <div className="flex items-center gap-2">

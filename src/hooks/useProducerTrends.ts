@@ -46,8 +46,8 @@ export function useProducerTrends(
         outbound_dials: toNum(row.outbound_dials),
         talk_minutes: toNum(row.talk_minutes),
         qhh: toNum(row.qhh),
-        policies_sold: toNum(row.sold_items),
-        items_sold: toNum(row.items)
+        policies_sold: toNum(row.sold_households),  // Count of households with sales (15)
+        items_sold: toNum(row.sold_items)           // Total items sold across all households (26)
       }))
       
       console.log('[useProducerTrends] parsed:', parsed)
