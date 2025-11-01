@@ -43,66 +43,30 @@ type ProducerRollup = {
   byMonth: Record<string, Totals>; // 'YYYY-MM' -> totals
 };
 
-export default function YTDPerformanceReport() {
-  // Auto-derived month window
-  const [fromYm, setFromYm] = useState<string | null>(null);
-  const [toYm, setToYm] = useState<string | null>(null);
-  const [months, setMonths] = useState<string[]>([]);
+interface YTDPerformanceReportProps {
+  selectedYear: number
+  selectedMonth: number | null
+}
 
+export default function YTDPerformanceReport({ selectedYear, selectedMonth }: YTDPerformanceReportProps) {
   const [metric, setMetric] = useState<MetricKey>("qhh");
 
-  // Fetch date range from daily_entries to determine YTD window
-  useEffect(() => {
-    let cancelled = false;
-
-    async function run() {
-      try {
-        // 0) Latest month in the dataset -> defines the active "YTD" year
-        const latestRes = await supabase
-          .from("daily_entries")
-          .select("entry_month")
-          .order("entry_month", { ascending: false })
-          .limit(1);
-        if (latestRes.error) throw latestRes.error;
-
-        const latestYm = latestRes.data?.[0]?.entry_month ?? null;
-        if (!latestYm) {
-          if (!cancelled) {
-            setFromYm(null);
-            setToYm(null);
-            setMonths([]);
-          }
-          return; // No data at all
-        }
-
-        const activeYear = latestYm.split("-")[0];
-
-        // 1) Earliest month in *that same year*
-        const earliestRes = await supabase
-          .from("daily_entries")
-          .select("entry_month")
-          .like("entry_month", `${activeYear}-%`)
-          .order("entry_month", { ascending: true })
-          .limit(1);
-        if (earliestRes.error) throw earliestRes.error;
-
-        const earliestYmInYear = earliestRes.data?.[0]?.entry_month ?? `${activeYear}-01`;
-
-        const MONTHS = getMonthRange(earliestYmInYear, latestYm);
-
-        if (!cancelled) {
-          setFromYm(earliestYmInYear);
-          setToYm(latestYm);
-          setMonths(MONTHS);
-        }
-      } catch (e: any) {
-        console.error('Error determining YTD date range:', e);
-      }
+  // Calculate YTD range based on selected year/month
+  const [fromYm, toYm, months] = useMemo(() => {
+    const startYm = `${selectedYear}-01` // Always start at January
+    
+    // If month is selected, end at that month; otherwise end at December
+    let endYm: string
+    if (selectedMonth !== null) {
+      endYm = `${selectedYear}-${String(selectedMonth).padStart(2, '0')}`
+    } else {
+      endYm = `${selectedYear}-12`
     }
-
-    run();
-    return () => { cancelled = true; };
-  }, []);
+    
+    const monthsList = getMonthRange(startYm, endYm)
+    
+    return [startYm, endYm, monthsList]
+  }, [selectedYear, selectedMonth])
 
   // Convert month range to date range for get_producer_trends
   const fromDate = fromYm ? `${fromYm}-01` : '';
@@ -208,13 +172,13 @@ export default function YTDPerformanceReport() {
     );
   }
 
-  if (!months.length || !rollups.length || !fromYm || !toYm) {
+  if (!rollups.length) {
     return (
       <Alert>
         <Info className="h-4 w-4" />
         <AlertTitle>No YTD data found</AlertTitle>
         <AlertDescription>
-          No daily entries found for the latest year with data.
+          No performance data found for {selectedYear}{selectedMonth ? ` through ${ymLabel(toYm)}` : ''}.
         </AlertDescription>
       </Alert>
     );
