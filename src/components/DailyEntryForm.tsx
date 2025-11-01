@@ -311,6 +311,7 @@ export const DailyEntryForm: React.FC<DailyEntryFormProps> = ({
           ...(sale.id && { id: sale.id }), // Include id if editing
           daily_entry_id: entryId,
           lead_source_id: sale.lead_source_id,
+          zip_code: sale.zip_code,
           items_sold: sale.items_sold,
           premium: sale.premium,
           notes: sale.notes || null,

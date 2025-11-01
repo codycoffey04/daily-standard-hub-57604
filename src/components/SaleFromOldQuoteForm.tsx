@@ -14,6 +14,7 @@ const STORAGE_KEY = 'salesFromOldQuotesFormData'
 export interface SaleFromOldQuote {
   id?: string
   lead_source_id: string
+  zip_code: string
   items_sold: number
   premium: number
   notes?: string | null
@@ -40,6 +41,7 @@ export const SaleFromOldQuoteForm: React.FC<SaleFromOldQuoteFormProps> = ({
   const [editingIndex, setEditingIndex] = useState<number | null>(null)
   const [formData, setFormData] = useState<SaleFromOldQuote>({
     lead_source_id: '',
+    zip_code: '',
     items_sold: 1,
     premium: 0,
     notes: ''
@@ -54,6 +56,7 @@ export const SaleFromOldQuoteForm: React.FC<SaleFromOldQuoteFormProps> = ({
         if (savedData) {
           const parsed = JSON.parse(savedData)
           if (parsed.lead_source_id) setFormData(prev => ({ ...prev, lead_source_id: parsed.lead_source_id }))
+          if (parsed.zip_code) setFormData(prev => ({ ...prev, zip_code: parsed.zip_code }))
           if (parsed.items_sold !== undefined) setFormData(prev => ({ ...prev, items_sold: parsed.items_sold }))
           if (parsed.premium !== undefined) setFormData(prev => ({ ...prev, premium: parsed.premium }))
           if (parsed.notes) setFormData(prev => ({ ...prev, notes: parsed.notes }))
@@ -74,6 +77,7 @@ export const SaleFromOldQuoteForm: React.FC<SaleFromOldQuoteFormProps> = ({
       try {
         const dataToSave = {
           lead_source_id: formData.lead_source_id,
+          zip_code: formData.zip_code,
           items_sold: formData.items_sold,
           premium: formData.premium,
           notes: formData.notes,
@@ -92,6 +96,7 @@ export const SaleFromOldQuoteForm: React.FC<SaleFromOldQuoteFormProps> = ({
       try {
         const dataToSave = {
           lead_source_id: formData.lead_source_id,
+          zip_code: formData.zip_code,
           items_sold: formData.items_sold,
           premium: formData.premium,
           notes: formData.notes,
@@ -136,6 +141,7 @@ export const SaleFromOldQuoteForm: React.FC<SaleFromOldQuoteFormProps> = ({
     
     setFormData({
       lead_source_id: '',
+      zip_code: '',
       items_sold: 1,
       premium: 0,
       notes: ''
@@ -150,6 +156,12 @@ export const SaleFromOldQuoteForm: React.FC<SaleFromOldQuoteFormProps> = ({
     
     if (!formData.lead_source_id) {
       newErrors.lead_source_id = 'Lead source is required'
+    }
+    
+    if (!formData.zip_code) {
+      newErrors.zip_code = 'ZIP code is required'
+    } else if (!/^\d{5}$/.test(formData.zip_code)) {
+      newErrors.zip_code = 'ZIP code must be exactly 5 digits'
     }
     
     if (!formData.items_sold || formData.items_sold < 1) {
@@ -255,6 +267,24 @@ export const SaleFromOldQuoteForm: React.FC<SaleFromOldQuoteFormProps> = ({
                   {errors.lead_source_id && <p className="text-sm text-destructive">{errors.lead_source_id}</p>}
                 </div>
 
+                {/* ZIP Code */}
+                <div className="space-y-2">
+                  <Label htmlFor="old-zip-code">ZIP Code *</Label>
+                  <Input
+                    id="old-zip-code"
+                    type="text"
+                    maxLength={5}
+                    placeholder="12345"
+                    value={formData.zip_code}
+                    onChange={(e) => {
+                      const value = e.target.value.replace(/\D/g, '')
+                      setFormData(prev => ({ ...prev, zip_code: value }))
+                    }}
+                    onFocus={(e) => e.target.select()}
+                  />
+                  {errors.zip_code && <p className="text-sm text-destructive">{errors.zip_code}</p>}
+                </div>
+
                 {/* Items Sold */}
                 <div className="space-y-2">
                   <Label htmlFor="old-items-sold">Items Sold *</Label>
@@ -324,6 +354,7 @@ export const SaleFromOldQuoteForm: React.FC<SaleFromOldQuoteFormProps> = ({
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-1">
                       <Badge variant="secondary">{source?.name || 'Unknown Source'}</Badge>
+                      <Badge variant="outline">{sale.zip_code}</Badge>
                       <span className="text-sm font-medium">{sale.items_sold} items</span>
                       <span className="text-sm text-muted-foreground">•</span>
                       <span className="text-sm flex items-center">
