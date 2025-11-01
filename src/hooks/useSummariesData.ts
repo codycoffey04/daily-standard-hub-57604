@@ -612,9 +612,9 @@ export function useSalesByProducer(year: number, month: number | null) {
         const existing = producerMap.get(row.producer_id)
         if (existing) {
           existing.days_worked++
-          existing.days_top += (row.framework_status === 'top' ? 1 : 0)
-          existing.days_bottom += (row.framework_status === 'bottom' ? 1 : 0)
-          existing.days_outside += (row.framework_status === 'outside' ? 1 : 0)
+          existing.days_top += (row.days_top || 0)
+          existing.days_bottom += (row.days_bottom || 0)
+          existing.days_outside += (row.days_outside || 0)
           existing.total_qhh += row.qhh || 0
           existing.total_quotes += row.quotes || 0
           existing.total_items += row.items || 0
@@ -625,9 +625,9 @@ export function useSalesByProducer(year: number, month: number | null) {
             producer_id: row.producer_id,
             producer_name: row.producer_name,
             days_worked: 1,
-            days_top: row.framework_status === 'top' ? 1 : 0,
-            days_bottom: row.framework_status === 'bottom' ? 1 : 0,
-            days_outside: row.framework_status === 'outside' ? 1 : 0,
+            days_top: row.days_top || 0,
+            days_bottom: row.days_bottom || 0,
+            days_outside: row.days_outside || 0,
             total_qhh: row.qhh || 0,
             total_quotes: row.quotes || 0,
             total_items: row.items || 0,
@@ -651,13 +651,13 @@ export function useSalesByProducer(year: number, month: number | null) {
           const existing = prevMap.get(row.producer_id)
           if (existing) {
             existing.days_worked++
-            existing.days_top += (row.framework_status === 'top' ? 1 : 0)
+            existing.days_top += (row.days_top || 0)
             existing.total_items += row.items || 0
             existing.total_sold_items += row.sold_items || 0
           } else {
             prevMap.set(row.producer_id, {
               days_worked: 1,
-              days_top: row.framework_status === 'top' ? 1 : 0,
+              days_top: row.days_top || 0,
               framework_compliance_pct: 0, // Will be calculated
               total_items: row.items || 0,
               total_sold_items: row.sold_items || 0
