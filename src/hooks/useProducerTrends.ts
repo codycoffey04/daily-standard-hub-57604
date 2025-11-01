@@ -89,18 +89,18 @@ export function useProducerTrends(
 
   const queryResult = useQuery({
     // Bump key to invalidate any stale cache from prior implementations
-    queryKey: ['producer-trends-ytd-v3', producerIds?.join(',') ?? 'all', fromDate, toDate],
+    queryKey: ['producer-trends-ytd-v4', producerIds?.join(',') ?? 'all', fromDate, toDate],
     queryFn: async (): Promise<ProducerTrendsData> => {
       console.log('[YTD HOOK] Called with fromDate:', fromDate, 'toDate:', toDate)
       
-      const { data, error } = await supabase.rpc('get_producer_trends_v2' as any, {
-        producer_ids: producerIds && producerIds.length ? producerIds : null,
+      const { data, error } = await supabase.rpc('get_producer_trends_v3' as any, {
         from_date: fromDate,
         to_date: toDate,
+        producer_ids: producerIds && producerIds.length ? producerIds : null,
       })
 
       if (error) {
-        console.error('❌ get_producer_trends_v2 RPC error:', error)
+        console.error('❌ get_producer_trends_v3 RPC error:', error)
         throw error
       }
 
@@ -158,7 +158,7 @@ export function useProducerTrends(
     enabled: !!(fromDate && toDate),
     fromDate,
     toDate,
-    queryKey: ['producer-trends-ytd-v3', producerIds?.join(',') ?? 'all', fromDate, toDate],
+    queryKey: ['producer-trends-ytd-v4', producerIds?.join(',') ?? 'all', fromDate, toDate],
     dataExists: !!queryResult.data
   })
 
