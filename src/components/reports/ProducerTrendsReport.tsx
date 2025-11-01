@@ -61,21 +61,19 @@ export const ProducerTrendsReport: React.FC<ProducerTrendsReportProps> = () => {
   }
 
   const summaryStats = useMemo(() => {
-    if (!trendsData || trendsData.length === 0) return null
+    if (!trendsData || trendsData.byProducer.length === 0) return null
 
-    const uniqueProducers = trendsData.length
-    const totalQHH = trendsData.reduce((sum, d) => sum + (d.qhh || 0), 0)
-    const totalPolicies = trendsData.reduce((sum, d) => sum + (d.policies_sold || 0), 0)
-    const totalItems = trendsData.reduce((sum, d) => sum + (d.items_sold || 0), 0)
-    const avgQHH = trendsData.length > 0 ? totalQHH / trendsData.length : 0
-    const avgPolicies = trendsData.length > 0 ? totalPolicies / trendsData.length : 0
+    const uniqueProducers = trendsData.byProducer.length
+    const totalItems = trendsData.totals.items
+    const totalPolicies = trendsData.totals.households
+    const avgItems = trendsData.byProducer.length > 0 ? totalItems / trendsData.byProducer.length : 0
+    const avgPolicies = trendsData.byProducer.length > 0 ? totalPolicies / trendsData.byProducer.length : 0
 
     return {
       uniqueProducers,
-      totalQHH,
       totalPolicies,
       totalItems,
-      avgQHH,
+      avgItems,
       avgPolicies
     }
   }, [trendsData])
@@ -169,7 +167,7 @@ export const ProducerTrendsReport: React.FC<ProducerTrendsReportProps> = () => {
 
       {/* Summary Cards */}
       {summaryStats && (
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">Producers Tracked</CardTitle>
@@ -181,17 +179,7 @@ export const ProducerTrendsReport: React.FC<ProducerTrendsReportProps> = () => {
           
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Total QHH</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{formatNumber(summaryStats.totalQHH)}</div>
-              <p className="text-xs text-muted-foreground mt-1">Avg: {summaryStats.avgQHH.toFixed(1)}/day</p>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Total Policies Sold</CardTitle>
+              <CardTitle className="text-sm font-medium text-muted-foreground">Total Policies Sold (HH)</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{formatNumber(summaryStats.totalPolicies)}</div>
@@ -215,11 +203,11 @@ export const ProducerTrendsReport: React.FC<ProducerTrendsReportProps> = () => {
         <CardHeader>
           <CardTitle>Producer Performance Summary</CardTitle>
           <p className="text-sm text-muted-foreground">
-            Aggregated totals for {trendsData?.length || 0} producers from {formatCTDate(dateFrom)} to {formatCTDate(dateTo)}
+            Aggregated totals for {trendsData?.byProducer.length || 0} producers from {formatCTDate(dateFrom)} to {formatCTDate(dateTo)}
           </p>
         </CardHeader>
         <CardContent>
-          {!trendsData || trendsData.length === 0 ? (
+          {!trendsData || trendsData.byProducer.length === 0 ? (
             <EmptyState 
               message="No data for selected period"
               suggestion="Try selecting a different date range or producer"
@@ -230,21 +218,19 @@ export const ProducerTrendsReport: React.FC<ProducerTrendsReportProps> = () => {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Producer</TableHead>
-                    <TableHead className="text-right">QHH</TableHead>
-                    <TableHead className="text-right">Policies Sold</TableHead>
+                    <TableHead className="text-right">Policies Sold (HH)</TableHead>
                     <TableHead className="text-right">Items Sold</TableHead>
                     <TableHead className="text-right">Attach Rate</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {trendsData.map((row) => (
-                    <TableRow key={row.producer_id}>
-                      <TableCell className="font-medium">{row.producer_name}</TableCell>
-                      <TableCell className="text-right">{formatNumber(row.qhh)}</TableCell>
-                      <TableCell className="text-right">{formatNumber(row.policies_sold)}</TableCell>
-                      <TableCell className="text-right">{formatNumber(row.items_sold)}</TableCell>
+                  {trendsData.byProducer.map((producer) => (
+                    <TableRow key={producer.producerName}>
+                      <TableCell className="font-medium">{producer.producerName}</TableCell>
+                      <TableCell className="text-right">{formatNumber(producer.households)}</TableCell>
+                      <TableCell className="text-right">{formatNumber(producer.items)}</TableCell>
                       <TableCell className="text-right">
-                        {row.policies_sold > 0 ? (row.items_sold / row.policies_sold).toFixed(2) : '0.00'}
+                        {producer.households > 0 ? (producer.items / producer.households).toFixed(2) : '0.00'}
                       </TableCell>
                     </TableRow>
                   ))}
