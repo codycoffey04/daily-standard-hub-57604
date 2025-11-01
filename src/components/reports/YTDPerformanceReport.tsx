@@ -14,8 +14,6 @@ interface YTDPerformanceReportProps {
 }
 
 export default function YTDPerformanceReport({ selectedYear }: YTDPerformanceReportProps) {
-  console.log('[YTD] COMPONENT RENDERING - selectedYear:', selectedYear)
-  
   // YTD range: Jan 1 → today (if current year) or Dec 31 (past year)
   const [fromDate, toDate] = useMemo(() => {
     const currentYear = new Date().getFullYear()

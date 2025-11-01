@@ -77,22 +77,10 @@ export function useProducerTrends(
   fromDate: string,
   toDate: string
 ) {
-  // Debug: Log hook invocation
-  console.log('[YTD HOOK] useProducerTrends called with:', {
-    producerIds,
-    fromDate,
-    toDate,
-    fromDateTruthy: !!fromDate,
-    toDateTruthy: !!toDate,
-    willEnable: !!(fromDate && toDate)
-  })
-
   const queryResult = useQuery({
     // Bump key to invalidate any stale cache from prior implementations
     queryKey: ['producer-trends-ytd-v4', producerIds?.join(',') ?? 'all', fromDate, toDate],
     queryFn: async (): Promise<ProducerTrendsData> => {
-      console.log('[YTD HOOK] Called with fromDate:', fromDate, 'toDate:', toDate)
-      
       const { data, error } = await supabase.rpc('get_producer_trends_v3' as any, {
         from_date: fromDate,
         to_date: toDate,
@@ -106,19 +94,10 @@ export function useProducerTrends(
 
       const dailyRows: RpcDailyRow[] = Array.isArray(data) ? data : []
 
-      // DEBUG: Log all daily rows for Maria
-      const mariaRows = dailyRows.filter(r => r.producer_name?.toLowerCase().includes('maria'))
-      console.log('[YTD] Maria daily rows count:', mariaRows.length)
-      console.log('[YTD] Maria sold_households per day:', mariaRows.map(r => ({
-        date: (r as any).entry_date,
-        households: r.sold_households,
-        items: r.sold_items
-      })))
-
-      // ✅ Aggregate per producer
+      // Aggregate per producer
       const byProducer = aggregateByProducer(dailyRows)
 
-      // ✅ Team totals from aggregated rows
+      // Team totals from aggregated rows
       const totals = byProducer.reduce(
         (acc, r) => {
           acc.items += r.items
@@ -127,16 +106,6 @@ export function useProducerTrends(
         },
         { items: 0, households: 0 }
       )
-
-      // Always log aggregation results for debugging
-      console.log('[YTD] Aggregated byProducer:', byProducer)
-      console.log('[YTD] Computed totals:', totals)
-
-      if (process.env.NODE_ENV !== 'production') {
-        console.log('[YTD Debug] daily row count:', dailyRows.length)
-        console.log('[YTD Debug] aggregated byProducer:', byProducer)
-        console.log('[YTD Debug] totals:', totals)
-      }
 
       // Freeze in dev to catch accidental mutation downstream
       if (process.env.NODE_ENV !== 'production') {
@@ -147,19 +116,6 @@ export function useProducerTrends(
       return { byProducer, totals }
     },
     enabled: !!fromDate && !!toDate,
-  })
-
-  // Debug: Log query state
-  console.log('[YTD HOOK] Query result state:', {
-    isLoading: queryResult.isLoading,
-    isFetching: queryResult.isFetching,
-    isError: queryResult.isError,
-    isSuccess: queryResult.isSuccess,
-    enabled: !!(fromDate && toDate),
-    fromDate,
-    toDate,
-    queryKey: ['producer-trends-ytd-v4', producerIds?.join(',') ?? 'all', fromDate, toDate],
-    dataExists: !!queryResult.data
   })
 
   return queryResult
