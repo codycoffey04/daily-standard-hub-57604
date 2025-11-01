@@ -7,6 +7,16 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import { toast } from '@/hooks/use-toast'
 import { Calendar, Lock, Save } from 'lucide-react'
 import { useSourcesForSelection, type Source } from '@/hooks/useSourcesForSelection'
@@ -36,6 +46,7 @@ export const DailyEntryForm: React.FC<DailyEntryFormProps> = ({
   const [validationError, setValidationError] = useState('')
   const [quotedHouseholds, setQuotedHouseholds] = useState<QuotedHousehold[]>([])
   const [salesFromOldQuotes, setSalesFromOldQuotes] = useState<SaleFromOldQuote[]>([])
+  const [deletingSaleIndex, setDeletingSaleIndex] = useState<number | null>(null)
 
   // Load all sources (including inactive) with proper "Other" sorting
   const { data: sources = [], isLoading: sourcesLoading } = useSourcesForSelection()
@@ -396,7 +407,58 @@ export const DailyEntryForm: React.FC<DailyEntryFormProps> = ({
   }
 
   const handleDeleteSaleFromOldQuote = (index: number) => {
-    setSalesFromOldQuotes(prev => prev.filter((_, i) => i !== index))
+    setDeletingSaleIndex(index) // Trigger confirmation dialog
+  }
+
+  const confirmDeleteSaleFromOldQuote = async () => {
+    if (deletingSaleIndex === null) return
+    
+    const saleToDelete = salesFromOldQuotes[deletingSaleIndex]
+    
+    // If sale has an ID, it's already saved to database - DELETE it
+    if (saleToDelete.id && existingEntry) {
+      try {
+        // 1. Delete from sales_from_old_quotes table
+        const { error: deleteError } = await (supabase as any)
+          .from('sales_from_old_quotes')
+          .delete()
+          .eq('id', saleToDelete.id)
+        
+        if (deleteError) throw deleteError
+        
+        // 2. Recalculate sales_total for the parent daily_entry
+        const remainingSales = salesFromOldQuotes.filter((_, i) => i !== deletingSaleIndex)
+        const newSalesTotal = salesMade - saleToDelete.items_sold
+        
+        const { error: updateError } = await supabase
+          .from('daily_entries')
+          .update({ sales_total: newSalesTotal })
+          .eq('id', existingEntry.id)
+        
+        if (updateError) throw updateError
+        
+        // 3. Update local state
+        setSalesFromOldQuotes(remainingSales)
+        setSalesMade(newSalesTotal)
+        
+        toast({
+          title: "Sale deleted",
+          description: "The sale has been removed from the database.",
+        })
+      } catch (error) {
+        console.error('Error deleting sale from old quote:', error)
+        toast({
+          title: "Error",
+          description: "Failed to delete the sale. Please try again.",
+          variant: "destructive"
+        })
+      }
+    } else {
+      // Sale not yet saved to database - just remove from local state
+      setSalesFromOldQuotes(prev => prev.filter((_, i) => i !== deletingSaleIndex))
+    }
+    
+    setDeletingSaleIndex(null)
   }
 
   return (
@@ -577,6 +639,35 @@ export const DailyEntryForm: React.FC<DailyEntryFormProps> = ({
               {loading ? 'Saving...' : 'Save Entry'}
             </Button>
           )}
+
+          {/* Delete Sale Confirmation Dialog */}
+          <AlertDialog 
+            open={deletingSaleIndex !== null} 
+            onOpenChange={(open) => !open && setDeletingSaleIndex(null)}
+          >
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Delete this sale?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  This will permanently remove the sale from old quotes. This action cannot be undone.
+                  {salesFromOldQuotes[deletingSaleIndex ?? -1]?.id && (
+                    <span className="block mt-2 font-semibold text-foreground">
+                      This sale is already saved and will be deleted from the database.
+                    </span>
+                  )}
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction 
+                  onClick={confirmDeleteSaleFromOldQuote}
+                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                >
+                  Delete
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </form>
       </CardContent>
     </Card>
