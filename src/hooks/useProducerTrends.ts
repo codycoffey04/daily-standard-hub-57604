@@ -96,6 +96,15 @@ export function useProducerTrends(
 
       const dailyRows: RpcDailyRow[] = Array.isArray(data) ? data : []
 
+      // DEBUG: Log all daily rows for Maria
+      const mariaRows = dailyRows.filter(r => r.producer_name?.toLowerCase().includes('maria'))
+      console.log('[YTD] Maria daily rows count:', mariaRows.length)
+      console.log('[YTD] Maria sold_households per day:', mariaRows.map(r => ({
+        date: (r as any).entry_date,
+        households: r.sold_households,
+        items: r.sold_items
+      })))
+
       // ✅ Aggregate per producer
       const byProducer = aggregateByProducer(dailyRows)
 
