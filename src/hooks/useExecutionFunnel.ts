@@ -16,6 +16,7 @@ export interface ExecutionFunnelData {
   stages: ExecutionFunnelStage[]
   qhh?: number
   policies_sold?: number
+  items_sold?: number
 }
 
 export interface ExecutionBenchmark {
@@ -158,7 +159,8 @@ export const useExecutionFunnel = (
       return {
         stages, 
         qhh: qhh,
-        policies_sold: policies_sold
+        policies_sold: policies_sold,
+        items_sold: items_sold
       }
     },
     enabled: !!fromDate && !!toDate

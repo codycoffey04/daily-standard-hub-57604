@@ -90,7 +90,7 @@ export const ExecutionFunnelReport: React.FC<ExecutionFunnelReportProps> = () =>
     const dials = funnelData.stages[0]?.stage_value || 0;
     const qhh = funnelData.stages[1]?.stage_value || 0;
     const policies = funnelData?.policies_sold ?? 0;  // Policies sold (for Sales stage)
-    const items = funnelData.stages[3]?.stage_value || 0; // Items sold
+    const items = funnelData?.items_sold ?? 0; // Items sold - using direct field from RPC
     const premium = funnelData.stages[4]?.stage_value || 0;
     const shh = funnelData.stages[2]?.stage_value || 0;  // Households sold (keep for calculations)
     
