@@ -91,6 +91,12 @@ export default function YTDPerformanceReport({ selectedYear, selectedMonth }: YT
 
     // Process ALL daily rows (not just the first one per producer)
     for (const dailyRow of trendsData) {
+      // Skip rows with missing required fields
+      if (!dailyRow.producer_id || !dailyRow.entry_date) {
+        console.warn('[YTDPerformanceReport] Skipping row with missing data:', dailyRow);
+        continue;
+      }
+
       // Initialize producer if not exists
       if (!byProducer[dailyRow.producer_id]) {
         byProducer[dailyRow.producer_id] = {
@@ -107,7 +113,13 @@ export default function YTDPerformanceReport({ selectedYear, selectedMonth }: YT
       const rollup = byProducer[dailyRow.producer_id];
       
       // Extract year-month from entry_date (format: "YYYY-MM-DD")
-      const ym = dailyRow.entry_date.substring(0, 7); // "2025-01-15" -> "2025-01"
+      const ym = dailyRow.entry_date?.substring(0, 7);
+
+      // Skip rows with invalid dates
+      if (!ym || !months.includes(ym)) {
+        console.warn('[YTDPerformanceReport] Skipping row with invalid date:', dailyRow);
+        continue;
+      }
       
       // Accumulate into totals
       rollup.totals.qhh += dailyRow.qhh;

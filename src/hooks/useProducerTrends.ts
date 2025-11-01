@@ -40,7 +40,7 @@ export function useProducerTrends(
       
       // Map and coerce numeric fields
       const parsed = (data || []).map((row: any) => ({
-        entry_date: row.entry_date,
+        entry_date: row.entry_date ? String(row.entry_date) : '',
         producer_id: row.producer_id,
         producer_name: row.producer_name,
         outbound_dials: toNum(row.outbound_dials),
