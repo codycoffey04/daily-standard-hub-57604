@@ -89,7 +89,7 @@ export function useProducerTrends(
 
   const queryResult = useQuery({
     // Bump key to invalidate any stale cache from prior implementations
-    queryKey: ['producer-trends-ytd-v2', producerIds?.join(',') ?? 'all', fromDate, toDate],
+    queryKey: ['producer-trends-ytd-v3', producerIds?.join(',') ?? 'all', fromDate, toDate],
     queryFn: async (): Promise<ProducerTrendsData> => {
       console.log('[YTD HOOK] Called with fromDate:', fromDate, 'toDate:', toDate)
       
@@ -158,7 +158,7 @@ export function useProducerTrends(
     enabled: !!(fromDate && toDate),
     fromDate,
     toDate,
-    queryKey: ['producer-trends-ytd-v2', producerIds?.join(',') ?? 'all', fromDate, toDate],
+    queryKey: ['producer-trends-ytd-v3', producerIds?.join(',') ?? 'all', fromDate, toDate],
     dataExists: !!queryResult.data
   })
 
