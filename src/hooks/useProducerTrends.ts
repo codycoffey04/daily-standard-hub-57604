@@ -109,6 +109,10 @@ export function useProducerTrends(
         { items: 0, households: 0 }
       )
 
+      // Always log aggregation results for debugging
+      console.log('[YTD] Aggregated byProducer:', byProducer)
+      console.log('[YTD] Computed totals:', totals)
+
       if (process.env.NODE_ENV !== 'production') {
         console.log('[YTD Debug] daily row count:', dailyRows.length)
         console.log('[YTD Debug] aggregated byProducer:', byProducer)
