@@ -83,14 +83,14 @@ export function useProducerTrends(
     queryFn: async (): Promise<ProducerTrendsData> => {
       console.log('[YTD HOOK] Called with fromDate:', fromDate, 'toDate:', toDate)
       
-      const { data, error } = await supabase.rpc('get_producer_trends' as any, {
+      const { data, error } = await supabase.rpc('get_producer_trends_v2' as any, {
         producer_ids: producerIds && producerIds.length ? producerIds : null,
         from_date: fromDate,
         to_date: toDate,
       })
 
       if (error) {
-        console.error('❌ get_producer_trends RPC error:', error)
+        console.error('❌ get_producer_trends_v2 RPC error:', error)
         throw error
       }
 
