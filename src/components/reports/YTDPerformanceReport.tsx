@@ -109,6 +109,32 @@ export default function YTDPerformanceReport({ selectedYear }: YTDPerformanceRep
     toDate
   );
 
+  // Debug: Log raw data from RPC
+  useEffect(() => {
+    if (trendsData) {
+      console.log('[YTD Debug] Raw trendsData from RPC:', trendsData);
+      console.log('[YTD Debug] Total rows:', trendsData.length);
+      
+      // Group by producer to see daily breakdown
+      const byProducer = trendsData.reduce((acc, row) => {
+        if (!acc[row.producer_name]) acc[row.producer_name] = [];
+        acc[row.producer_name].push({
+          date: row.entry_date,
+          policies: row.policies_sold,
+          items: row.items_sold
+        });
+        return acc;
+      }, {} as Record<string, any[]>);
+      
+      console.log('[YTD Debug] Grouped by producer:', byProducer);
+      
+      // Calculate expected totals
+      const expectedSales = trendsData.reduce((sum, row) => sum + row.policies_sold, 0);
+      const expectedItems = trendsData.reduce((sum, row) => sum + row.items_sold, 0);
+      console.log('[YTD Debug] Expected totals - Sales:', expectedSales, 'Items:', expectedItems);
+    }
+  }, [trendsData]);
+
   const rollups = useMemo<ProducerRollup[]>(() => {
     if (!trendsData || !months.length) return [];
 
@@ -178,6 +204,15 @@ export default function YTDPerformanceReport({ selectedYear }: YTDPerformanceRep
       t.dials += r.totals.dials;
       t.talk += r.totals.talk;
     }
+    
+    // Debug: Log aggregated totals before display
+    console.log('[YTD Debug] teamTotals being displayed:', t);
+    console.log('[YTD Debug] Rollups detail:', rollups.map(r => ({
+      name: r.producerName,
+      sales: r.totals.sales,
+      items: r.totals.items
+    })));
+    
     return t;
   }, [rollups]);
 
