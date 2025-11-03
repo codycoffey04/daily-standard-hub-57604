@@ -677,7 +677,7 @@ export const QuotedHouseholdForm: React.FC<QuotedHouseholdFormProps> = ({
         </div>
       )}
 
-      {totalQHH > 0 && quotedHouseholds.length === 0 && (
+      {totalQHH > 0 && totalQHH < 9999 && quotedHouseholds.length === 0 && (
         <div className="text-center py-8 text-muted-foreground">
           <p>No quoted households entered yet.</p>
           <p className="text-sm">You need to enter {totalQHH} QHH details to match your source totals.</p>
