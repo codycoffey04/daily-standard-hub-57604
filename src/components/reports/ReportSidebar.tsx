@@ -57,7 +57,7 @@ export const ReportSidebar: React.FC<ReportSidebarProps> = ({
     return () => {
       mounted = false
     }
-  }, [profile]) // Added profile dependency
+  }, []) // Empty deps - only run once on mount
 
   // Filter categories based on role - hide Lead Source Analysis from managers and sales_service
   const visibleCategories = reportCategories.filter(category => {

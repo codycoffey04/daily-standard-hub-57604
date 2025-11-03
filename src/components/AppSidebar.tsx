@@ -104,7 +104,7 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({ collapsed, onToggle }) =
     return () => {
       mounted = false
     }
-  }, [profile]) // Added profile dependency
+  }, []) // Empty deps - only run once on mount
 
   const visibleItems = navigationItems.filter(item => {
     // Use server roles if available
