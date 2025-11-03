@@ -19,6 +19,7 @@ import SourcesPage from "./pages/SourcesPage";
 import SummariesPage from "./pages/SummariesPage";
 import ImporterPage from "./pages/ImporterPage";
 import { AccountabilityReviewsPage } from "./pages/AccountabilityReviewsPage";
+import SalesServicePage from "./pages/SalesServicePage";
 import { AdminReviewsPage } from "./pages/AdminReviewsPage";
 import NotFound from "./pages/NotFound";
 
@@ -55,6 +56,16 @@ const App = () => (
                     <ProtectedRoute>
                       <AppLayout>
                         <HomePage />
+                      </AppLayout>
+                    </ProtectedRoute>
+                  } 
+                />
+                <Route 
+                  path="/sales-service" 
+                  element={
+                    <ProtectedRoute requiresRoles={['sales_service']}>
+                      <AppLayout>
+                        <SalesServicePage />
                       </AppLayout>
                     </ProtectedRoute>
                   } 

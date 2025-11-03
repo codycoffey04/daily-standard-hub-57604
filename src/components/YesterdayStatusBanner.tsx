@@ -1,4 +1,5 @@
 import React from 'react'
+import { useAuth } from '@/contexts/AuthContext'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { CheckCircle, AlertTriangle, XCircle, TrendingUp } from 'lucide-react'
@@ -21,6 +22,11 @@ export const YesterdayStatusBanner: React.FC<YesterdayStatusBannerProps> = ({
   status, 
   className 
 }) => {
+  const { profile } = useAuth()
+  if (profile?.role === 'sales_service') {
+    return null
+  }
+
   const getStatusConfig = (frameworkStatus: string) => {
     switch (frameworkStatus) {
       case 'Top':

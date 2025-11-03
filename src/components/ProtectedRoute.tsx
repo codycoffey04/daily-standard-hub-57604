@@ -1,15 +1,18 @@
 import { useAuth } from '@/contexts/AuthContext'
 import { Navigate } from 'react-router-dom'
-import { isOwnerManager } from '@/lib/auth'
+import { getRedirectPath, isOwnerManager } from '@/lib/auth'
+import type { UserRole } from '@/lib/auth'
 
 interface ProtectedRouteProps {
   children: React.ReactNode
   requiresOwnerManager?: boolean
+  requiresRoles?: UserRole[]
 }
 
 export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ 
   children, 
-  requiresOwnerManager = false 
+  requiresOwnerManager = false,
+  requiresRoles
 }) => {
   const { user, profile, loading } = useAuth()
 
@@ -27,6 +30,10 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
 
   if (requiresOwnerManager && !isOwnerManager(profile)) {
     return <Navigate to="/producer" replace />
+  }
+
+  if (requiresRoles && !requiresRoles.includes(profile.role as UserRole)) {
+    return <Navigate to={getRedirectPath(profile)} replace />
   }
 
   return <>{children}</>
