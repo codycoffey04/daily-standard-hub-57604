@@ -34,18 +34,26 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
 
   // Phase 2: Evaluate roles via server; fallback to profile.role during transition
   React.useEffect(() => {
+    // Early exit if no auth data (prevents calls during sign out)
+    if (!user || !profile) {
+      setRolesReady(true)
+      setHasRequiredRoles(true)
+      return
+    }
+
     let mounted = true
     ;(async () => {
       try {
         await ensureRolesLoaded()
         const myRoles = await fetchMyRoles()
-        if (!mounted) return
+        if (!mounted) return // Check before any setState
 
         if (requiresOwnerManager) {
           // Check both server roles and legacy profile.role for safety
           const isMgrOwner =
             myRoles.has('manager') || myRoles.has('owner') || isOwnerManager(profile)
           if (!isMgrOwner) {
+            if (!mounted) return // Double check before setState
             setHasRequiredRoles(false)
             setRolesReady(true)
             return
@@ -56,14 +64,19 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
           // Check both server roles and legacy profile.role
           const okServer = requiresRoles.some(r => myRoles.has(r as any))
           const okProfile = requiresRoles.includes(profile.role as UserRole)
+          if (!mounted) return // Check before setState
           setHasRequiredRoles(okServer || okProfile)
         } else {
+          if (!mounted) return // Check before setState
           setHasRequiredRoles(true)
         }
+        if (!mounted) return // Check before setState
         setRolesReady(true)
       } catch (error) {
         // On error, degrade to profile-based checks
         console.error('Error checking roles:', error)
+        if (!mounted) return // CRITICAL: Check before setState in catch
+        
         if (requiresOwnerManager && !isOwnerManager(profile)) {
           setHasRequiredRoles(false)
         } else if (requiresRoles && requiresRoles.length > 0) {
@@ -77,7 +90,7 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     return () => {
       mounted = false
     }
-  }, [profile, requiresOwnerManager, requiresRoles])
+  }, [user, profile, requiresOwnerManager, requiresRoles]) // Added 'user' to deps
 
   if (!rolesReady || hasRequiredRoles === null) {
     return (

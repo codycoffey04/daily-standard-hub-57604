@@ -35,23 +35,29 @@ export const ReportSidebar: React.FC<ReportSidebarProps> = ({
   const [hasSalesService, setHasSalesService] = React.useState<boolean | null>(null)
   
   React.useEffect(() => {
+    // Early exit if no profile (prevents calls during sign out)
+    if (!profile) {
+      setHasSalesService(null)
+      return
+    }
+
     let mounted = true
     ;(async () => {
       try {
         await ensureRolesLoaded()
         const roles = await fetchMyRoles()
-        if (!mounted) return
+        if (!mounted) return // Check before setState
         setHasSalesService(roles.has('sales_service'))
       } catch (error) {
         console.error('Error loading roles for report sidebar:', error)
-        // Fallback handled in filter below
-        if (mounted) setHasSalesService(null)
+        if (!mounted) return // Check before setState in catch
+        setHasSalesService(null)
       }
     })()
     return () => {
       mounted = false
     }
-  }, [])
+  }, [profile]) // Added profile dependency
 
   // Filter categories based on role - hide Lead Source Analysis from managers and sales_service
   const visibleCategories = reportCategories.filter(category => {

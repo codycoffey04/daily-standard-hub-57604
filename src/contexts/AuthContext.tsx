@@ -2,6 +2,7 @@ import React, { createContext, useContext, useEffect, useState } from 'react'
 import { supabase } from '@/integrations/supabase/client'
 import { getProfile, type Profile } from '@/lib/auth'
 import type { User, Session } from '@supabase/supabase-js'
+import { clearRolesCache } from '@/lib/roles'
 
 interface AuthContextType {
   user: User | null
@@ -86,6 +87,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const handleSignOut = async () => {
     try {
+      // Clear role cache before signing out
+      clearRolesCache()
       await supabase.auth.signOut()
     } catch (error) {
       console.error('Error signing out:', error)

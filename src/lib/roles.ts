@@ -63,3 +63,12 @@ export async function hasRole(role: RoleName): Promise<boolean> {
 export async function ensureRolesLoaded(): Promise<Set<RoleName>> {
   return fetchMyRoles()
 }
+
+/**
+ * Clears the role cache
+ * Should be called on sign out to prevent stale data
+ */
+export function clearRolesCache(): void {
+  cachedRoles = null
+  lastFetchedAt = null
+}

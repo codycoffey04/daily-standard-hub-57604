@@ -23,7 +23,7 @@ interface AppSidebarProps {
 }
 
 export const AppSidebar: React.FC<AppSidebarProps> = ({ collapsed, onToggle }) => {
-  const { profile } = useAuth()
+  const { profile, user } = useAuth()
   const location = useLocation()
 
   const isActive = (path: string) => location.pathname === path
@@ -82,22 +82,29 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({ collapsed, onToggle }) =
   const [roleSet, setRoleSet] = React.useState<Set<string> | null>(null)
   
   React.useEffect(() => {
+    // Early exit if no profile (prevents calls during sign out)
+    if (!profile) {
+      setRoleSet(null)
+      return
+    }
+
     let mounted = true
     ;(async () => {
       try {
         await ensureRolesLoaded()
         const roles = await fetchMyRoles()
-        if (mounted) setRoleSet(roles)
+        if (!mounted) return // Check before setState
+        setRoleSet(roles)
       } catch (error) {
         console.error('Error loading roles for sidebar:', error)
-        // Fallback handled in filter below
-        if (mounted) setRoleSet(null)
+        if (!mounted) return // Check before setState in catch
+        setRoleSet(null)
       }
     })()
     return () => {
       mounted = false
     }
-  }, [])
+  }, [profile]) // Added profile dependency
 
   const visibleItems = navigationItems.filter(item => {
     // Use server roles if available
