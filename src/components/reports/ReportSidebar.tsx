@@ -7,6 +7,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { reportCategories, type ReportConfig } from '@/config/reportConfig'
 import { cn } from '@/lib/utils'
 import { useAuth } from '@/contexts/AuthContext'
+import { ensureRolesLoaded, fetchMyRoles } from '@/lib/roles'
 
 interface ReportSidebarProps {
   activeReportId: string
@@ -31,9 +32,35 @@ export const ReportSidebar: React.FC<ReportSidebarProps> = ({
     onReportChange(report.id)
   }
 
-  // Filter categories based on role - hide Lead Source Analysis from managers
+  const [hasSalesService, setHasSalesService] = React.useState<boolean | null>(null)
+  
+  React.useEffect(() => {
+    let mounted = true
+    ;(async () => {
+      try {
+        await ensureRolesLoaded()
+        const roles = await fetchMyRoles()
+        if (!mounted) return
+        setHasSalesService(roles.has('sales_service'))
+      } catch (error) {
+        console.error('Error loading roles for report sidebar:', error)
+        // Fallback handled in filter below
+        if (mounted) setHasSalesService(null)
+      }
+    })()
+    return () => {
+      mounted = false
+    }
+  }, [])
+
+  // Filter categories based on role - hide Lead Source Analysis from managers and sales_service
   const visibleCategories = reportCategories.filter(category => {
+    // Keep existing manager rule (legacy profile.role)
     if (category.id === 'lead-source-analysis' && profile?.role === 'manager') {
+      return false
+    }
+    // Also hide for sales_service once roles are known
+    if (hasSalesService === true && category.id === 'lead-source-analysis') {
       return false
     }
     return true

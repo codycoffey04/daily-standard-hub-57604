@@ -15,6 +15,7 @@ import {
   Home
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { ensureRolesLoaded, fetchMyRoles } from '@/lib/roles'
 
 interface AppSidebarProps {
   collapsed: boolean
@@ -78,9 +79,34 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({ collapsed, onToggle }) =
     }
   ]
 
-  const visibleItems = navigationItems.filter(item => 
-    item.allowedRoles.includes(profile?.role || '')
-  )
+  const [roleSet, setRoleSet] = React.useState<Set<string> | null>(null)
+  
+  React.useEffect(() => {
+    let mounted = true
+    ;(async () => {
+      try {
+        await ensureRolesLoaded()
+        const roles = await fetchMyRoles()
+        if (mounted) setRoleSet(roles)
+      } catch (error) {
+        console.error('Error loading roles for sidebar:', error)
+        // Fallback handled in filter below
+        if (mounted) setRoleSet(null)
+      }
+    })()
+    return () => {
+      mounted = false
+    }
+  }, [])
+
+  const visibleItems = navigationItems.filter(item => {
+    // Use server roles if available
+    if (roleSet && roleSet.size > 0) {
+      return item.allowedRoles.some((r: string) => roleSet.has(r))
+    }
+    // Fallback to legacy profile.role during transition
+    return item.allowedRoles.includes(profile?.role || '')
+  })
 
   if (collapsed) {
     return (
