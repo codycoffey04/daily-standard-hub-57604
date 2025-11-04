@@ -380,7 +380,7 @@ export const useSalesProcessGaps = (dateRange: { from: Date; to: Date }, selecte
   })
 }
 
-export const useCoachingEffectiveness = (dateRange: { from: Date; to: Date }, selectedProducer?: string) => {
+export const useCoachingEffectivenessSimple = (dateRange: { from: Date; to: Date }, selectedProducer?: string) => {
   return useQuery({
     queryKey: ['coaching-effectiveness', dateRange, selectedProducer],
     queryFn: async (): Promise<CoachingEffectiveness> => {

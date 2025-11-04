@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react'
-import { CoachingEffectivenessCard } from '@/components/insights/CoachingEffectivenessCard'
+import { CoachingEffectivenessCardSimple } from '@/components/insights/CoachingEffectivenessCardSimple'
 import { ReviewsEmptyState } from '@/components/ui/reviews-empty-state'
-import { useCoachingEffectiveness } from '@/hooks/useAnalyticsData'
+import { useCoachingEffectivenessSimple } from '@/hooks/useAnalyticsData'
 import { Skeleton } from '@/components/ui/skeleton'
 
 interface CoachingEffectivenessReportProps {
@@ -25,7 +25,7 @@ export const CoachingEffectivenessReport: React.FC<CoachingEffectivenessReportPr
     return { from: startDate, to: endDate }
   }, [selectedYear, selectedMonth])
 
-  const { data, isLoading } = useCoachingEffectiveness(dateRange)
+  const { data, isLoading } = useCoachingEffectivenessSimple(dateRange)
 
   if (isLoading) {
     return <Skeleton className="h-96 w-full" />
@@ -35,5 +35,5 @@ export const CoachingEffectivenessReport: React.FC<CoachingEffectivenessReportPr
     return <ReviewsEmptyState />
   }
 
-  return <CoachingEffectivenessCard dateRange={dateRange} />
+  return <CoachingEffectivenessCardSimple dateRange={dateRange} />
 }

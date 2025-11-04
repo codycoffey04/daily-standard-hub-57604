@@ -3,18 +3,18 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Progress } from '@/components/ui/progress'
 import { Badge } from '@/components/ui/badge'
 import { Target, TrendingUp, TrendingDown, Minus } from 'lucide-react'
-import { useCoachingEffectiveness } from '@/hooks/useAnalyticsData'
+import { useCoachingEffectivenessSimple } from '@/hooks/useAnalyticsData'
 
 interface CoachingEffectivenessCardProps {
   dateRange: { from: Date; to: Date }
   selectedProducer?: string
 }
 
-export const CoachingEffectivenessCard: React.FC<CoachingEffectivenessCardProps> = ({ 
+export const CoachingEffectivenessCardSimple: React.FC<CoachingEffectivenessCardProps> = ({ 
   dateRange, 
   selectedProducer 
 }) => {
-  const { data: effectiveness, isLoading } = useCoachingEffectiveness(dateRange, selectedProducer)
+  const { data: effectiveness, isLoading } = useCoachingEffectivenessSimple(dateRange, selectedProducer)
 
   if (isLoading) {
     return (

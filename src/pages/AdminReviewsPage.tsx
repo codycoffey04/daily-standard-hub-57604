@@ -17,7 +17,7 @@ import { ReviewDetailsModal } from '@/components/ReviewDetailsModal'
 import { ConversionFunnelCard } from '@/components/insights/ConversionFunnelCard'
 import { ProducerPerformanceCard } from '@/components/insights/ProducerPerformanceCard'
 import { SalesProcessGapsCard } from '@/components/insights/SalesProcessGapsCard'
-import { CoachingEffectivenessCard } from '@/components/insights/CoachingEffectivenessCard'
+import { CoachingEffectivenessCardSimple } from '@/components/insights/CoachingEffectivenessCardSimple'
 import { CalendarIcon, Eye, Database, AlertTriangle, CheckCircle2, Brain, ChevronDown, ChevronUp } from 'lucide-react'
 import { format, subDays } from 'date-fns'
 import { cn } from '@/lib/utils'
@@ -243,7 +243,7 @@ export const AdminReviewsPage: React.FC = () => {
                     dateRange={dateRange} 
                     selectedProducer={selectedProducer}
                   />
-                  <CoachingEffectivenessCard 
+                  <CoachingEffectivenessCardSimple 
                     dateRange={dateRange} 
                     selectedProducer={selectedProducer}
                   />
