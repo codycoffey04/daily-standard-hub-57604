@@ -81,6 +81,43 @@ export interface CoachingEffectivenessDashboard {
   weekly_trends: WeeklyTrend[]
 }
 
+// Helper function to safely parse week_start from various possible formats
+const parseWeekStart = (weekString: string, weekStartField?: any): string => {
+  // Try to use the week_start field from DB response first
+  if (weekStartField && typeof weekStartField === 'string' && weekStartField.trim() !== '') {
+    return weekStartField
+  }
+  
+  // Fall back to parsing from the week field
+  if (!weekString || weekString.trim() === '') {
+    return ''
+  }
+  
+  // Try to parse ISO date format (2024-01-15)
+  if (/^\d{4}-\d{2}-\d{2}$/.test(weekString)) {
+    return weekString
+  }
+  
+  // Try to parse "2024-W01" format (ISO week format)
+  const weekMatch = weekString.match(/^(\d{4})-W(\d{2})$/)
+  if (weekMatch) {
+    const [, year, week] = weekMatch
+    // Convert to approximate date (Monday of that week)
+    const date = new Date(parseInt(year), 0, 1 + (parseInt(week) - 1) * 7)
+    return date.toISOString().split('T')[0]
+  }
+  
+  // Try to parse "2024-01" format (year-month)
+  const monthMatch = weekString.match(/^(\d{4})-(\d{2})$/)
+  if (monthMatch) {
+    const [, year, month] = monthMatch
+    return `${year}-${month}-01`
+  }
+  
+  // If no pattern matches, return empty string
+  return ''
+}
+
 export const useCoachingEffectivenessDashboard = (timeframe: number = 30) => {
   return useQuery({
     queryKey: ['coaching-effectiveness-dashboard', timeframe],
@@ -189,16 +226,21 @@ export const useCoachingEffectivenessDashboard = (timeframe: number = 30) => {
       }))
 
       // Transform weekly trends
-      const transformedTrends: WeeklyTrend[] = trendsRaw.map(t => ({
-        week: t.week || '',
-        identified: t.identified || 0,
-        resolved: t.resolved || 0,
-        effectiveness: t.effectiveness || 0,
-        week_start: '', // Not in DB response
-        resolution_rate: t.effectiveness || 0, // Map effectiveness to resolution_rate
-        avg_effectiveness_score: t.effectiveness || 0, // Map effectiveness
-        reviews_count: t.identified || 0 // Use identified as reviews count
-      }))
+      const transformedTrends: WeeklyTrend[] = trendsRaw
+        .map(t => {
+          const weekStart = parseWeekStart(t.week || '', t.week_start || t.week_start_date || t.start_date)
+          return {
+            week: t.week || '',
+            identified: t.identified || 0,
+            resolved: t.resolved || 0,
+            effectiveness: t.effectiveness || 0,
+            week_start: weekStart,
+            resolution_rate: t.effectiveness || 0,
+            avg_effectiveness_score: t.effectiveness || 0,
+            reviews_count: t.identified || 0
+          }
+        })
+        .filter(t => t.week_start !== '') // Filter out entries with invalid dates
 
       return {
         overall_metrics: transformedMetrics,

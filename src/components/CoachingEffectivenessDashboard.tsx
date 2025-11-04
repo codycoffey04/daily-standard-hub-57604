@@ -41,6 +41,25 @@ import {
   TableRow,
 } from '@/components/ui/table'
 
+// Helper function to safely format dates, handling null/undefined/invalid values
+const safeFormatDate = (dateString: string | null | undefined, formatStr: string): string => {
+  if (!dateString || dateString.trim() === '') {
+    return 'N/A'
+  }
+  
+  try {
+    const date = new Date(dateString)
+    // Check if date is valid
+    if (isNaN(date.getTime())) {
+      return 'Invalid Date'
+    }
+    return format(date, formatStr)
+  } catch (error) {
+    console.error('Date formatting error:', error, 'for date:', dateString)
+    return 'Invalid Date'
+  }
+}
+
 export const CoachingEffectivenessDashboard = () => {
   const [timeframe, setTimeframe] = useState<number>(30)
   const { data, isLoading, error } = useCoachingEffectivenessDashboard(timeframe)
@@ -94,12 +113,14 @@ export const CoachingEffectivenessDashboard = () => {
   ]
 
   // Prepare trend chart data
-  const trendChartData = weekly_trends.map(trend => ({
-    week: format(new Date(trend.week_start), 'MMM dd'),
-    resolution: trend.resolution_rate,
-    effectiveness: trend.avg_effectiveness_score,
-    reviews: trend.reviews_count
-  }))
+  const trendChartData = weekly_trends
+    .filter(trend => trend.week_start && trend.week_start.trim() !== '') // Filter out invalid dates
+    .map(trend => ({
+      week: safeFormatDate(trend.week_start, 'MMM dd'),
+      resolution: trend.resolution_rate,
+      effectiveness: trend.avg_effectiveness_score,
+      reviews: trend.reviews_count
+    }))
 
   const getTrendIcon = (trend: string) => {
     switch (trend) {
@@ -335,7 +356,7 @@ export const CoachingEffectivenessDashboard = () => {
 
                   {producer.last_review_date && (
                     <p className="text-xs text-muted-foreground">
-                      Last review: {format(new Date(producer.last_review_date), 'MMM dd, yyyy')}
+                      Last review: {safeFormatDate(producer.last_review_date, 'MMM dd, yyyy')}
                     </p>
                   )}
                 </CardContent>
