@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react'
 
 import { AccountabilityQueue } from '@/components/AccountabilityQueue'
+import { CoachingEffectivenessDashboard } from '@/components/CoachingEffectivenessDashboard'
 import { useAuth } from '@/contexts/AuthContext'
 import { supabase } from '@/integrations/supabase/client'
 import { canAccessAccountabilityReviews } from '@/lib/auth'
 import { Navigate } from 'react-router-dom'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 
 interface DailyEntryForReview {
   id: string
@@ -114,20 +116,33 @@ export const AccountabilityReviewsPage = () => {
 
   return (
     <main className="container mx-auto px-4 py-8">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-foreground mb-2">
-            Accountability Reviews
-          </h1>
-          <p className="text-muted-foreground">
-            Review pending producer entries and provide coaching feedback
-          </p>
-        </div>
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold text-foreground mb-2">
+          Accountability Reviews
+        </h1>
+        <p className="text-muted-foreground">
+          Review producer entries, provide coaching feedback, and track effectiveness
+        </p>
+      </div>
 
-        <AccountabilityQueue 
-          entries={reviewQueue}
-          loading={isLoading}
-          onRefresh={handleRefresh}
-      />
+      <Tabs defaultValue="queue" className="w-full">
+        <TabsList className="grid w-full grid-cols-2 mb-6">
+          <TabsTrigger value="queue">Review Queue</TabsTrigger>
+          <TabsTrigger value="analytics">Coaching Effectiveness</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="queue">
+          <AccountabilityQueue 
+            entries={reviewQueue}
+            loading={isLoading}
+            onRefresh={handleRefresh}
+          />
+        </TabsContent>
+
+        <TabsContent value="analytics">
+          <CoachingEffectivenessDashboard />
+        </TabsContent>
+      </Tabs>
     </main>
   )
 }
