@@ -60,8 +60,16 @@ const safeFormatDate = (dateString: string | null | undefined, formatStr: string
   }
 }
 
-export const CoachingEffectivenessDashboard = () => {
-  const [timeframe, setTimeframe] = useState<number>(30)
+interface CoachingEffectivenessDashboardProps {
+  initialTimeframe?: number
+  hideTimeframeSelector?: boolean
+}
+
+export const CoachingEffectivenessDashboard = ({ 
+  initialTimeframe = 30, 
+  hideTimeframeSelector = false 
+}: CoachingEffectivenessDashboardProps = {}) => {
+  const [timeframe, setTimeframe] = useState<number>(initialTimeframe)
   const { data, isLoading, error } = useCoachingEffectivenessDashboard(timeframe)
 
   if (isLoading) {
@@ -147,23 +155,25 @@ export const CoachingEffectivenessDashboard = () => {
   return (
     <div className="space-y-6">
       {/* Timeframe Selector */}
-      <div className="flex items-center gap-4">
-        <div className="flex gap-2">
-          {[30, 60, 90].map((days) => (
-            <button
-              key={days}
-              onClick={() => setTimeframe(days)}
-              className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                timeframe === days
-                  ? 'bg-primary text-primary-foreground'
-                  : 'bg-muted text-muted-foreground hover:bg-muted/80'
-              }`}
-            >
-              {days} Days
-            </button>
-          ))}
+      {!hideTimeframeSelector && (
+        <div className="flex items-center gap-4">
+          <div className="flex gap-2">
+            {[30, 60, 90].map((days) => (
+              <button
+                key={days}
+                onClick={() => setTimeframe(days)}
+                className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                  timeframe === days
+                    ? 'bg-primary text-primary-foreground'
+                    : 'bg-muted text-muted-foreground hover:bg-muted/80'
+                }`}
+              >
+                {days} Days
+              </button>
+            ))}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Header Metrics */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
