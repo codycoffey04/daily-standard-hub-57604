@@ -11,8 +11,9 @@ const TeamPage: React.FC = () => {
   const { profile } = useAuth()
   const [loading, setLoading] = useState(true)
   const [teamMetrics, setTeamMetrics] = useState<any[]>([])
-  const [selectedMonth, setSelectedMonth] = useState<number | null>(10)  // October
-  const [selectedYear, setSelectedYear] = useState(2025)
+  const now = new Date()
+  const [selectedMonth, setSelectedMonth] = useState<number | null>(now.getMonth() + 1)  // Current month (1-12)
+  const [selectedYear, setSelectedYear] = useState(now.getFullYear())
 
   useEffect(() => {
     loadTeamMetrics()
