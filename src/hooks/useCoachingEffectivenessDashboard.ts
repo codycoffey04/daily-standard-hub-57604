@@ -49,48 +49,40 @@ export const useCoachingEffectivenessDashboard = (timeframe: number = 30) => {
   return useQuery({
     queryKey: ['coaching-effectiveness-dashboard', timeframe],
     queryFn: async (): Promise<CoachingEffectivenessDashboard> => {
-      const endDate = new Date()
-      const startDate = new Date()
-      startDate.setDate(startDate.getDate() - timeframe)
-
-      // Call all 4 functions in parallel
-      // @ts-ignore - Functions exist in DB but types not yet regenerated
-      const [overallRes, producerRes, gapRes, trendRes] = await Promise.all([
-        // @ts-ignore
-        supabase.rpc('get_coaching_effectiveness_overall', {
-          p_start_date: startDate.toISOString().split('T')[0],
-          p_end_date: endDate.toISOString().split('T')[0]
+      // Call all 4 functions in parallel with correct function names
+      const [metricsRes, progressRes, gapRes, trendRes] = await Promise.all([
+        // @ts-expect-error - Function exists in database but not in auto-generated types
+        supabase.rpc('get_coaching_effectiveness_metrics', {
+          p_days_back: timeframe
         }),
-        // @ts-ignore
-        supabase.rpc('get_coaching_effectiveness_by_producer', {
-          p_start_date: startDate.toISOString().split('T')[0],
-          p_end_date: endDate.toISOString().split('T')[0]
+        // @ts-expect-error - Function exists in database but not in auto-generated types
+        supabase.rpc('get_producer_progress', {
+          p_days_back: timeframe
         }),
-        // @ts-ignore
-        supabase.rpc('get_coaching_gap_analysis', {
-          p_start_date: startDate.toISOString().split('T')[0],
-          p_end_date: endDate.toISOString().split('T')[0]
+        // @ts-expect-error - Function exists in database but not in auto-generated types
+        supabase.rpc('get_gap_analysis', {
+          p_days_back: timeframe
         }),
-        // @ts-ignore
-        supabase.rpc('get_coaching_weekly_trends', {
-          p_start_date: startDate.toISOString().split('T')[0],
-          p_end_date: endDate.toISOString().split('T')[0]
+        // @ts-expect-error - Function exists in database but not in auto-generated types
+        supabase.rpc('get_weekly_coaching_trend', {
+          p_weeks_back: 4
         })
       ])
 
       // Handle errors
-      if (overallRes.error) throw overallRes.error
-      if (producerRes.error) throw producerRes.error
+      if (metricsRes.error) throw metricsRes.error
+      if (progressRes.error) throw progressRes.error
       if (gapRes.error) throw gapRes.error
       if (trendRes.error) throw trendRes.error
 
       return {
-        overall_metrics: (overallRes.data?.[0] as unknown as OverallMetrics) || null,
-        producer_progress: (producerRes.data as unknown as ProducerProgress[]) || [],
+        overall_metrics: (metricsRes.data as unknown as OverallMetrics) || null,
+        producer_progress: (progressRes.data as unknown as ProducerProgress[]) || [],
         gap_analysis: (gapRes.data as unknown as GapAnalysis[]) || [],
         weekly_trends: (trendRes.data as unknown as WeeklyTrend[]) || []
       }
     },
     staleTime: 5 * 60 * 1000, // 5 minutes
+    refetchOnWindowFocus: false
   })
 }
