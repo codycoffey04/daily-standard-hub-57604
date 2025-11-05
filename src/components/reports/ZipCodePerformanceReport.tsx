@@ -41,11 +41,11 @@ export const ZipCodePerformanceReport: React.FC<ZipCodePerformanceReportProps> =
     return { startDate, endDate }
   }
 
-  const defaultRange = getDefaultDateRange()
+  const defaultRange = useMemo(() => getDefaultDateRange(), [selectedMonth, selectedYear])
 
   // Filter state
-  const [fromDate, setFromDate] = useState(defaultRange.startDate)
-  const [toDate, setToDate] = useState(defaultRange.endDate)
+  const [fromDate, setFromDate] = useState(() => defaultRange.startDate)
+  const [toDate, setToDate] = useState(() => defaultRange.endDate)
   const [selectedProducerId, setSelectedProducerId] = useState<string | null>(null)
   const [selectedSourceId, setSelectedSourceId] = useState<string | null>(null)
   const [minQuotes, setMinQuotes] = useState(1)
