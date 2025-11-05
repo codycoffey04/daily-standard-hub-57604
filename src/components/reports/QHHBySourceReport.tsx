@@ -74,10 +74,13 @@ export const QHHBySourceReport: React.FC<QHHBySourceReportProps> = ({
     )
   }
 
-  const chartData = data?.map(item => ({
+  // Filter out sources with 0 QHH
+  const activeSources = data?.filter(item => item.qhh > 0) || []
+  
+  const chartData = activeSources.map(item => ({
     name: item.source_name,
     value: item.qhh
-  })) || []
+  }))
 
   const totalQHH = monthlySummary?.total_qhh || 0
 
@@ -104,10 +107,10 @@ export const QHHBySourceReport: React.FC<QHHBySourceReportProps> = ({
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {data?.[0]?.source_name || 'N/A'}
+              {activeSources?.[0]?.source_name || 'N/A'}
             </div>
             <p className="text-xs text-muted-foreground">
-              {formatNumber(data?.[0]?.qhh || 0)} QHH
+              {formatNumber(activeSources?.[0]?.qhh || 0)} QHH
             </p>
           </CardContent>
         </Card>
@@ -117,7 +120,7 @@ export const QHHBySourceReport: React.FC<QHHBySourceReportProps> = ({
             <CardTitle className="text-sm font-medium">Active Sources</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{data?.length || 0}</div>
+            <div className="text-2xl font-bold">{activeSources.length}</div>
             <p className="text-xs text-muted-foreground">
               Sources generating QHH
             </p>
