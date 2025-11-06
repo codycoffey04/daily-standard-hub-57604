@@ -238,20 +238,25 @@ const MonthlySummaryReport: React.FC<MonthlySummaryReportProps> = ({ selectedYea
           <CardContent>
             {topQuoteSources && topQuoteSources.length > 0 ? (
               <div className="space-y-3">
-                {topQuoteSources.map((source, index) => (
-                  <div key={source.source_name} className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <span className="font-semibold text-muted-foreground">#{index + 1}</span>
-                      <span className="font-medium">{source.source_name}</span>
+                {topQuoteSources.map((source, index) => {
+                  const percentage = summaryMetrics.totalQuotes > 0 
+                    ? (source.metric_value / summaryMetrics.totalQuotes) * 100 
+                    : 0
+                  return (
+                    <div key={source.source_name} className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className="font-semibold text-muted-foreground">#{index + 1}</span>
+                        <span className="font-medium">{source.source_name}</span>
+                      </div>
+                      <div className="text-right">
+                        <span className="font-semibold">{source?.metric_value ?? 0}</span>
+                        <span className="text-sm text-muted-foreground ml-2">
+                          {percentage.toFixed(1)}%
+                        </span>
+                      </div>
                     </div>
-                    <div className="text-right">
-                      <span className="font-semibold">{source?.metric_value ?? 0}</span>
-                      <span className="text-sm text-muted-foreground ml-2">
-                        {(source?.percentage ?? 0).toFixed(1)}%
-                      </span>
-                    </div>
-                  </div>
-                ))}
+                  )
+                })}
               </div>
             ) : (
               <p className="text-sm text-muted-foreground">No data available</p>
@@ -269,20 +274,25 @@ const MonthlySummaryReport: React.FC<MonthlySummaryReportProps> = ({ selectedYea
           <CardContent>
             {topQHHSources && topQHHSources.length > 0 ? (
               <div className="space-y-3">
-                {topQHHSources.map((source, index) => (
-                  <div key={source.source_name} className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <span className="font-semibold text-muted-foreground">#{index + 1}</span>
-                      <span className="font-medium">{source.source_name}</span>
+                {topQHHSources.map((source, index) => {
+                  const percentage = summaryMetrics.totalQHH > 0 
+                    ? (source.metric_value / summaryMetrics.totalQHH) * 100 
+                    : 0
+                  return (
+                    <div key={source.source_name} className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className="font-semibold text-muted-foreground">#{index + 1}</span>
+                        <span className="font-medium">{source.source_name}</span>
+                      </div>
+                      <div className="text-right">
+                        <span className="font-semibold">{source?.metric_value ?? 0}</span>
+                        <span className="text-sm text-muted-foreground ml-2">
+                          {percentage.toFixed(1)}%
+                        </span>
+                      </div>
                     </div>
-                    <div className="text-right">
-                      <span className="font-semibold">{source?.metric_value ?? 0}</span>
-                      <span className="text-sm text-muted-foreground ml-2">
-                        {(source?.percentage ?? 0).toFixed(1)}%
-                      </span>
-                    </div>
-                  </div>
-                ))}
+                  )
+                })}
               </div>
             ) : (
               <p className="text-sm text-muted-foreground">No data available</p>
