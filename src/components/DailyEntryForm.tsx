@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react'
+import { useAuth } from '@/contexts/AuthContext'
 import { supabase } from '@/integrations/supabase/client'
 import { getDefaultEntryDate, isPast6PM } from '@/lib/timezone'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -47,6 +48,9 @@ export const DailyEntryForm: React.FC<DailyEntryFormProps> = ({
   const [quotedHouseholds, setQuotedHouseholds] = useState<QuotedHousehold[]>([])
   const [salesFromOldQuotes, setSalesFromOldQuotes] = useState<SaleFromOldQuote[]>([])
   const [deletingSaleIndex, setDeletingSaleIndex] = useState<number | null>(null)
+
+  // Get authenticated user from context
+  const { user } = useAuth()
 
   // Load all sources (including inactive) with proper "Other" sorting
   const { data: sources = [], isLoading: sourcesLoading } = useSourcesForSelection()
@@ -222,13 +226,18 @@ export const DailyEntryForm: React.FC<DailyEntryFormProps> = ({
       return
     }
 
+    // Check authentication using the hook
+    if (!user) {
+      toast({
+        title: "Error",
+        description: "Not authenticated. Please refresh the page and try again.",
+        variant: "destructive"
+      })
+      return
+    }
+
     setLoading(true)
     try {
-      // Get current authenticated user ID
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) {
-        throw new Error('Not authenticated')
-      }
       // Save/update daily entry
       const entryData = {
         producer_id: producerId,
@@ -262,18 +271,36 @@ export const DailyEntryForm: React.FC<DailyEntryFormProps> = ({
       }
 
 
-      // Save quoted households
+      // Save quoted households using UPSERT pattern to prevent duplicates
       if (quotedHouseholds.length > 0) {
-        // Delete existing QHH entries if editing
+        // Get existing QHH entries if editing
+        let existingQHHIds: string[] = []
         if (existingEntry) {
-          await (supabase as any)
+          const { data: existingQHH } = await (supabase as any)
             .from('quoted_households')
-            .delete()
+            .select('id')
             .eq('daily_entry_id', entryId)
+          
+          existingQHHIds = existingQHH?.map((q: any) => q.id) || []
         }
 
-        // Insert new QHH entries
+        // Get current QHH IDs (those that have been saved before)
+        const currentQHHIds = quotedHouseholds.filter(qhh => qhh.id).map(qhh => qhh.id!)
+
+        // Delete removed QHH entries (those that exist in DB but not in current state)
+        const idsToDelete = existingQHHIds.filter((id: string) => !currentQHHIds.includes(id))
+        if (idsToDelete.length > 0) {
+          const { error: deleteError } = await (supabase as any)
+            .from('quoted_households')
+            .delete()
+            .in('id', idsToDelete)
+          
+          if (deleteError) throw deleteError
+        }
+
+        // Upsert all QHH entries (insert new, update existing)
         const qhhEntries = quotedHouseholds.map(qhh => ({
+          ...(qhh.id && { id: qhh.id }), // Include id if editing existing QHH
           daily_entry_id: entryId,
           zip_code: qhh.zip_code,
           product_lines: qhh.product_lines,
@@ -292,9 +319,19 @@ export const DailyEntryForm: React.FC<DailyEntryFormProps> = ({
 
         const { error: qhhError } = await (supabase as any)
           .from('quoted_households')
-          .insert(qhhEntries)
+          .upsert(qhhEntries, {
+            onConflict: 'id'
+          })
 
         if (qhhError) throw qhhError
+      } else if (existingEntry) {
+        // If no QHH in form but entry exists, delete all QHH
+        const { error: deleteError } = await (supabase as any)
+          .from('quoted_households')
+          .delete()
+          .eq('daily_entry_id', entryId)
+        
+        if (deleteError) throw deleteError
       }
 
       // Save sales from old quotes using UPSERT pattern
