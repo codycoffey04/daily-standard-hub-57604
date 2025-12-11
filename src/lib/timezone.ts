@@ -23,8 +23,12 @@ export const isToday = (date: string) => {
 }
 
 export const isPast6PM = (date: string) => {
-  const lockTime = dayjs(date).tz(CT_TIMEZONE).hour(18).minute(0).second(0)
-  return dayjs().tz(CT_TIMEZONE).isAfter(lockTime)
+  // Parse the date string (YYYY-MM-DD) and set it to 6 PM CT
+  // dayjs needs to parse the date in CT timezone to avoid timezone conversion issues
+  const dateOnly = date.split('T')[0] // Ensure we only have YYYY-MM-DD
+  const lockTime = dayjs.tz(`${dateOnly} 18:00:00`, 'YYYY-MM-DD HH:mm:ss', CT_TIMEZONE)
+  const now = dayjs().tz(CT_TIMEZONE)
+  return now.isAfter(lockTime)
 }
 
 export const getDefaultEntryDate = () => {
