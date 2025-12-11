@@ -160,7 +160,11 @@ export const DailyEntryForm: React.FC<DailyEntryFormProps> = ({
         console.error('Failed to clear sessionStorage:', error)
       }
 
-      setEntryDate(existingEntry.entry_date)
+      // Ensure entry_date is in YYYY-MM-DD format for isPast6PM function
+      const entryDateStr = typeof existingEntry.entry_date === 'string' 
+        ? existingEntry.entry_date.split('T')[0] 
+        : existingEntry.entry_date
+      setEntryDate(entryDateStr)
       setOutboundDials(existingEntry.outbound_dials || 0)
       setTalkMinutes(existingEntry.talk_minutes || 0)
       setQhhTotal(existingEntry.qhh_total || 0)
