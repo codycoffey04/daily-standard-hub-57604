@@ -209,11 +209,16 @@ export const DailyEntryForm: React.FC<DailyEntryFormProps> = ({
     }
 
     // Validate QHH entries match QHH total
-    if (quotedHouseholds.length !== qhhTotal) {
+    if (qhhTotal > 0 && quotedHouseholds.length !== qhhTotal) {
       setValidationError(`Number of QHH entries (${quotedHouseholds.length}) must match QHH total (${qhhTotal})`)
       return false
     }
 
+    // Validate that if QHH total is 0, there are no QHH entries
+    if (qhhTotal === 0 && quotedHouseholds.length > 0) {
+      setValidationError(`QHH total is 0, but you have ${quotedHouseholds.length} QHH entries. Please remove the entries or update the QHH total.`)
+      return false
+    }
 
     setValidationError('')
     return true
@@ -236,6 +241,16 @@ export const DailyEntryForm: React.FC<DailyEntryFormProps> = ({
       return
     }
 
+    // Validate producerId is provided
+    if (!producerId) {
+      toast({
+        title: "Error",
+        description: "Producer ID is missing. Please refresh the page and try again.",
+        variant: "destructive"
+      })
+      return
+    }
+
     setLoading(true)
     try {
       // Save/update daily entry
@@ -247,19 +262,23 @@ export const DailyEntryForm: React.FC<DailyEntryFormProps> = ({
         talk_minutes: talkMinutes,
         qhh_total: qhhTotal,
         items_total: itemsSold,
-        sales_total: salesMade
+        sales_total: salesMade,
+        created_by: user.id // Explicitly set created_by for RLS policies
       }
 
       let entryId = existingEntry?.id
 
       if (existingEntry) {
+        // For updates, don't include created_by (it shouldn't change)
+        const { created_by, ...updateData } = entryData
         const { error } = await supabase
           .from('daily_entries')
-          .update(entryData)
+          .update(updateData)
           .eq('id', existingEntry.id)
 
         if (error) throw error
       } else {
+        // For inserts, include created_by for RLS policies
         const { data, error } = await supabase
           .from('daily_entries')
           .insert(entryData)
@@ -398,20 +417,39 @@ export const DailyEntryForm: React.FC<DailyEntryFormProps> = ({
     } catch (error: any) {
       console.error('Error saving entry:', error)
       
-      // Check for RLS violations specifically
-      if (error.message?.includes('row-level security policy')) {
-        toast({
-          title: "Permission Error",
-          description: "Unable to save entry. Please contact support if this persists.",
-          variant: "destructive"
-        })
-      } else {
-        toast({
-          title: "Error",
-          description: error.message || "Failed to save entry",
-          variant: "destructive"
-        })
+      // Extract detailed error information
+      let errorMessage = "Failed to save entry"
+      let errorTitle = "Error"
+      
+      if (error.message) {
+        errorMessage = error.message
+      } else if (error.error_description) {
+        errorMessage = error.error_description
+      } else if (typeof error === 'string') {
+        errorMessage = error
       }
+      
+      // Check for specific error types
+      if (error.message?.includes('row-level security policy') || error.message?.includes('RLS')) {
+        errorTitle = "Permission Error"
+        errorMessage = "You don't have permission to save this entry. Please ensure your producer profile is correctly set up and try again. If this persists, contact support."
+      } else if (error.message?.includes('duplicate key') || error.message?.includes('unique constraint')) {
+        errorTitle = "Duplicate Entry"
+        errorMessage = "An entry for this date already exists. Please edit the existing entry instead."
+      } else if (error.message?.includes('foreign key') || error.message?.includes('producer_id')) {
+        errorTitle = "Invalid Producer"
+        errorMessage = "The producer ID is invalid. Please refresh the page and try again."
+      } else if (error.code === 'PGRST301' || error.message?.includes('JWT')) {
+        errorTitle = "Authentication Error"
+        errorMessage = "Your session has expired. Please refresh the page and try again."
+      }
+      
+      toast({
+        title: errorTitle,
+        description: errorMessage,
+        variant: "destructive",
+        duration: 10000 // Show for 10 seconds so user can read it
+      })
     } finally {
       setLoading(false)
     }
