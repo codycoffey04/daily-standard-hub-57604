@@ -463,7 +463,12 @@ export const DailyEntryForm: React.FC<DailyEntryFormProps> = ({
   const normalizedEntryDate = entryDate && typeof entryDate === 'string' 
     ? entryDate.split('T')[0] 
     : entryDate
-  const isLocked = existingEntry && normalizedEntryDate && isPast6PM(normalizedEntryDate)
+  
+  // Check if entry is for today - if so, don't lock it (temporary fix for lockout issue)
+  const isTodayEntry = normalizedEntryDate === getDefaultEntryDate()
+  
+  // Only lock if it's past 6 PM AND it's not today's entry
+  const isLocked = existingEntry && normalizedEntryDate && !isTodayEntry && isPast6PM(normalizedEntryDate)
   const canEdit = !isLocked // For now, assuming manager override will be handled elsewhere
 
 
