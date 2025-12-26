@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useCallback, useRef, useEffect, useMemo } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { ProducerSourceMatrix } from '@/components/charts/ProducerSourceMatrix'
 import { useProducerSourceMatrix } from '@/hooks/useSummariesData'
@@ -18,6 +18,72 @@ export const ProducerSourceMatrixReport: React.FC<ProducerSourceMatrixReportProp
 }) => {
   const { data, isLoading, error } = useProducerSourceMatrix(selectedYear, selectedMonth)
 
+  // Derive data safely even when data is undefined
+  const rows = useMemo(() => data ?? [], [data])
+
+  const totalCombinations = rows.length
+  const activeProducers = useMemo(() => new Set(rows.map(item => item.producer_name)).size, [rows])
+  const activeSources = useMemo(() => new Set(rows.map(item => item.source_name)).size, [rows])
+
+  // Export to CSV function - all hooks MUST be called before any early returns
+  const exportToCSV = useCallback(() => {
+    if (rows.length === 0) {
+      console.warn('No data to export')
+      return
+    }
+
+    const escapeCSV = (value: string | number): string => {
+      const str = String(value)
+      if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+        return `"${str.replace(/"/g, '""')}"`
+      }
+      return str
+    }
+
+    const headers = ['Producer', 'Source', 'QHH', 'Quotes', 'Items']
+    const csvRows = rows.map(item => [
+      escapeCSV(item.producer_name),
+      escapeCSV(item.source_name),
+      escapeCSV(item.qhh),
+      escapeCSV(item.quotes),
+      escapeCSV(item.items)
+    ])
+
+    const csvContent = [
+      headers.join(','),
+      ...csvRows.map(row => row.join(','))
+    ].join('\n')
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+    const url = window.URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    const monthStr = selectedMonth ? `${selectedYear}-${String(selectedMonth).padStart(2, '0')}` : `${selectedYear}`
+    link.download = `producer-source-matrix_${monthStr}.csv`
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    window.URL.revokeObjectURL(url)
+  }, [rows, selectedYear, selectedMonth])
+
+  // Store export function in ref and create stable wrapper
+  const exportToCSVRef = useRef(exportToCSV)
+  exportToCSVRef.current = exportToCSV
+  const stableExportWrapperRef = useRef<(() => void) | null>(null)
+  if (!stableExportWrapperRef.current) {
+    stableExportWrapperRef.current = () => {
+      exportToCSVRef.current()
+    }
+  }
+
+  // Register export function ONCE on mount
+  useEffect(() => {
+    if (onExportReady && stableExportWrapperRef.current) {
+      onExportReady(stableExportWrapperRef.current)
+    }
+  }, [onExportReady])
+
+  // Early returns AFTER all hooks
   if (isLoading) {
     return (
       <div className="space-y-6">
@@ -51,68 +117,6 @@ export const ProducerSourceMatrixReport: React.FC<ProducerSourceMatrixReportProp
       </Card>
     )
   }
-
-  const totalCombinations = data?.length || 0
-  const activeProducers = new Set(data?.map(item => item.producer_name)).size
-  const activeSources = new Set(data?.map(item => item.source_name)).size
-
-  // Export to CSV function - table format with all metrics
-  const exportToCSV = React.useCallback(() => {
-    if (!data || data.length === 0) {
-      console.warn('No data to export')
-      return
-    }
-
-    const escapeCSV = (value: string | number): string => {
-      const str = String(value)
-      if (str.includes(',') || str.includes('"') || str.includes('\n')) {
-        return `"${str.replace(/"/g, '""')}"`
-      }
-      return str
-    }
-
-    const headers = ['Producer', 'Source', 'QHH', 'Quotes', 'Items']
-    const csvRows = data.map(item => [
-      escapeCSV(item.producer_name),
-      escapeCSV(item.source_name),
-      escapeCSV(item.qhh),
-      escapeCSV(item.quotes),
-      escapeCSV(item.items)
-    ])
-
-    const csvContent = [
-      headers.join(','),
-      ...csvRows.map(row => row.join(','))
-    ].join('\n')
-
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
-    const url = window.URL.createObjectURL(blob)
-    const link = document.createElement('a')
-    link.href = url
-    const monthStr = selectedMonth ? `${selectedYear}-${String(selectedMonth).padStart(2, '0')}` : `${selectedYear}`
-    link.download = `producer-source-matrix_${monthStr}.csv`
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
-    window.URL.revokeObjectURL(url)
-  }, [data, selectedYear, selectedMonth])
-
-  // Store export function in ref and create stable wrapper
-  const exportToCSVRef = React.useRef(exportToCSV)
-  exportToCSVRef.current = exportToCSV
-  const stableExportWrapperRef = React.useRef<(() => void) | null>(null)
-  if (!stableExportWrapperRef.current) {
-    stableExportWrapperRef.current = () => {
-      exportToCSVRef.current()
-    }
-  }
-
-  // Register export function ONCE on mount
-  React.useEffect(() => {
-    if (onExportReady && stableExportWrapperRef.current) {
-      onExportReady(stableExportWrapperRef.current)
-    }
-  }, [onExportReady])
 
   return (
     <div className="space-y-6">
@@ -163,9 +167,9 @@ export const ProducerSourceMatrixReport: React.FC<ProducerSourceMatrixReportProp
           </p>
         </CardHeader>
         <CardContent>
-          {data && data.length > 0 ? (
+          {rows.length > 0 ? (
             <ProducerSourceMatrix
-              data={data}
+              data={rows}
               height={600}
             />
           ) : (

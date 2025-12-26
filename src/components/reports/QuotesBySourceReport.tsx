@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useCallback, useRef, useEffect, useMemo } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { SummaryBarChart } from '@/components/charts/SummaryBarChart'
 import { useQuotesBySource } from '@/hooks/useSummariesData'
@@ -20,6 +20,72 @@ export const QuotesBySourceReport: React.FC<QuotesBySourceReportProps> = ({
 }) => {
   const { data, isLoading, error } = useQuotesBySource(selectedYear, selectedMonth)
 
+  // Derive data safely even when data is undefined
+  const rows = useMemo(() => data ?? [], [data])
+
+  const chartData = useMemo(() => rows.map(item => ({
+    name: item.source_name,
+    value: item.quotes
+  })), [rows])
+
+  const totalQuotes = useMemo(() => rows.reduce((sum, item) => sum + item.quotes, 0), [rows])
+
+  // Export to CSV function - all hooks MUST be called before any early returns
+  const exportToCSV = useCallback(() => {
+    if (rows.length === 0) {
+      console.warn('No data to export')
+      return
+    }
+
+    const escapeCSV = (value: string | number): string => {
+      const str = String(value)
+      if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+        return `"${str.replace(/"/g, '""')}"`
+      }
+      return str
+    }
+
+    const headers = ['Source Name', 'Quotes']
+    const csvRows = rows.map(item => [
+      escapeCSV(item.source_name),
+      escapeCSV(item.quotes)
+    ])
+
+    const csvContent = [
+      headers.join(','),
+      ...csvRows.map(row => row.join(','))
+    ].join('\n')
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+    const url = window.URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    const monthStr = selectedMonth ? `${selectedYear}-${String(selectedMonth).padStart(2, '0')}` : `${selectedYear}`
+    link.download = `quotes-by-source_${monthStr}.csv`
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    window.URL.revokeObjectURL(url)
+  }, [rows, selectedYear, selectedMonth])
+
+  // Store export function in ref and create stable wrapper
+  const exportToCSVRef = useRef(exportToCSV)
+  exportToCSVRef.current = exportToCSV
+  const stableExportWrapperRef = useRef<(() => void) | null>(null)
+  if (!stableExportWrapperRef.current) {
+    stableExportWrapperRef.current = () => {
+      exportToCSVRef.current()
+    }
+  }
+
+  // Register export function ONCE on mount
+  useEffect(() => {
+    if (onExportReady && stableExportWrapperRef.current) {
+      onExportReady(stableExportWrapperRef.current)
+    }
+  }, [onExportReady])
+
+  // Early returns AFTER all hooks
   if (isLoading) {
     return (
       <div className="space-y-6">
@@ -67,68 +133,6 @@ export const QuotesBySourceReport: React.FC<QuotesBySourceReportProps> = ({
     )
   }
 
-  const chartData = data?.map(item => ({
-    name: item.source_name,
-    value: item.quotes
-  })) || []
-
-  const totalQuotes = data?.reduce((sum, item) => sum + item.quotes, 0) || 0
-
-  // Export to CSV function
-  const exportToCSV = React.useCallback(() => {
-    if (!data || data.length === 0) {
-      console.warn('No data to export')
-      return
-    }
-
-    const escapeCSV = (value: string | number): string => {
-      const str = String(value)
-      if (str.includes(',') || str.includes('"') || str.includes('\n')) {
-        return `"${str.replace(/"/g, '""')}"`
-      }
-      return str
-    }
-
-    const headers = ['Source Name', 'Quotes']
-    const csvRows = data.map(item => [
-      escapeCSV(item.source_name),
-      escapeCSV(item.quotes)
-    ])
-
-    const csvContent = [
-      headers.join(','),
-      ...csvRows.map(row => row.join(','))
-    ].join('\n')
-
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
-    const url = window.URL.createObjectURL(blob)
-    const link = document.createElement('a')
-    link.href = url
-    const monthStr = selectedMonth ? `${selectedYear}-${String(selectedMonth).padStart(2, '0')}` : `${selectedYear}`
-    link.download = `quotes-by-source_${monthStr}.csv`
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
-    window.URL.revokeObjectURL(url)
-  }, [data, selectedYear, selectedMonth])
-
-  // Store export function in ref and create stable wrapper
-  const exportToCSVRef = React.useRef(exportToCSV)
-  exportToCSVRef.current = exportToCSV
-  const stableExportWrapperRef = React.useRef<(() => void) | null>(null)
-  if (!stableExportWrapperRef.current) {
-    stableExportWrapperRef.current = () => {
-      exportToCSVRef.current()
-    }
-  }
-
-  // Register export function ONCE on mount
-  React.useEffect(() => {
-    if (onExportReady && stableExportWrapperRef.current) {
-      onExportReady(stableExportWrapperRef.current)
-    }
-  }, [onExportReady])
-
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -150,10 +154,10 @@ export const QuotesBySourceReport: React.FC<QuotesBySourceReportProps> = ({
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {data?.[0]?.source_name || 'N/A'}
+              {rows[0]?.source_name || 'N/A'}
             </div>
             <p className="text-xs text-muted-foreground">
-              {formatNumber(data?.[0]?.quotes || 0)} quotes
+              {formatNumber(rows[0]?.quotes || 0)} quotes
             </p>
           </CardContent>
         </Card>
@@ -163,7 +167,7 @@ export const QuotesBySourceReport: React.FC<QuotesBySourceReportProps> = ({
             <CardTitle className="text-sm font-medium">Active Sources</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{data?.length || 0}</div>
+            <div className="text-2xl font-bold">{rows.length}</div>
             <p className="text-xs text-muted-foreground">
               Sources generating quotes
             </p>

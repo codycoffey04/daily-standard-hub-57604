@@ -77,6 +77,10 @@ export const ZipCodePerformanceReport: React.FC<ZipCodePerformanceReportProps> =
   const { data: sources } = useSourcesForSelection()
   const { data: producers } = useProducersForSelection()
 
+  // Derive data safely even when data is undefined
+  const rows = useMemo(() => data?.rows ?? [], [data?.rows])
+  const summary = data?.summary
+
   // Format currency
   const formatCurrency = (value: number): string => `$${formatNumber(Math.round(value))}`
 
@@ -92,22 +96,18 @@ export const ZipCodePerformanceReport: React.FC<ZipCodePerformanceReportProps> =
 
   // Sort table data
   const sortedRows = useMemo(() => {
-    if (!data?.rows) return []
-    
-    return [...data.rows].sort((a, b) => {
+    return [...rows].sort((a, b) => {
       const aVal = a[sortColumn]
       const bVal = b[sortColumn]
       
       const comparison = aVal > bVal ? 1 : -1
       return sortDirection === 'asc' ? comparison : -comparison
     })
-  }, [data?.rows, sortColumn, sortDirection])
+  }, [rows, sortColumn, sortDirection])
 
   // Top 10 zips for chart
   const chartData = useMemo(() => {
-    if (!data?.rows) return []
-    
-    return [...data.rows]
+    return [...rows]
       .sort((a, b) => b.quotes - a.quotes)
       .slice(0, 10)
       .map(row => ({
@@ -115,11 +115,11 @@ export const ZipCodePerformanceReport: React.FC<ZipCodePerformanceReportProps> =
         quotes: row.quotes,
         hasSales: row.sales > 0
       }))
-  }, [data?.rows])
+  }, [rows])
 
-  // Export to CSV function - use useCallback to prevent unnecessary re-registrations
+  // Export to CSV function - all hooks MUST be called before any early returns
   const exportToCSV = useCallback(() => {
-    if (!data?.rows || data.rows.length === 0) {
+    if (sortedRows.length === 0) {
       console.warn('No data to export')
       return
     }
@@ -169,7 +169,7 @@ export const ZipCodePerformanceReport: React.FC<ZipCodePerformanceReportProps> =
     link.click()
     document.body.removeChild(link)
     window.URL.revokeObjectURL(url)
-  }, [data?.rows, sortedRows, fromDate, toDate])
+  }, [sortedRows, fromDate, toDate])
 
   // Store export function in ref so we always call the latest version without re-registering
   const exportToCSVRef = useRef(exportToCSV)
@@ -188,8 +188,9 @@ export const ZipCodePerformanceReport: React.FC<ZipCodePerformanceReportProps> =
     if (onExportReady && stableExportWrapperRef.current) {
       onExportReady(stableExportWrapperRef.current)
     }
-  }, [onExportReady]) // Only depend on onExportReady - wrapper never changes, so we only register once
+  }, [onExportReady])
 
+  // Early returns AFTER all hooks
   if (isLoading) return <ChartLoading />
 
   if (error) {
@@ -206,11 +207,9 @@ export const ZipCodePerformanceReport: React.FC<ZipCodePerformanceReportProps> =
     )
   }
 
-  if (!data || data.rows.length === 0) {
+  if (rows.length === 0 || !summary) {
     return <EmptyState />
   }
-
-  const { rows, summary } = data
 
   return (
     <div className="space-y-6">
@@ -473,16 +472,7 @@ export const ZipCodePerformanceReport: React.FC<ZipCodePerformanceReportProps> =
                     <TableCell className="font-medium">{row.zip_code}</TableCell>
                     <TableCell className="text-right">{formatNumber(row.quotes)}</TableCell>
                     <TableCell className="text-right">{formatNumber(row.sales)}</TableCell>
-                    <TableCell className="text-right">
-                      <div className={cn(
-                        "inline-flex items-center justify-center px-2 py-1 rounded font-medium",
-                        row.conversion_rate >= 25 ? "bg-green-500/20 text-green-700 dark:text-green-400" :
-                        row.conversion_rate >= 15 ? "bg-yellow-500/20 text-yellow-700 dark:text-yellow-400" :
-                        "bg-red-500/20 text-red-700 dark:text-red-400"
-                      )}>
-                        {row.conversion_rate.toFixed(1)}%
-                      </div>
-                    </TableCell>
+                    <TableCell className="text-right">{row.conversion_rate.toFixed(1)}%</TableCell>
                     <TableCell className="text-right">{formatCurrency(row.premium)}</TableCell>
                     <TableCell className="text-right">{formatNumber(row.items_sold)}</TableCell>
                   </TableRow>
@@ -493,53 +483,40 @@ export const ZipCodePerformanceReport: React.FC<ZipCodePerformanceReportProps> =
         </CardContent>
       </Card>
 
-      {/* Bar Chart */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Top 10 ZIP Codes by Quote Volume</CardTitle>
-          <CardDescription>Bars highlighted in green have generated sales</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="h-80">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={chartData} margin={{ top: 10, right: 10, left: 10, bottom: 40 }}>
-                <XAxis 
-                  dataKey="zip" 
-                  angle={-45}
-                  textAnchor="end"
-                  height={80}
-                />
-                <YAxis />
-                <Tooltip 
-                  content={({ active, payload }) => {
-                    if (active && payload && payload.length) {
-                      const data = payload[0].payload
-                      return (
-                        <div className="bg-background border rounded-lg shadow-lg p-3">
-                          <p className="font-medium">ZIP: {data.zip}</p>
-                          <p className="text-sm">Quotes: {data.quotes}</p>
-                          <p className="text-sm text-muted-foreground">
-                            {data.hasSales ? 'Has sales ✓' : 'No sales yet'}
-                          </p>
-                        </div>
-                      )
-                    }
-                    return null
-                  }}
-                />
-                <Bar dataKey="quotes" radius={[8, 8, 0, 0]}>
-                  {chartData.map((entry, index) => (
-                    <Cell 
-                      key={`cell-${index}`} 
-                      fill={entry.hasSales ? 'hsl(var(--chart-2))' : 'hsl(var(--chart-1))'}
-                    />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </CardContent>
-      </Card>
+      {/* Top 10 Chart */}
+      {chartData.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Top 10 ZIP Codes by Quotes</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="h-80">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={chartData} layout="vertical" margin={{ left: 50 }}>
+                  <XAxis type="number" />
+                  <YAxis type="category" dataKey="zip" width={60} />
+                  <Tooltip 
+                    formatter={(value: number) => [formatNumber(value), 'Quotes']}
+                    contentStyle={{ 
+                      backgroundColor: 'hsl(var(--background))', 
+                      border: '1px solid hsl(var(--border))',
+                      borderRadius: '6px'
+                    }}
+                  />
+                  <Bar dataKey="quotes" radius={[0, 4, 4, 0]}>
+                    {chartData.map((entry, index) => (
+                      <Cell 
+                        key={`cell-${index}`} 
+                        fill={entry.hasSales ? 'hsl(var(--primary))' : 'hsl(var(--muted-foreground))'} 
+                      />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   )
 }
