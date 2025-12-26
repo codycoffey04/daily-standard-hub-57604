@@ -241,12 +241,6 @@ export const ExecutionFunnelReport: React.FC<ExecutionFunnelReportProps> = ({
     if (onExportReady && stableExportWrapperRef.current) {
       onExportReady(stableExportWrapperRef.current)
     }
-    // Cleanup: clear export function when component unmounts
-    return () => {
-      if (onExportReady) {
-        onExportReady(null)
-      }
-    }
   }, [onExportReady])
 
   const toggleSort = (field: string) => {

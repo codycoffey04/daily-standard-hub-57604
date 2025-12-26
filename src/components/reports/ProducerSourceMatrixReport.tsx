@@ -112,11 +112,6 @@ export const ProducerSourceMatrixReport: React.FC<ProducerSourceMatrixReportProp
     if (onExportReady && stableExportWrapperRef.current) {
       onExportReady(stableExportWrapperRef.current)
     }
-    return () => {
-      if (onExportReady) {
-        onExportReady(null)
-      }
-    }
   }, [onExportReady])
 
   return (

@@ -127,11 +127,6 @@ export const QuotesBySourceReport: React.FC<QuotesBySourceReportProps> = ({
     if (onExportReady && stableExportWrapperRef.current) {
       onExportReady(stableExportWrapperRef.current)
     }
-    return () => {
-      if (onExportReady) {
-        onExportReady(null)
-      }
-    }
   }, [onExportReady])
 
   return (

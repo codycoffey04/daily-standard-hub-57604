@@ -128,11 +128,6 @@ export const QHHByProducerReport: React.FC<QHHByProducerReportProps> = ({
     if (onExportReady && stableExportWrapperRef.current) {
       onExportReady(stableExportWrapperRef.current)
     }
-    return () => {
-      if (onExportReady) {
-        onExportReady(null)
-      }
-    }
   }, [onExportReady])
 
   return (
