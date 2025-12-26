@@ -150,7 +150,12 @@ const SummariesPage: React.FC = () => {
 
   const handleReportChange = (reportId: string) => {
     setActiveReportId(reportId)
-    setExportFunction(null) // Clear export function when switching reports
+    setExportFunction(() => null) // Clear export function when switching reports
+  }
+
+  // Wrapper to properly store function in state (prevents React from calling it as functional update)
+  const handleExportReady = (fn: (() => void) | null) => {
+    setExportFunction(() => fn)
   }
 
   const handleSidebarToggle = () => {
@@ -201,7 +206,7 @@ const SummariesPage: React.FC = () => {
             reportId={activeReportId}
             selectedYear={selectedYear}
             selectedMonth={selectedMonth}
-            onExportReady={setExportFunction}
+            onExportReady={handleExportReady}
           />
         </div>
       </div>

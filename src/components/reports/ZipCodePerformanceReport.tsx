@@ -186,8 +186,7 @@ export const ZipCodePerformanceReport: React.FC<ZipCodePerformanceReportProps> =
   // Register export function ONCE on mount - wrapper is stable, never changes
   useEffect(() => {
     if (onExportReady && stableExportWrapperRef.current) {
-      // Wrap in arrow function to prevent React from calling it as functional update
-      onExportReady(() => stableExportWrapperRef.current?.())
+      onExportReady(stableExportWrapperRef.current)
     }
     // Cleanup: clear export function when component unmounts
     return () => {
