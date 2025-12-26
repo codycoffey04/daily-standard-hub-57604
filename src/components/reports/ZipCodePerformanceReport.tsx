@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, useCallback } from 'react'
+import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Button } from '@/components/ui/button'
@@ -171,12 +171,22 @@ export const ZipCodePerformanceReport: React.FC<ZipCodePerformanceReportProps> =
     window.URL.revokeObjectURL(url)
   }, [data?.rows, sortedRows, fromDate, toDate])
 
-  // Register export function with parent
-  // Note: We register the function directly - re-registration on date changes is fine,
-  // as long as the Export button click handler is the only thing that calls it
+  // Store export function in ref so we always call the latest version without re-registering
+  const exportToCSVRef = useRef(exportToCSV)
+  exportToCSVRef.current = exportToCSV
+
+  // Create stable wrapper function ONCE that always calls the latest export function via ref
+  const stableExportWrapperRef = useRef<(() => void) | null>(null)
+  if (!stableExportWrapperRef.current) {
+    stableExportWrapperRef.current = () => {
+      exportToCSVRef.current()
+    }
+  }
+
+  // Register export function ONCE on mount - wrapper is stable, never changes
   useEffect(() => {
-    if (onExportReady) {
-      onExportReady(exportToCSV)
+    if (onExportReady && stableExportWrapperRef.current) {
+      onExportReady(stableExportWrapperRef.current)
     }
     // Cleanup: clear export function when component unmounts
     return () => {
@@ -184,7 +194,7 @@ export const ZipCodePerformanceReport: React.FC<ZipCodePerformanceReportProps> =
         onExportReady(null)
       }
     }
-  }, [onExportReady, exportToCSV])
+  }, [onExportReady]) // Only depend on onExportReady - wrapper never changes, so we only register once
 
   if (isLoading) return <ChartLoading />
 
