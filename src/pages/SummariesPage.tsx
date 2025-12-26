@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect, useCallback, useRef } from 'react'
 
 import { ReportSidebar } from '@/components/reports/ReportSidebar'
 import { ReportHeader } from '@/components/reports/ReportHeader'
@@ -108,7 +108,7 @@ const SummariesPage: React.FC = () => {
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(
     new Set(['lead-source-analysis']) // Start with lead source analysis expanded
   )
-  const [exportFunction, setExportFunction] = useState<(() => void) | null>(null)
+  const exportFunctionRef = useRef<(() => void) | null>(null)
   
   // Sidebar collapsed state with localStorage persistence
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
@@ -152,17 +152,16 @@ const SummariesPage: React.FC = () => {
 
   const handleReportChange = (reportId: string) => {
     setActiveReportId(reportId)
-    setExportFunction(() => null) // Clear export function when switching reports
+    exportFunctionRef.current = null // Clear export function when switching reports
   }
 
   const handleSidebarToggle = () => {
     setSidebarCollapsed(prev => !prev)
   }
 
-  // Wrapper function to properly store export functions in state
-  // Must use () => fn pattern to prevent React from treating fn as a functional update
+  // Store export function in ref to avoid state updates that cause re-renders
   const handleExportReady = useCallback((fn: (() => void) | null) => {
-    setExportFunction(() => fn)
+    exportFunctionRef.current = fn
   }, [])
 
   if (!activeReport) {
@@ -201,7 +200,7 @@ const SummariesPage: React.FC = () => {
           selectedMonth={selectedMonth}
           onYearChange={setSelectedYear}
           onMonthChange={setSelectedMonth}
-          onExport={exportFunction ? () => exportFunction() : undefined}
+          onExport={() => exportFunctionRef.current?.()}
         />
         
         <div className="flex-1 overflow-y-auto p-6">
