@@ -58,25 +58,25 @@ const ReportContent: React.FC<ReportContentProps> = ({
     case 'qhh-by-source':
       return <QHHBySourceReport selectedYear={selectedYear} selectedMonth={selectedMonth} onExportReady={onExportReady} />
     case 'quotes-by-source':
-      return <QuotesBySourceReport selectedYear={selectedYear} selectedMonth={selectedMonth} />
+      return <QuotesBySourceReport selectedYear={selectedYear} selectedMonth={selectedMonth} onExportReady={onExportReady} />
     case 'qhh-by-producer':
-      return <QHHByProducerReport selectedYear={selectedYear} selectedMonth={selectedMonth} />
+      return <QHHByProducerReport selectedYear={selectedYear} selectedMonth={selectedMonth} onExportReady={onExportReady} />
     case 'quotes-by-producer':
-      return <QuotesByProducerReport selectedYear={selectedYear} selectedMonth={selectedMonth} />
+      return <QuotesByProducerReport selectedYear={selectedYear} selectedMonth={selectedMonth} onExportReady={onExportReady} />
     case 'producer-source-matrix-qhh':
       return <ProducerSourceMatrixQHHReport selectedYear={selectedYear} selectedMonth={selectedMonth} />
     case 'producer-source-matrix-quotes':
       return <ProducerSourceMatrixQuotesReport selectedYear={selectedYear} selectedMonth={selectedMonth} />
     case 'items-by-producer':
-      return <ItemsByProducerReport selectedYear={selectedYear} selectedMonth={selectedMonth} />
+      return <ItemsByProducerReport selectedYear={selectedYear} selectedMonth={selectedMonth} onExportReady={onExportReady} />
     case 'items-by-source':
       return <ItemsBySourceReport selectedYear={selectedYear} selectedMonth={selectedMonth} onExportReady={onExportReady} />
     case 'producer-source-matrix':
       return <ProducerSourceMatrixReport selectedYear={selectedYear} selectedMonth={selectedMonth} />
     case 'source-roi-calculator':
-      return <SourceROICalculatorReport selectedYear={selectedYear} selectedMonth={selectedMonth} />
+      return <SourceROICalculatorReport selectedYear={selectedYear} selectedMonth={selectedMonth} onExportReady={onExportReady} />
     case 'sales-by-producer':
-      return <SalesByProducerReport selectedYear={selectedYear} selectedMonth={selectedMonth} />
+      return <SalesByProducerReport selectedYear={selectedYear} selectedMonth={selectedMonth} onExportReady={onExportReady} />
     case 'producer-trends':
       return <ProducerTrendsReport selectedYear={selectedYear} selectedMonth={selectedMonth} />
     case 'review-summary':

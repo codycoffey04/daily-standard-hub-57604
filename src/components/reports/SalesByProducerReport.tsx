@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react'
+import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
@@ -12,6 +12,7 @@ import { MonthlyTotalsCard } from '@/components/MonthlyTotalsCard'
 interface SalesByProducerReportProps {
   selectedYear: number
   selectedMonth: number | null
+  onExportReady?: (exportFn: (() => void) | null) => void
 }
 
 type SortField = 'producer_name' | 'days_worked' | 'framework_compliance_pct' | 'avg_daily_qhh' | 'avg_daily_items' | 'total_sold_items' | 'total_sold_premium'
@@ -53,7 +54,8 @@ const FrameworkStatusCell: React.FC<{ data: SalesByProducerData }> = ({ data }) 
 
 export const SalesByProducerReport: React.FC<SalesByProducerReportProps> = ({
   selectedYear,
-  selectedMonth
+  selectedMonth,
+  onExportReady
 }) => {
   const { data: producersData, isLoading, error } = useSalesByProducer(selectedYear, selectedMonth)
   const { data: monthlySummary, isLoading: isSummaryLoading } = useMonthlySummary(selectedYear, selectedMonth)
@@ -124,6 +126,85 @@ export const SalesByProducerReport: React.FC<SalesByProducerReportProps> = ({
       total_sold_premium: producersData.reduce((sum, p) => sum + (p.total_sold_premium ?? 0), 0),
     }
   }, [producersData, monthlySummary])
+
+  // Export to CSV function
+  const exportToCSV = useCallback(() => {
+    if (!sortedData || sortedData.length === 0) {
+      console.warn('No data to export')
+      return
+    }
+
+    const escapeCSV = (value: string | number | null | undefined): string => {
+      if (value == null) return ''
+      const str = String(value)
+      if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+        return `"${str.replace(/"/g, '""')}"`
+      }
+      return str
+    }
+
+    const headers = [
+      'Rank',
+      'Producer',
+      'Days Worked',
+      'Framework Compliance %',
+      'Avg Daily QHH',
+      'Avg Daily Items',
+      'Total QHH',
+      'Total Sold Items',
+      'Total Sold Premium'
+    ]
+
+    const csvRows = sortedData.map((producer, index) => [
+      escapeCSV(index + 1),
+      escapeCSV(producer.producer_name),
+      escapeCSV(producer.days_worked),
+      escapeCSV(producer.framework_compliance_pct?.toFixed(1) ?? ''),
+      escapeCSV(producer.avg_daily_qhh?.toFixed(2) ?? ''),
+      escapeCSV(producer.avg_daily_items?.toFixed(2) ?? ''),
+      escapeCSV(producer.total_qhh ?? 0),
+      escapeCSV(producer.total_sold_items ?? 0),
+      escapeCSV(producer.total_sold_premium?.toFixed(2) ?? '')
+    ])
+
+    const csvContent = [
+      headers.join(','),
+      ...csvRows.map(row => row.join(','))
+    ].join('\n')
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+    const url = window.URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    const monthStr = selectedMonth ? `${selectedYear}-${String(selectedMonth).padStart(2, '0')}` : `${selectedYear}`
+    link.download = `sales-by-producer_${monthStr}.csv`
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    window.URL.revokeObjectURL(url)
+  }, [sortedData, selectedYear, selectedMonth])
+
+  // Store export function in ref and create stable wrapper
+  const exportToCSVRef = useRef(exportToCSV)
+  exportToCSVRef.current = exportToCSV
+  const stableExportWrapperRef = useRef<(() => void) | null>(null)
+  if (!stableExportWrapperRef.current) {
+    stableExportWrapperRef.current = () => {
+      exportToCSVRef.current()
+    }
+  }
+
+  // Register export function ONCE on mount
+  useEffect(() => {
+    if (onExportReady && stableExportWrapperRef.current) {
+      onExportReady(stableExportWrapperRef.current)
+    }
+    return () => {
+      if (onExportReady) {
+        onExportReady(null)
+      }
+    }
+  }, [onExportReady])
 
   if (isLoading || isSummaryLoading) {
     return (

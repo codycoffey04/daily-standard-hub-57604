@@ -8,11 +8,13 @@ import { AlertCircle } from 'lucide-react'
 interface ItemsByProducerReportProps {
   selectedYear: number
   selectedMonth: number | null
+  onExportReady?: (exportFn: (() => void) | null) => void
 }
 
 export const ItemsByProducerReport: React.FC<ItemsByProducerReportProps> = ({
   selectedYear,
-  selectedMonth
+  selectedMonth,
+  onExportReady
 }) => {
   const { data, isLoading, error } = useItemsByProducer(selectedYear, selectedMonth)
 
@@ -57,6 +59,66 @@ export const ItemsByProducerReport: React.FC<ItemsByProducerReportProps> = ({
 
   const totalItems = data?.reduce((sum, item) => sum + item.items, 0) || 0
   const avgItems = data?.length ? Math.round(totalItems / data.length) : 0
+
+  // Export to CSV function
+  const exportToCSV = React.useCallback(() => {
+    if (!data || data.length === 0) {
+      console.warn('No data to export')
+      return
+    }
+
+    const escapeCSV = (value: string | number): string => {
+      const str = String(value)
+      if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+        return `"${str.replace(/"/g, '""')}"`
+      }
+      return str
+    }
+
+    const headers = ['Producer', 'Items']
+    const csvRows = data.map(item => [
+      escapeCSV(item.producer_name),
+      escapeCSV(item.items)
+    ])
+
+    const csvContent = [
+      headers.join(','),
+      ...csvRows.map(row => row.join(','))
+    ].join('\n')
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+    const url = window.URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    const monthStr = selectedMonth ? `${selectedYear}-${String(selectedMonth).padStart(2, '0')}` : `${selectedYear}`
+    link.download = `items-by-producer_${monthStr}.csv`
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    window.URL.revokeObjectURL(url)
+  }, [data, selectedYear, selectedMonth])
+
+  // Store export function in ref and create stable wrapper
+  const exportToCSVRef = React.useRef(exportToCSV)
+  exportToCSVRef.current = exportToCSV
+  const stableExportWrapperRef = React.useRef<(() => void) | null>(null)
+  if (!stableExportWrapperRef.current) {
+    stableExportWrapperRef.current = () => {
+      exportToCSVRef.current()
+    }
+  }
+
+  // Register export function ONCE on mount
+  React.useEffect(() => {
+    if (onExportReady && stableExportWrapperRef.current) {
+      onExportReady(stableExportWrapperRef.current)
+    }
+    return () => {
+      if (onExportReady) {
+        onExportReady(null)
+      }
+    }
+  }, [onExportReady])
 
   return (
     <div className="space-y-6">
