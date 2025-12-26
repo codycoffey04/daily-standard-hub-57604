@@ -64,9 +64,11 @@ const ReportContent: React.FC<ReportContentProps> = ({
     case 'quotes-by-producer':
       return <QuotesByProducerReport selectedYear={selectedYear} selectedMonth={selectedMonth} onExportReady={onExportReady} />
     case 'producer-source-matrix-qhh':
-      return <ProducerSourceMatrixQHHReport selectedYear={selectedYear} selectedMonth={selectedMonth} />
+      return <ProducerSourceMatrixQHHReport selectedYear={selectedYear} selectedMonth={selectedMonth} onExportReady={onExportReady} />
     case 'producer-source-matrix-quotes':
-      return <ProducerSourceMatrixQuotesReport selectedYear={selectedYear} selectedMonth={selectedMonth} />
+      return <ProducerSourceMatrixQuotesReport selectedYear={selectedYear} selectedMonth={selectedMonth} onExportReady={onExportReady} />
+    case 'producer-source-matrix':
+      return <ProducerSourceMatrixReport selectedYear={selectedYear} selectedMonth={selectedMonth} onExportReady={onExportReady} />
     case 'items-by-producer':
       return <ItemsByProducerReport selectedYear={selectedYear} selectedMonth={selectedMonth} onExportReady={onExportReady} />
     case 'items-by-source':

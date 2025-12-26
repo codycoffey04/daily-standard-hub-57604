@@ -11,11 +11,13 @@ import { MonthlyTotalsCard } from '@/components/MonthlyTotalsCard'
 interface ProducerSourceMatrixQHHReportProps {
   selectedYear: number
   selectedMonth: number | null
+  onExportReady?: (exportFn: (() => void) | null) => void
 }
 
 export const ProducerSourceMatrixQHHReport: React.FC<ProducerSourceMatrixQHHReportProps> = ({
   selectedYear,
-  selectedMonth
+  selectedMonth,
+  onExportReady
 }) => {
   const { data, isLoading, error } = useProducerSourceMatrix(selectedYear, selectedMonth)
   const { data: monthlySummary, isLoading: isSummaryLoading } = useMonthlySummary(selectedYear, selectedMonth)
@@ -67,6 +69,80 @@ export const ProducerSourceMatrixQHHReport: React.FC<ProducerSourceMatrixQHHRepo
   const activeProducers = new Set(data.map(item => item.producer_name)).size
   const activeSources = new Set(data.map(item => item.source_name)).size
   const combinations = data.filter(item => item.qhh > 0).length
+
+  // Export to CSV function - matrix format
+  const exportToCSV = React.useCallback(() => {
+    if (!data || data.length === 0) {
+      console.warn('No data to export')
+      return
+    }
+
+    // Build matrix structure
+    const producers = [...new Set(data.map(d => d.producer_name))].sort()
+    const sources = [...new Set(data.map(d => d.source_name))].sort()
+    const matrixData = new Map<string, number>()
+    data.forEach(item => {
+      matrixData.set(`${item.producer_name}-${item.source_name}`, item.qhh)
+    })
+
+    const producerTotals = producers.map(producer => ({
+      producer,
+      total: data.filter(d => d.producer_name === producer).reduce((sum, d) => sum + d.qhh, 0)
+    }))
+
+    const sourceTotals = sources.map(source => ({
+      source,
+      total: data.filter(d => d.source_name === source).reduce((sum, d) => sum + d.qhh, 0)
+    }))
+
+    const grandTotal = data.reduce((sum, d) => sum + d.qhh, 0)
+
+    const csvData = [
+      ['Producer', ...sources, 'Total'],
+      ...producerTotals.map(pt => [
+        pt.producer,
+        ...sources.map(source => 
+          String(matrixData.get(`${pt.producer}-${source}`) || 0)
+        ),
+        String(pt.total)
+      ]),
+      ['Total', ...sourceTotals.map(st => String(st.total)), String(grandTotal)]
+    ]
+
+    const csvContent = csvData.map(row => row.join(',')).join('\n')
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+    const url = window.URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    const monthStr = selectedMonth ? `${selectedYear}-${String(selectedMonth).padStart(2, '0')}` : `${selectedYear}`
+    link.download = `producer-source-qhh-matrix_${monthStr}.csv`
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    window.URL.revokeObjectURL(url)
+  }, [data, selectedYear, selectedMonth])
+
+  // Store export function in ref and create stable wrapper
+  const exportToCSVRef = React.useRef(exportToCSV)
+  exportToCSVRef.current = exportToCSV
+  const stableExportWrapperRef = React.useRef<(() => void) | null>(null)
+  if (!stableExportWrapperRef.current) {
+    stableExportWrapperRef.current = () => {
+      exportToCSVRef.current()
+    }
+  }
+
+  // Register export function ONCE on mount
+  React.useEffect(() => {
+    if (onExportReady && stableExportWrapperRef.current) {
+      onExportReady(stableExportWrapperRef.current)
+    }
+    return () => {
+      if (onExportReady) {
+        onExportReady(null)
+      }
+    }
+  }, [onExportReady])
 
   return (
     <div className="space-y-6">

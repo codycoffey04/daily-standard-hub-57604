@@ -8,11 +8,13 @@ import { AlertCircle } from 'lucide-react'
 interface ProducerSourceMatrixReportProps {
   selectedYear: number
   selectedMonth: number | null
+  onExportReady?: (exportFn: (() => void) | null) => void
 }
 
 export const ProducerSourceMatrixReport: React.FC<ProducerSourceMatrixReportProps> = ({
   selectedYear,
-  selectedMonth
+  selectedMonth,
+  onExportReady
 }) => {
   const { data, isLoading, error } = useProducerSourceMatrix(selectedYear, selectedMonth)
 
@@ -53,6 +55,69 @@ export const ProducerSourceMatrixReport: React.FC<ProducerSourceMatrixReportProp
   const totalCombinations = data?.length || 0
   const activeProducers = new Set(data?.map(item => item.producer_name)).size
   const activeSources = new Set(data?.map(item => item.source_name)).size
+
+  // Export to CSV function - table format with all metrics
+  const exportToCSV = React.useCallback(() => {
+    if (!data || data.length === 0) {
+      console.warn('No data to export')
+      return
+    }
+
+    const escapeCSV = (value: string | number): string => {
+      const str = String(value)
+      if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+        return `"${str.replace(/"/g, '""')}"`
+      }
+      return str
+    }
+
+    const headers = ['Producer', 'Source', 'QHH', 'Quotes', 'Items']
+    const csvRows = data.map(item => [
+      escapeCSV(item.producer_name),
+      escapeCSV(item.source_name),
+      escapeCSV(item.qhh),
+      escapeCSV(item.quotes),
+      escapeCSV(item.items)
+    ])
+
+    const csvContent = [
+      headers.join(','),
+      ...csvRows.map(row => row.join(','))
+    ].join('\n')
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+    const url = window.URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    const monthStr = selectedMonth ? `${selectedYear}-${String(selectedMonth).padStart(2, '0')}` : `${selectedYear}`
+    link.download = `producer-source-matrix_${monthStr}.csv`
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    window.URL.revokeObjectURL(url)
+  }, [data, selectedYear, selectedMonth])
+
+  // Store export function in ref and create stable wrapper
+  const exportToCSVRef = React.useRef(exportToCSV)
+  exportToCSVRef.current = exportToCSV
+  const stableExportWrapperRef = React.useRef<(() => void) | null>(null)
+  if (!stableExportWrapperRef.current) {
+    stableExportWrapperRef.current = () => {
+      exportToCSVRef.current()
+    }
+  }
+
+  // Register export function ONCE on mount
+  React.useEffect(() => {
+    if (onExportReady && stableExportWrapperRef.current) {
+      onExportReady(stableExportWrapperRef.current)
+    }
+    return () => {
+      if (onExportReady) {
+        onExportReady(null)
+      }
+    }
+  }, [onExportReady])
 
   return (
     <div className="space-y-6">
