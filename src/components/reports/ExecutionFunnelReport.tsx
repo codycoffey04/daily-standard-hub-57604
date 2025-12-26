@@ -236,20 +236,10 @@ export const ExecutionFunnelReport: React.FC<ExecutionFunnelReportProps> = ({
     }
   }
 
-  // Register export function - use effect to ensure it happens after render
+  // Register export function ONCE on mount - wrapper is stable, never changes
   useEffect(() => {
-    if (onExportReady) {
-      if (stableExportWrapperRef.current) {
-        onExportReady(stableExportWrapperRef.current)
-      } else {
-        // Fallback: register a wrapper that will call the current ref
-        const wrapper = () => {
-          if (exportToCSVRef.current) {
-            exportToCSVRef.current()
-          }
-        }
-        onExportReady(wrapper)
-      }
+    if (onExportReady && stableExportWrapperRef.current) {
+      onExportReady(stableExportWrapperRef.current)
     }
     // Cleanup: clear export function when component unmounts
     return () => {
