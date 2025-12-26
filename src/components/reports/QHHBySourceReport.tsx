@@ -12,11 +12,13 @@ import { MonthlyTotalsCard } from '@/components/MonthlyTotalsCard'
 interface QHHBySourceReportProps {
   selectedYear: number
   selectedMonth: number | null
+  onExportReady?: (exportFn: (() => void) | null) => void
 }
 
 export const QHHBySourceReport: React.FC<QHHBySourceReportProps> = ({
   selectedYear,
-  selectedMonth
+  selectedMonth,
+  onExportReady
 }) => {
   console.log('🎯 === QHHBySourceReport RENDERING ===')
   console.log('  Props - selectedYear:', selectedYear, 'selectedMonth:', selectedMonth)
@@ -83,6 +85,66 @@ export const QHHBySourceReport: React.FC<QHHBySourceReportProps> = ({
   }))
 
   const totalQHH = monthlySummary?.total_qhh || 0
+
+  // Export to CSV function
+  const exportToCSV = React.useCallback(() => {
+    if (!activeSources || activeSources.length === 0) {
+      console.warn('No data to export')
+      return
+    }
+
+    const escapeCSV = (value: string | number): string => {
+      const str = String(value)
+      if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+        return `"${str.replace(/"/g, '""')}"`
+      }
+      return str
+    }
+
+    const headers = ['Source Name', 'QHH']
+    const csvRows = activeSources.map(item => [
+      escapeCSV(item.source_name),
+      escapeCSV(item.qhh)
+    ])
+
+    const csvContent = [
+      headers.join(','),
+      ...csvRows.map(row => row.join(','))
+    ].join('\n')
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+    const url = window.URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    const monthStr = selectedMonth ? `${selectedYear}-${String(selectedMonth).padStart(2, '0')}` : `${selectedYear}`
+    link.download = `qhh-by-source_${monthStr}.csv`
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    window.URL.revokeObjectURL(url)
+  }, [activeSources, selectedYear, selectedMonth])
+
+  // Store export function in ref and create stable wrapper
+  const exportToCSVRef = React.useRef(exportToCSV)
+  exportToCSVRef.current = exportToCSV
+  const stableExportWrapperRef = React.useRef<(() => void) | null>(null)
+  if (!stableExportWrapperRef.current) {
+    stableExportWrapperRef.current = () => {
+      exportToCSVRef.current()
+    }
+  }
+
+  // Register export function ONCE on mount
+  React.useEffect(() => {
+    if (onExportReady && stableExportWrapperRef.current) {
+      onExportReady(stableExportWrapperRef.current)
+    }
+    return () => {
+      if (onExportReady) {
+        onExportReady(null)
+      }
+    }
+  }, [onExportReady])
 
   return (
     <div className="space-y-6">

@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react'
+import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react'
 import { subDays, format } from 'date-fns'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
@@ -28,9 +28,12 @@ const safeToFixed = (value: number | null | undefined, decimals: number = 2): st
 interface ExecutionFunnelReportProps {
   selectedYear: number
   selectedMonth: number | null
+  onExportReady?: (exportFn: (() => void) | null) => void
 }
 
-export const ExecutionFunnelReport: React.FC<ExecutionFunnelReportProps> = () => {
+export const ExecutionFunnelReport: React.FC<ExecutionFunnelReportProps> = ({
+  onExportReady
+}) => {
   // Date range: default to last 90 days
   const [fromDate, setFromDate] = useState<Date>(subDays(new Date(), 90))
   const [toDate, setToDate] = useState<Date>(new Date())
@@ -153,6 +156,98 @@ export const ExecutionFunnelReport: React.FC<ExecutionFunnelReportProps> = () =>
     })
     return sorted
   }, [leaderboard, sortField, sortDirection])
+
+  // Export to CSV function
+  const exportToCSV = useCallback(() => {
+    if (!sortedLeaderboard || sortedLeaderboard.length === 0) {
+      console.warn('No data to export')
+      return
+    }
+
+    // Helper function to escape CSV values
+    const escapeCSV = (value: string | number | null | undefined): string => {
+      if (value == null) return ''
+      const str = String(value)
+      if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+        return `"${str.replace(/"/g, '""')}"`
+      }
+      return str
+    }
+
+    // Create CSV headers
+    const headers = [
+      'Producer',
+      'Dials',
+      'QHH',
+      'Quote Rate %',
+      'SHH',
+      'Close Rate %',
+      'Items',
+      'Attach Rate',
+      'Rank'
+    ]
+
+    // Create CSV rows
+    const csvRows = sortedLeaderboard.map(producer => [
+      escapeCSV(producer.producer_name),
+      escapeCSV(producer.dials),
+      escapeCSV(producer.qhh),
+      escapeCSV(producer.dials > 0 ? ((producer.qhh / producer.dials) * 100).toFixed(2) : '0.00'),
+      escapeCSV(producer.households_sold),
+      escapeCSV(producer.qhh > 0 ? ((producer.households_sold / producer.qhh) * 100).toFixed(2) : '0.00'),
+      escapeCSV(producer.items_sold),
+      escapeCSV(producer.households_sold > 0 ? (producer.items_sold / producer.households_sold).toFixed(2) : '0.00'),
+      escapeCSV(producer.rank_by_sales)
+    ])
+
+    // Combine headers and rows
+    const csvContent = [
+      headers.join(','),
+      ...csvRows.map(row => row.join(','))
+    ].join('\n')
+
+    // Create blob and download
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+    const url = window.URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    
+    // Generate filename with date range
+    const dateRange = fromDateStr && toDateStr 
+      ? `_${fromDateStr}_to_${toDateStr}`.replace(/-/g, '')
+      : ''
+    link.download = `execution-funnel-leaderboard${dateRange}.csv`
+    
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    window.URL.revokeObjectURL(url)
+  }, [sortedLeaderboard, fromDateStr, toDateStr])
+
+  // Store export function in ref so we always call the latest version without re-registering
+  const exportToCSVRef = useRef(exportToCSV)
+  exportToCSVRef.current = exportToCSV
+
+  // Create stable wrapper function ONCE that always calls the latest export function via ref
+  const stableExportWrapperRef = useRef<(() => void) | null>(null)
+  if (!stableExportWrapperRef.current) {
+    stableExportWrapperRef.current = () => {
+      exportToCSVRef.current()
+    }
+  }
+
+  // Register export function ONCE on mount - wrapper is stable, never changes
+  useEffect(() => {
+    if (onExportReady && stableExportWrapperRef.current) {
+      onExportReady(stableExportWrapperRef.current)
+    }
+    // Cleanup: clear export function when component unmounts
+    return () => {
+      if (onExportReady) {
+        onExportReady(null)
+      }
+    }
+  }, [onExportReady])
 
   const toggleSort = (field: string) => {
     if (sortField === field) {

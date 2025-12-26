@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 
 import { ReportSidebar } from '@/components/reports/ReportSidebar'
 import { ReportHeader } from '@/components/reports/ReportHeader'
@@ -56,7 +56,7 @@ const ReportContent: React.FC<ReportContentProps> = ({
     case 'monthly-summary':
       return <MonthlySummaryReport selectedYear={selectedYear} selectedMonth={selectedMonth} />
     case 'qhh-by-source':
-      return <QHHBySourceReport selectedYear={selectedYear} selectedMonth={selectedMonth} />
+      return <QHHBySourceReport selectedYear={selectedYear} selectedMonth={selectedMonth} onExportReady={onExportReady} />
     case 'quotes-by-source':
       return <QuotesBySourceReport selectedYear={selectedYear} selectedMonth={selectedMonth} />
     case 'qhh-by-producer':
@@ -70,7 +70,7 @@ const ReportContent: React.FC<ReportContentProps> = ({
     case 'items-by-producer':
       return <ItemsByProducerReport selectedYear={selectedYear} selectedMonth={selectedMonth} />
     case 'items-by-source':
-      return <ItemsBySourceReport selectedYear={selectedYear} selectedMonth={selectedMonth} />
+      return <ItemsBySourceReport selectedYear={selectedYear} selectedMonth={selectedMonth} onExportReady={onExportReady} />
     case 'producer-source-matrix':
       return <ProducerSourceMatrixReport selectedYear={selectedYear} selectedMonth={selectedMonth} />
     case 'source-roi-calculator':
@@ -84,7 +84,7 @@ const ReportContent: React.FC<ReportContentProps> = ({
     case 'common-weak-points':
       return <CommonWeakPointsReport selectedYear={selectedYear} selectedMonth={selectedMonth} />
     case 'conversion-funnel':
-      return <ExecutionFunnelReport selectedYear={selectedYear} selectedMonth={selectedMonth} />
+      return <ExecutionFunnelReport selectedYear={selectedYear} selectedMonth={selectedMonth} onExportReady={onExportReady} />
       case 'ytd-performance':
         return <YTDPerformanceReport selectedYear={selectedYear} />
     case 'zip-code-performance':
@@ -161,6 +161,11 @@ const SummariesPage: React.FC = () => {
   const handleSidebarToggle = () => {
     setSidebarCollapsed(prev => !prev)
   }
+
+  // Wrapper function to properly store export functions using function form of setState
+  const handleExportReady = useCallback((exportFn: (() => void) | null) => {
+    setExportFunction(() => exportFn || null)
+  }, [])
 
   if (!activeReport) {
     return (

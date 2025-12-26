@@ -21,11 +21,13 @@ import { MonthlyTotalsCard } from '@/components/MonthlyTotalsCard'
 interface ItemsBySourceReportProps {
   selectedYear: number
   selectedMonth: number | null
+  onExportReady?: (exportFn: (() => void) | null) => void
 }
 
 export const ItemsBySourceReport: React.FC<ItemsBySourceReportProps> = ({
   selectedYear,
-  selectedMonth
+  selectedMonth,
+  onExportReady
 }) => {
   const { data, isLoading, error } = useItemsBySource(selectedYear, selectedMonth)
   const { data: monthlySummary, isLoading: isSummaryLoading } = useMonthlySummary(selectedYear, selectedMonth)
@@ -129,6 +131,89 @@ export const ItemsBySourceReport: React.FC<ItemsBySourceReportProps> = ({
     const comparison = aVal > bVal ? 1 : -1
     return sortDirection === 'asc' ? comparison : -comparison
   })
+
+  // Export to CSV function
+  const exportToCSV = React.useCallback(() => {
+    if (!sortedData || sortedData.length === 0) {
+      console.warn('No data to export')
+      return
+    }
+
+    const escapeCSV = (value: string | number | null | undefined): string => {
+      if (value == null) return ''
+      const str = String(value)
+      if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+        return `"${str.replace(/"/g, '""')}"`
+      }
+      return str
+    }
+
+    const headers = [
+      'Source Name',
+      'QHH',
+      'Quotes',
+      'Items',
+      'Items per QHH',
+      'Items per Quote',
+      'QHH Rows Detail',
+      'Detail Coverage %',
+      'Bundle Rate %',
+      'Avg Quoted Premium',
+      'Avg Sold Quote Premium'
+    ]
+
+    const csvRows = sortedData.map(row => [
+      escapeCSV(row.source_name),
+      escapeCSV(row.qhh),
+      escapeCSV(row.quotes),
+      escapeCSV(row.items),
+      escapeCSV(row.items_per_qhh ?? ''),
+      escapeCSV(row.items_per_quote ?? ''),
+      escapeCSV(row.qhh_rows_detail),
+      escapeCSV(row.detail_coverage_pct ? `${row.detail_coverage_pct.toFixed(1)}%` : ''),
+      escapeCSV(row.bundle_rate ? `${row.bundle_rate.toFixed(1)}%` : ''),
+      escapeCSV(row.avg_quoted_premium ? Math.round(row.avg_quoted_premium) : ''),
+      escapeCSV(row.avg_sold_quote_premium ? Math.round(row.avg_sold_quote_premium) : '')
+    ])
+
+    const csvContent = [
+      headers.join(','),
+      ...csvRows.map(row => row.join(','))
+    ].join('\n')
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+    const url = window.URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    const monthStr = selectedMonth ? `${selectedYear}-${String(selectedMonth).padStart(2, '0')}` : `${selectedYear}`
+    link.download = `items-by-source_${monthStr}.csv`
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    window.URL.revokeObjectURL(url)
+  }, [sortedData, selectedYear, selectedMonth])
+
+  // Store export function in ref and create stable wrapper
+  const exportToCSVRef = React.useRef(exportToCSV)
+  exportToCSVRef.current = exportToCSV
+  const stableExportWrapperRef = React.useRef<(() => void) | null>(null)
+  if (!stableExportWrapperRef.current) {
+    stableExportWrapperRef.current = () => {
+      exportToCSVRef.current()
+    }
+  }
+
+  // Register export function ONCE on mount
+  React.useEffect(() => {
+    if (onExportReady && stableExportWrapperRef.current) {
+      onExportReady(stableExportWrapperRef.current)
+    }
+    return () => {
+      if (onExportReady) {
+        onExportReady(null)
+      }
+    }
+  }, [onExportReady])
 
   const SortButton: React.FC<{ column: keyof ItemsBySourceData; label: string }> = ({ 
     column, 
