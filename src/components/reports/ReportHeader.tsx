@@ -11,6 +11,7 @@ interface ReportHeaderProps {
   onYearChange: (year: number) => void
   onMonthChange: (month: number | null) => void
   onRefresh?: () => void
+  onExport?: () => void
   isLoading?: boolean
 }
 
@@ -21,13 +22,17 @@ export const ReportHeader: React.FC<ReportHeaderProps> = ({
   onYearChange,
   onMonthChange,
   onRefresh,
+  onExport,
   isLoading = false
 }) => {
   const Icon = report?.icon ?? BarChart3
 
   const handleExport = () => {
-    // Placeholder for export functionality
-    console.log('Export report:', report.id)
+    if (onExport) {
+      onExport()
+    } else {
+      console.log('Export not available for report:', report.id)
+    }
   }
 
   const handlePrint = () => {

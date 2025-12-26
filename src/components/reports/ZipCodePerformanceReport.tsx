@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react'
+import React, { useState, useMemo, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Button } from '@/components/ui/button'
@@ -25,11 +25,13 @@ import { format } from 'date-fns'
 interface ZipCodePerformanceReportProps {
   selectedYear: number
   selectedMonth: number | null
+  onExportReady?: (exportFn: (() => void) | null) => void
 }
 
 export const ZipCodePerformanceReport: React.FC<ZipCodePerformanceReportProps> = ({
   selectedYear,
-  selectedMonth
+  selectedMonth,
+  onExportReady
 }) => {
   // Calculate default date range (current month)
   const getDefaultDateRange = () => {
@@ -108,6 +110,73 @@ export const ZipCodePerformanceReport: React.FC<ZipCodePerformanceReportProps> =
         hasSales: row.sales > 0
       }))
   }, [data?.rows])
+
+  // Export to CSV function
+  const exportToCSV = useMemo(() => {
+    return () => {
+      if (!data?.rows || data.rows.length === 0) {
+        console.warn('No data to export')
+        return
+      }
+
+      // Helper function to escape CSV values
+      const escapeCSV = (value: string | number): string => {
+        const str = String(value)
+        // If value contains comma, quote, or newline, wrap in quotes and escape quotes
+        if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+          return `"${str.replace(/"/g, '""')}"`
+        }
+        return str
+      }
+
+      // Create CSV headers
+      const headers = ['ZIP Code', 'Quotes', 'Sales', 'Conversion %', 'Premium', 'Items Sold']
+      
+      // Create CSV rows using sortedRows to match what's displayed
+      const csvRows = sortedRows.map(row => [
+        escapeCSV(row.zip_code),
+        escapeCSV(row.quotes),
+        escapeCSV(row.sales),
+        escapeCSV(row.conversion_rate.toFixed(2)),
+        escapeCSV(Math.round(row.premium)),
+        escapeCSV(row.items_sold)
+      ])
+
+      // Combine headers and rows
+      const csvContent = [
+        headers.join(','),
+        ...csvRows.map(row => row.join(','))
+      ].join('\n')
+
+      // Create blob and download
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+      const url = window.URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      
+      // Generate filename with date range
+      const dateRange = fromDate && toDate 
+        ? `_${fromDate}_to_${toDate}`.replace(/-/g, '')
+        : ''
+      link.download = `zip-code-performance${dateRange}.csv`
+      
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      window.URL.revokeObjectURL(url)
+    }
+  }, [data?.rows, sortedRows, fromDate, toDate])
+
+  // Register export function with parent
+  useEffect(() => {
+    if (onExportReady) {
+      if (data?.rows && data.rows.length > 0) {
+        onExportReady(exportToCSV)
+      } else {
+        onExportReady(null)
+      }
+    }
+  }, [onExportReady, exportToCSV, data?.rows])
 
   if (isLoading) return <ChartLoading />
 

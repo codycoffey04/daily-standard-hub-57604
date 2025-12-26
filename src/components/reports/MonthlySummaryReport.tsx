@@ -34,6 +34,9 @@ const MonthlySummaryReport: React.FC<MonthlySummaryReportProps> = ({ selectedYea
       console.log('🎯 Component received summaryData:', summaryData)
       console.log('  QHH:', summaryData.total_qhh)
       console.log('  Quotes:', summaryData.total_quotes)
+      console.log('  Framework Compliance (from DB):', summaryData.framework_compliance_pct)
+      console.log('  Total Entries:', summaryData.total_entries)
+      console.log('  Top Framework Entries:', summaryData.top_framework_entries)
     }
   }, [summaryData])
 
@@ -79,11 +82,30 @@ const MonthlySummaryReport: React.FC<MonthlySummaryReportProps> = ({ selectedYea
 
     const totalQHH = summaryData.total_qhh || 0
     const totalQuotes = summaryData.total_quotes || 0
-    const avgFramework = summaryData.framework_compliance_pct || 0
     const totalDials = summaryData.total_dials || 0
     const totalTalkMins = summaryData.total_talk_time || 0
     const totalTalkTimeHrs = Math.round(totalTalkMins / 60)
     const avgQuotesPerHH = totalQHH > 0 ? (totalQuotes / totalQHH) : 0
+    
+    // Calculate framework compliance percentage
+    // Prefer calculating from raw data if available, otherwise use database value
+    let avgFramework = 0
+    console.log('🔍 Framework Compliance Calculation:')
+    console.log('  total_entries:', summaryData.total_entries)
+    console.log('  top_framework_entries:', summaryData.top_framework_entries)
+    console.log('  framework_compliance_pct (from DB):', summaryData.framework_compliance_pct)
+    
+    if (summaryData.total_entries && summaryData.total_entries > 0 && summaryData.top_framework_entries !== undefined) {
+      // Calculate from raw data: (top_framework_entries / total_entries) * 100
+      avgFramework = (summaryData.top_framework_entries / summaryData.total_entries) * 100
+      console.log('  ✅ Calculated from raw data:', avgFramework, '%')
+    } else if (summaryData.framework_compliance_pct !== undefined && summaryData.framework_compliance_pct !== null) {
+      // Fall back to database value if raw data not available
+      avgFramework = summaryData.framework_compliance_pct
+      console.log('  ⚠️ Using database value:', avgFramework, '%')
+    } else {
+      console.log('  ❌ No data available for calculation, using 0%')
+    }
 
     return {
       totalQHH,

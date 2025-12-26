@@ -43,12 +43,14 @@ interface ReportContentProps {
   reportId: string
   selectedYear: number
   selectedMonth: number | null
+  onExportReady?: (exportFn: (() => void) | null) => void
 }
 
 const ReportContent: React.FC<ReportContentProps> = ({
   reportId,
   selectedYear,
-  selectedMonth
+  selectedMonth,
+  onExportReady
 }) => {
   switch (reportId) {
     case 'monthly-summary':
@@ -86,7 +88,7 @@ const ReportContent: React.FC<ReportContentProps> = ({
       case 'ytd-performance':
         return <YTDPerformanceReport selectedYear={selectedYear} />
     case 'zip-code-performance':
-      return <ZipCodePerformanceReport selectedYear={selectedYear} selectedMonth={selectedMonth} />
+      return <ZipCodePerformanceReport selectedYear={selectedYear} selectedMonth={selectedMonth} onExportReady={onExportReady} />
     case 'coaching-effectiveness':
       return <CoachingEffectivenessReport selectedYear={selectedYear} selectedMonth={selectedMonth} />
     default:
@@ -104,6 +106,7 @@ const SummariesPage: React.FC = () => {
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(
     new Set(['lead-source-analysis']) // Start with lead source analysis expanded
   )
+  const [exportFunction, setExportFunction] = useState<(() => void) | null>(null)
   
   // Sidebar collapsed state with localStorage persistence
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
@@ -147,6 +150,7 @@ const SummariesPage: React.FC = () => {
 
   const handleReportChange = (reportId: string) => {
     setActiveReportId(reportId)
+    setExportFunction(null) // Clear export function when switching reports
   }
 
   const handleSidebarToggle = () => {
@@ -189,6 +193,7 @@ const SummariesPage: React.FC = () => {
           selectedMonth={selectedMonth}
           onYearChange={setSelectedYear}
           onMonthChange={setSelectedMonth}
+          onExport={exportFunction ? () => exportFunction() : undefined}
         />
         
         <div className="flex-1 overflow-y-auto p-6">
@@ -196,6 +201,7 @@ const SummariesPage: React.FC = () => {
             reportId={activeReportId}
             selectedYear={selectedYear}
             selectedMonth={selectedMonth}
+            onExportReady={setExportFunction}
           />
         </div>
       </div>
