@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react'
+import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Button } from '@/components/ui/button'
@@ -117,66 +117,72 @@ export const ZipCodePerformanceReport: React.FC<ZipCodePerformanceReportProps> =
       }))
   }, [data?.rows])
 
-  // Export to CSV function
-  const exportToCSV = useMemo(() => {
-    return () => {
-      if (!data?.rows || data.rows.length === 0) {
-        console.warn('No data to export')
-        return
-      }
-
-      // Helper function to escape CSV values
-      const escapeCSV = (value: string | number): string => {
-        const str = String(value)
-        // If value contains comma, quote, or newline, wrap in quotes and escape quotes
-        if (str.includes(',') || str.includes('"') || str.includes('\n')) {
-          return `"${str.replace(/"/g, '""')}"`
-        }
-        return str
-      }
-
-      // Create CSV headers
-      const headers = ['ZIP Code', 'Quotes', 'Sales', 'Conversion %', 'Premium', 'Items Sold']
-      
-      // Create CSV rows using sortedRows to match what's displayed
-      const csvRows = sortedRows.map(row => [
-        escapeCSV(row.zip_code),
-        escapeCSV(row.quotes),
-        escapeCSV(row.sales),
-        escapeCSV(row.conversion_rate.toFixed(2)),
-        escapeCSV(Math.round(row.premium)),
-        escapeCSV(row.items_sold)
-      ])
-
-      // Combine headers and rows
-      const csvContent = [
-        headers.join(','),
-        ...csvRows.map(row => row.join(','))
-      ].join('\n')
-
-      // Create blob and download
-      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
-      const url = window.URL.createObjectURL(blob)
-      const link = document.createElement('a')
-      link.href = url
-      
-      // Generate filename with date range
-      const dateRange = fromDate && toDate 
-        ? `_${fromDate}_to_${toDate}`.replace(/-/g, '')
-        : ''
-      link.download = `zip-code-performance${dateRange}.csv`
-      
-      document.body.appendChild(link)
-      link.click()
-      document.body.removeChild(link)
-      window.URL.revokeObjectURL(url)
+  // Export to CSV function - use useCallback to prevent unnecessary re-registrations
+  const exportToCSV = useCallback(() => {
+    if (!data?.rows || data.rows.length === 0) {
+      console.warn('No data to export')
+      return
     }
+
+    // Helper function to escape CSV values
+    const escapeCSV = (value: string | number): string => {
+      const str = String(value)
+      // If value contains comma, quote, or newline, wrap in quotes and escape quotes
+      if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+        return `"${str.replace(/"/g, '""')}"`
+      }
+      return str
+    }
+
+    // Create CSV headers
+    const headers = ['ZIP Code', 'Quotes', 'Sales', 'Conversion %', 'Premium', 'Items Sold']
+    
+    // Create CSV rows using sortedRows to match what's displayed
+    const csvRows = sortedRows.map(row => [
+      escapeCSV(row.zip_code),
+      escapeCSV(row.quotes),
+      escapeCSV(row.sales),
+      escapeCSV(row.conversion_rate.toFixed(2)),
+      escapeCSV(Math.round(row.premium)),
+      escapeCSV(row.items_sold)
+    ])
+
+    // Combine headers and rows
+    const csvContent = [
+      headers.join(','),
+      ...csvRows.map(row => row.join(','))
+    ].join('\n')
+
+    // Create blob and download
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+    const url = window.URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    
+    // Generate filename with date range
+    const dateRange = fromDate && toDate 
+      ? `_${fromDate}_to_${toDate}`.replace(/-/g, '')
+      : ''
+    link.download = `zip-code-performance${dateRange}.csv`
+    
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    window.URL.revokeObjectURL(url)
   }, [data?.rows, sortedRows, fromDate, toDate])
 
-  // Register export function with parent - always register, even if data is empty
+  // Store export function in ref to avoid re-registration on every date change
+  const exportToCSVRef = useRef(exportToCSV)
+  exportToCSVRef.current = exportToCSV
+
+  // Register export function with parent - use stable wrapper to prevent re-registration
   useEffect(() => {
     if (onExportReady) {
-      onExportReady(exportToCSV)
+      // Create a stable wrapper function that always calls the current export function
+      const stableExportFn = () => {
+        exportToCSVRef.current()
+      }
+      onExportReady(stableExportFn)
     }
     // Cleanup: clear export function when component unmounts
     return () => {
@@ -184,7 +190,7 @@ export const ZipCodePerformanceReport: React.FC<ZipCodePerformanceReportProps> =
         onExportReady(null)
       }
     }
-  }, [onExportReady, exportToCSV])
+  }, [onExportReady]) // Only depend on onExportReady, not exportToCSV
 
   if (isLoading) return <ChartLoading />
 
@@ -225,6 +231,7 @@ export const ZipCodePerformanceReport: React.FC<ZipCodePerformanceReportProps> =
                 <PopoverTrigger asChild>
                   <Button
                     variant="outline"
+                    type="button"
                     className={cn(
                       "w-full justify-start text-left font-normal",
                       !fromDateObj && "text-muted-foreground"
@@ -234,11 +241,15 @@ export const ZipCodePerformanceReport: React.FC<ZipCodePerformanceReportProps> =
                     {fromDateObj ? format(fromDateObj, "MMM dd, yyyy") : <span>Pick a date</span>}
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
+                <PopoverContent className="w-auto p-0" align="start" onOpenAutoFocus={(e) => e.preventDefault()}>
                   <Calendar
                     mode="single"
                     selected={fromDateObj}
-                    onSelect={(date) => date && setFromDateObj(date)}
+                    onSelect={(date) => {
+                      if (date) {
+                        setFromDateObj(date)
+                      }
+                    }}
                     initialFocus
                   />
                 </PopoverContent>
@@ -251,6 +262,7 @@ export const ZipCodePerformanceReport: React.FC<ZipCodePerformanceReportProps> =
                 <PopoverTrigger asChild>
                   <Button
                     variant="outline"
+                    type="button"
                     className={cn(
                       "w-full justify-start text-left font-normal",
                       !toDateObj && "text-muted-foreground"
@@ -260,11 +272,15 @@ export const ZipCodePerformanceReport: React.FC<ZipCodePerformanceReportProps> =
                     {toDateObj ? format(toDateObj, "MMM dd, yyyy") : <span>Pick a date</span>}
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
+                <PopoverContent className="w-auto p-0" align="start" onOpenAutoFocus={(e) => e.preventDefault()}>
                   <Calendar
                     mode="single"
                     selected={toDateObj}
-                    onSelect={(date) => date && setToDateObj(date)}
+                    onSelect={(date) => {
+                      if (date) {
+                        setToDateObj(date)
+                      }
+                    }}
                     initialFocus
                   />
                 </PopoverContent>
