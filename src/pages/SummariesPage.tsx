@@ -159,9 +159,10 @@ const SummariesPage: React.FC = () => {
     setSidebarCollapsed(prev => !prev)
   }
 
-  // Wrapper function to properly store export functions
-  const handleExportReady = useCallback((exportFn: (() => void) | null) => {
-    setExportFunction(exportFn)
+  // Wrapper function to properly store export functions in state
+  // Must use () => fn pattern to prevent React from treating fn as a functional update
+  const handleExportReady = useCallback((fn: (() => void) | null) => {
+    setExportFunction(() => fn)
   }, [])
 
   if (!activeReport) {
