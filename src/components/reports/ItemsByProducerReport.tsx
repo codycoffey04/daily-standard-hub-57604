@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useCallback, useRef, useEffect, useMemo } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { SummaryBarChart } from '@/components/charts/SummaryBarChart'
 import { useItemsByProducer } from '@/hooks/useSummariesData'
@@ -18,6 +18,73 @@ export const ItemsByProducerReport: React.FC<ItemsByProducerReportProps> = ({
 }) => {
   const { data, isLoading, error } = useItemsByProducer(selectedYear, selectedMonth)
 
+  // Derive data safely even when data is undefined
+  const rows = useMemo(() => data ?? [], [data])
+
+  const chartData = useMemo(() => rows.map(item => ({
+    name: item.producer_name,
+    value: item.items
+  })), [rows])
+
+  const totalItems = useMemo(() => rows.reduce((sum, item) => sum + item.items, 0), [rows])
+  const avgItems = rows.length > 0 ? Math.round(totalItems / rows.length) : 0
+
+  // Export to CSV function - all hooks MUST be called before any early returns
+  const exportToCSV = useCallback(() => {
+    if (rows.length === 0) {
+      console.warn('No data to export')
+      return
+    }
+
+    const escapeCSV = (value: string | number): string => {
+      const str = String(value)
+      if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+        return `"${str.replace(/"/g, '""')}"`
+      }
+      return str
+    }
+
+    const headers = ['Producer', 'Items']
+    const csvRows = rows.map(item => [
+      escapeCSV(item.producer_name),
+      escapeCSV(item.items)
+    ])
+
+    const csvContent = [
+      headers.join(','),
+      ...csvRows.map(row => row.join(','))
+    ].join('\n')
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+    const url = window.URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    const monthStr = selectedMonth ? `${selectedYear}-${String(selectedMonth).padStart(2, '0')}` : `${selectedYear}`
+    link.download = `items-by-producer_${monthStr}.csv`
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    window.URL.revokeObjectURL(url)
+  }, [rows, selectedYear, selectedMonth])
+
+  // Store export function in ref and create stable wrapper
+  const exportToCSVRef = useRef(exportToCSV)
+  exportToCSVRef.current = exportToCSV
+  const stableExportWrapperRef = useRef<(() => void) | null>(null)
+  if (!stableExportWrapperRef.current) {
+    stableExportWrapperRef.current = () => {
+      exportToCSVRef.current()
+    }
+  }
+
+  // Register export function ONCE on mount
+  useEffect(() => {
+    if (onExportReady && stableExportWrapperRef.current) {
+      onExportReady(stableExportWrapperRef.current)
+    }
+  }, [onExportReady])
+
+  // Early returns AFTER all hooks
   if (isLoading) {
     return (
       <div className="space-y-6">
@@ -52,69 +119,6 @@ export const ItemsByProducerReport: React.FC<ItemsByProducerReportProps> = ({
     )
   }
 
-  const chartData = data?.map(item => ({
-    name: item.producer_name,
-    value: item.items
-  })) || []
-
-  const totalItems = data?.reduce((sum, item) => sum + item.items, 0) || 0
-  const avgItems = data?.length ? Math.round(totalItems / data.length) : 0
-
-  // Export to CSV function
-  const exportToCSV = React.useCallback(() => {
-    if (!data || data.length === 0) {
-      console.warn('No data to export')
-      return
-    }
-
-    const escapeCSV = (value: string | number): string => {
-      const str = String(value)
-      if (str.includes(',') || str.includes('"') || str.includes('\n')) {
-        return `"${str.replace(/"/g, '""')}"`
-      }
-      return str
-    }
-
-    const headers = ['Producer', 'Items']
-    const csvRows = data.map(item => [
-      escapeCSV(item.producer_name),
-      escapeCSV(item.items)
-    ])
-
-    const csvContent = [
-      headers.join(','),
-      ...csvRows.map(row => row.join(','))
-    ].join('\n')
-
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
-    const url = window.URL.createObjectURL(blob)
-    const link = document.createElement('a')
-    link.href = url
-    const monthStr = selectedMonth ? `${selectedYear}-${String(selectedMonth).padStart(2, '0')}` : `${selectedYear}`
-    link.download = `items-by-producer_${monthStr}.csv`
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
-    window.URL.revokeObjectURL(url)
-  }, [data, selectedYear, selectedMonth])
-
-  // Store export function in ref and create stable wrapper
-  const exportToCSVRef = React.useRef(exportToCSV)
-  exportToCSVRef.current = exportToCSV
-  const stableExportWrapperRef = React.useRef<(() => void) | null>(null)
-  if (!stableExportWrapperRef.current) {
-    stableExportWrapperRef.current = () => {
-      exportToCSVRef.current()
-    }
-  }
-
-  // Register export function ONCE on mount
-  React.useEffect(() => {
-    if (onExportReady && stableExportWrapperRef.current) {
-      onExportReady(stableExportWrapperRef.current)
-    }
-  }, [onExportReady])
-
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -136,10 +140,10 @@ export const ItemsByProducerReport: React.FC<ItemsByProducerReportProps> = ({
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {data?.[0]?.producer_name || 'N/A'}
+              {rows[0]?.producer_name || 'N/A'}
             </div>
             <p className="text-xs text-muted-foreground">
-              {data?.[0]?.items || 0} items
+              {rows[0]?.items || 0} items
             </p>
           </CardContent>
         </Card>

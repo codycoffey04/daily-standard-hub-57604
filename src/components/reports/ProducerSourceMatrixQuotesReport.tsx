@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useCallback, useRef, useEffect, useMemo } from 'react'
 import { AlertCircle } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -22,6 +22,85 @@ export const ProducerSourceMatrixQuotesReport: React.FC<ProducerSourceMatrixQuot
   const { data, isLoading, error } = useProducerSourceMatrix(selectedYear, selectedMonth)
   const { data: monthlySummary, isLoading: isSummaryLoading } = useMonthlySummary(selectedYear, selectedMonth)
 
+  // Derive data safely even when data is undefined
+  const rows = useMemo(() => data ?? [], [data])
+
+  // Calculate summary statistics for quotes
+  const totalQuotes = monthlySummary?.total_quotes || 0
+  const activeProducers = useMemo(() => new Set(rows.map(item => item.producer_name)).size, [rows])
+  const activeSources = useMemo(() => new Set(rows.map(item => item.source_name)).size, [rows])
+  const combinations = useMemo(() => rows.filter(item => item.quotes > 0).length, [rows])
+
+  // Export to CSV function - all hooks MUST be called before any early returns
+  const exportToCSV = useCallback(() => {
+    if (rows.length === 0) {
+      console.warn('No data to export')
+      return
+    }
+
+    // Build matrix structure
+    const producers = [...new Set(rows.map(d => d.producer_name))].sort()
+    const sources = [...new Set(rows.map(d => d.source_name))].sort()
+    const matrixData = new Map<string, number>()
+    rows.forEach(item => {
+      matrixData.set(`${item.producer_name}-${item.source_name}`, item.quotes)
+    })
+
+    const producerTotals = producers.map(producer => ({
+      producer,
+      total: rows.filter(d => d.producer_name === producer).reduce((sum, d) => sum + d.quotes, 0)
+    }))
+
+    const sourceTotals = sources.map(source => ({
+      source,
+      total: rows.filter(d => d.source_name === source).reduce((sum, d) => sum + d.quotes, 0)
+    }))
+
+    const grandTotal = rows.reduce((sum, d) => sum + d.quotes, 0)
+
+    const csvData = [
+      ['Producer', ...sources, 'Total'],
+      ...producerTotals.map(pt => [
+        pt.producer,
+        ...sources.map(source => 
+          String(matrixData.get(`${pt.producer}-${source}`) || 0)
+        ),
+        String(pt.total)
+      ]),
+      ['Total', ...sourceTotals.map(st => String(st.total)), String(grandTotal)]
+    ]
+
+    const csvContent = csvData.map(row => row.join(',')).join('\n')
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+    const url = window.URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    const monthStr = selectedMonth ? `${selectedYear}-${String(selectedMonth).padStart(2, '0')}` : `${selectedYear}`
+    link.download = `producer-source-quotes-matrix_${monthStr}.csv`
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    window.URL.revokeObjectURL(url)
+  }, [rows, selectedYear, selectedMonth])
+
+  // Store export function in ref and create stable wrapper
+  const exportToCSVRef = useRef(exportToCSV)
+  exportToCSVRef.current = exportToCSV
+  const stableExportWrapperRef = useRef<(() => void) | null>(null)
+  if (!stableExportWrapperRef.current) {
+    stableExportWrapperRef.current = () => {
+      exportToCSVRef.current()
+    }
+  }
+
+  // Register export function ONCE on mount
+  useEffect(() => {
+    if (onExportReady && stableExportWrapperRef.current) {
+      onExportReady(stableExportWrapperRef.current)
+    }
+  }, [onExportReady])
+
+  // Early returns AFTER all hooks
   if (isLoading || isSummaryLoading) {
     return (
       <div className="space-y-6">
@@ -51,7 +130,7 @@ export const ProducerSourceMatrixQuotesReport: React.FC<ProducerSourceMatrixQuot
     )
   }
 
-  if (!data || data.length === 0) {
+  if (rows.length === 0) {
     return (
       <div className="flex items-center justify-center h-96">
         <div className="text-center space-y-4">
@@ -63,81 +142,6 @@ export const ProducerSourceMatrixQuotesReport: React.FC<ProducerSourceMatrixQuot
       </div>
     )
   }
-
-  // Calculate summary statistics for quotes
-  const totalQuotes = monthlySummary?.total_quotes || 0
-  const activeProducers = new Set(data.map(item => item.producer_name)).size
-  const activeSources = new Set(data.map(item => item.source_name)).size
-  const combinations = data.filter(item => item.quotes > 0).length
-
-  // Export to CSV function - matrix format
-  const exportToCSV = React.useCallback(() => {
-    if (!data || data.length === 0) {
-      console.warn('No data to export')
-      return
-    }
-
-    // Build matrix structure
-    const producers = [...new Set(data.map(d => d.producer_name))].sort()
-    const sources = [...new Set(data.map(d => d.source_name))].sort()
-    const matrixData = new Map<string, number>()
-    data.forEach(item => {
-      matrixData.set(`${item.producer_name}-${item.source_name}`, item.quotes)
-    })
-
-    const producerTotals = producers.map(producer => ({
-      producer,
-      total: data.filter(d => d.producer_name === producer).reduce((sum, d) => sum + d.quotes, 0)
-    }))
-
-    const sourceTotals = sources.map(source => ({
-      source,
-      total: data.filter(d => d.source_name === source).reduce((sum, d) => sum + d.quotes, 0)
-    }))
-
-    const grandTotal = data.reduce((sum, d) => sum + d.quotes, 0)
-
-    const csvData = [
-      ['Producer', ...sources, 'Total'],
-      ...producerTotals.map(pt => [
-        pt.producer,
-        ...sources.map(source => 
-          String(matrixData.get(`${pt.producer}-${source}`) || 0)
-        ),
-        String(pt.total)
-      ]),
-      ['Total', ...sourceTotals.map(st => String(st.total)), String(grandTotal)]
-    ]
-
-    const csvContent = csvData.map(row => row.join(',')).join('\n')
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
-    const url = window.URL.createObjectURL(blob)
-    const link = document.createElement('a')
-    link.href = url
-    const monthStr = selectedMonth ? `${selectedYear}-${String(selectedMonth).padStart(2, '0')}` : `${selectedYear}`
-    link.download = `producer-source-quotes-matrix_${monthStr}.csv`
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
-    window.URL.revokeObjectURL(url)
-  }, [data, selectedYear, selectedMonth])
-
-  // Store export function in ref and create stable wrapper
-  const exportToCSVRef = React.useRef(exportToCSV)
-  exportToCSVRef.current = exportToCSV
-  const stableExportWrapperRef = React.useRef<(() => void) | null>(null)
-  if (!stableExportWrapperRef.current) {
-    stableExportWrapperRef.current = () => {
-      exportToCSVRef.current()
-    }
-  }
-
-  // Register export function ONCE on mount
-  React.useEffect(() => {
-    if (onExportReady && stableExportWrapperRef.current) {
-      onExportReady(stableExportWrapperRef.current)
-    }
-  }, [onExportReady])
 
   return (
     <div className="space-y-6">
@@ -199,7 +203,7 @@ export const ProducerSourceMatrixQuotesReport: React.FC<ProducerSourceMatrixQuot
           </p>
         </CardHeader>
         <CardContent>
-          <ProducerSourceMatrixQuotesChart data={data} height={500} />
+          <ProducerSourceMatrixQuotesChart data={rows} height={500} />
         </CardContent>
       </Card>
     </div>

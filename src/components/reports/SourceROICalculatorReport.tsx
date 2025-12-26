@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
@@ -34,6 +34,8 @@ export const SourceROICalculatorReport: React.FC<SourceROICalculatorReportProps>
     meetingVCGoal
   )
 
+  // Derive data safely even when data is undefined
+  const rows = useMemo(() => data ?? [], [data])
 
   const formatCurrency = (value: number): string => `$${formatNumber(Math.round(value))}`
   
@@ -79,8 +81,8 @@ export const SourceROICalculatorReport: React.FC<SourceROICalculatorReportProps>
     }
   }
 
-  const sortedData = React.useMemo(() => {
-    return [...(data || [])].sort((a, b) => {
+  const sortedData = useMemo(() => {
+    return [...rows].sort((a, b) => {
       const aVal = a[sortColumn]
       const bVal = b[sortColumn]
 
@@ -92,11 +94,17 @@ export const SourceROICalculatorReport: React.FC<SourceROICalculatorReportProps>
       const comparison = aVal > bVal ? 1 : -1
       return sortDirection === 'asc' ? comparison : -comparison
     })
-  }, [data, sortColumn, sortDirection])
+  }, [rows, sortColumn, sortDirection])
 
-  // Export to CSV function
-  const exportToCSV = React.useCallback(() => {
-    if (!sortedData || sortedData.length === 0) {
+  // Calculate summary metrics
+  const totalSpend = useMemo(() => rows.reduce((sum, item) => sum + (item.spend || 0), 0), [rows])
+  const totalQHH = useMemo(() => rows.reduce((sum, item) => sum + item.qhh, 0), [rows])
+  const avgCostPerQHH = totalQHH > 0 ? totalSpend / totalQHH : 0
+  const sourcesWithCost = useMemo(() => rows.filter(item => (item.spend || 0) > 0).length, [rows])
+
+  // Export to CSV function - all hooks MUST be called before any early returns
+  const exportToCSV = useCallback(() => {
+    if (sortedData.length === 0) {
       console.warn('No data to export')
       return
     }
@@ -156,9 +164,9 @@ export const SourceROICalculatorReport: React.FC<SourceROICalculatorReportProps>
   }, [sortedData, selectedYear, selectedMonth])
 
   // Store export function in ref and create stable wrapper
-  const exportToCSVRef = React.useRef(exportToCSV)
+  const exportToCSVRef = useRef(exportToCSV)
   exportToCSVRef.current = exportToCSV
-  const stableExportWrapperRef = React.useRef<(() => void) | null>(null)
+  const stableExportWrapperRef = useRef<(() => void) | null>(null)
   if (!stableExportWrapperRef.current) {
     stableExportWrapperRef.current = () => {
       exportToCSVRef.current()
@@ -166,12 +174,13 @@ export const SourceROICalculatorReport: React.FC<SourceROICalculatorReportProps>
   }
 
   // Register export function ONCE on mount
-  React.useEffect(() => {
+  useEffect(() => {
     if (onExportReady && stableExportWrapperRef.current) {
       onExportReady(stableExportWrapperRef.current)
     }
   }, [onExportReady])
 
+  // Early returns AFTER all hooks
   if (isLoading) return <ChartLoading />
 
   if (error) {
@@ -188,15 +197,9 @@ export const SourceROICalculatorReport: React.FC<SourceROICalculatorReportProps>
     )
   }
 
-  if (!data || data.length === 0) {
+  if (rows.length === 0) {
     return <EmptyState />
   }
-
-  // Calculate summary metrics
-  const totalSpend = data.reduce((sum, item) => sum + (item.spend || 0), 0)
-  const totalQHH = data.reduce((sum, item) => sum + item.qhh, 0)
-  const avgCostPerQHH = totalQHH > 0 ? totalSpend / totalQHH : 0
-  const sourcesWithCost = data.filter(item => (item.spend || 0) > 0).length
 
   return (
     <div className="space-y-6">
@@ -277,7 +280,7 @@ export const SourceROICalculatorReport: React.FC<SourceROICalculatorReportProps>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{sourcesWithCost}</div>
-            <p className="text-xs text-muted-foreground">Out of {data.length} sources</p>
+            <p className="text-xs text-muted-foreground">Out of {rows.length} sources</p>
           </CardContent>
         </Card>
       </div>

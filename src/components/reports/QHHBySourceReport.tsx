@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useCallback, useRef, useEffect, useMemo } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { SummaryBarChart } from '@/components/charts/SummaryBarChart'
 import { useQHHBySource } from '@/hooks/useSummariesData'
@@ -23,6 +23,72 @@ export const QHHBySourceReport: React.FC<QHHBySourceReportProps> = ({
   const { data, isLoading, error } = useQHHBySource(selectedYear, selectedMonth)
   const { data: monthlySummary, isLoading: isSummaryLoading } = useMonthlySummary(selectedYear, selectedMonth)
 
+  // Filter out sources with 0 QHH - safe even when data is undefined
+  const activeSources = useMemo(() => (data ?? []).filter(item => item.qhh > 0), [data])
+  
+  const chartData = useMemo(() => activeSources.map(item => ({
+    name: item.source_name,
+    value: item.qhh
+  })), [activeSources])
+
+  const totalQHH = monthlySummary?.total_qhh || 0
+
+  // Export to CSV function - all hooks MUST be called before any early returns
+  const exportToCSV = useCallback(() => {
+    if (activeSources.length === 0) {
+      console.warn('No data to export')
+      return
+    }
+
+    const escapeCSV = (value: string | number): string => {
+      const str = String(value)
+      if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+        return `"${str.replace(/"/g, '""')}"`
+      }
+      return str
+    }
+
+    const headers = ['Source Name', 'QHH']
+    const csvRows = activeSources.map(item => [
+      escapeCSV(item.source_name),
+      escapeCSV(item.qhh)
+    ])
+
+    const csvContent = [
+      headers.join(','),
+      ...csvRows.map(row => row.join(','))
+    ].join('\n')
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+    const url = window.URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    const monthStr = selectedMonth ? `${selectedYear}-${String(selectedMonth).padStart(2, '0')}` : `${selectedYear}`
+    link.download = `qhh-by-source_${monthStr}.csv`
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    window.URL.revokeObjectURL(url)
+  }, [activeSources, selectedYear, selectedMonth])
+
+  // Store export function in ref and create stable wrapper
+  const exportToCSVRef = useRef(exportToCSV)
+  exportToCSVRef.current = exportToCSV
+  const stableExportWrapperRef = useRef<(() => void) | null>(null)
+  if (!stableExportWrapperRef.current) {
+    stableExportWrapperRef.current = () => {
+      exportToCSVRef.current()
+    }
+  }
+
+  // Register export function ONCE on mount
+  useEffect(() => {
+    if (onExportReady && stableExportWrapperRef.current) {
+      onExportReady(stableExportWrapperRef.current)
+    }
+  }, [onExportReady])
+
+  // Early returns AFTER all hooks
   if (isLoading || isSummaryLoading) {
     return (
       <div className="space-y-6">
@@ -69,71 +135,6 @@ export const QHHBySourceReport: React.FC<QHHBySourceReportProps> = ({
       </Card>
     )
   }
-
-  // Filter out sources with 0 QHH
-  const activeSources = data?.filter(item => item.qhh > 0) || []
-  
-  const chartData = activeSources.map(item => ({
-    name: item.source_name,
-    value: item.qhh
-  }))
-
-  const totalQHH = monthlySummary?.total_qhh || 0
-
-  // Export to CSV function
-  const exportToCSV = React.useCallback(() => {
-    if (!activeSources || activeSources.length === 0) {
-      console.warn('No data to export')
-      return
-    }
-
-    const escapeCSV = (value: string | number): string => {
-      const str = String(value)
-      if (str.includes(',') || str.includes('"') || str.includes('\n')) {
-        return `"${str.replace(/"/g, '""')}"`
-      }
-      return str
-    }
-
-    const headers = ['Source Name', 'QHH']
-    const csvRows = activeSources.map(item => [
-      escapeCSV(item.source_name),
-      escapeCSV(item.qhh)
-    ])
-
-    const csvContent = [
-      headers.join(','),
-      ...csvRows.map(row => row.join(','))
-    ].join('\n')
-
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
-    const url = window.URL.createObjectURL(blob)
-    const link = document.createElement('a')
-    link.href = url
-    const monthStr = selectedMonth ? `${selectedYear}-${String(selectedMonth).padStart(2, '0')}` : `${selectedYear}`
-    link.download = `qhh-by-source_${monthStr}.csv`
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
-    window.URL.revokeObjectURL(url)
-  }, [activeSources, selectedYear, selectedMonth])
-
-  // Store export function in ref and create stable wrapper
-  const exportToCSVRef = React.useRef(exportToCSV)
-  exportToCSVRef.current = exportToCSV
-  const stableExportWrapperRef = React.useRef<(() => void) | null>(null)
-  if (!stableExportWrapperRef.current) {
-    stableExportWrapperRef.current = () => {
-      exportToCSVRef.current()
-    }
-  }
-
-  // Register export function ONCE on mount
-  React.useEffect(() => {
-    if (onExportReady && stableExportWrapperRef.current) {
-      onExportReady(stableExportWrapperRef.current)
-    }
-  }, [onExportReady])
 
   return (
     <div className="space-y-6">

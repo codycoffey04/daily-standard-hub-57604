@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useCallback, useRef, useEffect, useMemo } from 'react'
 import { AlertCircle } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -22,6 +22,75 @@ export const QHHByProducerReport: React.FC<QHHByProducerReportProps> = ({
   const { data, isLoading, error } = useQHHByProducer(selectedYear, selectedMonth)
   const { data: monthlySummary, isLoading: isSummaryLoading } = useMonthlySummary(selectedYear, selectedMonth)
 
+  // Derive data safely even when data is undefined
+  const rows = useMemo(() => data ?? [], [data])
+  
+  const totalQHH = monthlySummary?.total_qhh || 0
+  const topProducer = rows[0] // Already sorted by QHH descending
+  const averageQHH = rows.length > 0 ? totalQHH / rows.length : 0
+
+  // Prepare data for chart
+  const chartData = useMemo(() => rows.map(item => ({
+    name: item.producer,
+    value: item.qhh
+  })), [rows])
+
+  // Export to CSV function - all hooks MUST be called before any early returns
+  const exportToCSV = useCallback(() => {
+    if (rows.length === 0) {
+      console.warn('No data to export')
+      return
+    }
+
+    const escapeCSV = (value: string | number): string => {
+      const str = String(value)
+      if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+        return `"${str.replace(/"/g, '""')}"`
+      }
+      return str
+    }
+
+    const headers = ['Producer', 'QHH']
+    const csvRows = rows.map(item => [
+      escapeCSV(item.producer),
+      escapeCSV(item.qhh)
+    ])
+
+    const csvContent = [
+      headers.join(','),
+      ...csvRows.map(row => row.join(','))
+    ].join('\n')
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+    const url = window.URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    const monthStr = selectedMonth ? `${selectedYear}-${String(selectedMonth).padStart(2, '0')}` : `${selectedYear}`
+    link.download = `qhh-by-producer_${monthStr}.csv`
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    window.URL.revokeObjectURL(url)
+  }, [rows, selectedYear, selectedMonth])
+
+  // Store export function in ref and create stable wrapper
+  const exportToCSVRef = useRef(exportToCSV)
+  exportToCSVRef.current = exportToCSV
+  const stableExportWrapperRef = useRef<(() => void) | null>(null)
+  if (!stableExportWrapperRef.current) {
+    stableExportWrapperRef.current = () => {
+      exportToCSVRef.current()
+    }
+  }
+
+  // Register export function ONCE on mount
+  useEffect(() => {
+    if (onExportReady && stableExportWrapperRef.current) {
+      onExportReady(stableExportWrapperRef.current)
+    }
+  }, [onExportReady])
+
+  // Early returns AFTER all hooks
   if (isLoading || isSummaryLoading) {
     return (
       <div className="space-y-6">
@@ -51,7 +120,7 @@ export const QHHByProducerReport: React.FC<QHHByProducerReportProps> = ({
     )
   }
 
-  if (!data || data.length === 0) {
+  if (rows.length === 0) {
     return (
       <div className="flex items-center justify-center h-96">
         <div className="text-center space-y-4">
@@ -63,72 +132,6 @@ export const QHHByProducerReport: React.FC<QHHByProducerReportProps> = ({
       </div>
     )
   }
-
-  // Calculate summary statistics
-  const totalQHH = monthlySummary?.total_qhh || 0
-  const topProducer = data[0] // Already sorted by QHH descending
-  const averageQHH = totalQHH / data.length
-
-  // Prepare data for chart
-  const chartData = data.map(item => ({
-    name: item.producer,
-    value: item.qhh
-  }))
-
-  // Export to CSV function
-  const exportToCSV = React.useCallback(() => {
-    if (!data || data.length === 0) {
-      console.warn('No data to export')
-      return
-    }
-
-    const escapeCSV = (value: string | number): string => {
-      const str = String(value)
-      if (str.includes(',') || str.includes('"') || str.includes('\n')) {
-        return `"${str.replace(/"/g, '""')}"`
-      }
-      return str
-    }
-
-    const headers = ['Producer', 'QHH']
-    const csvRows = data.map(item => [
-      escapeCSV(item.producer),
-      escapeCSV(item.qhh)
-    ])
-
-    const csvContent = [
-      headers.join(','),
-      ...csvRows.map(row => row.join(','))
-    ].join('\n')
-
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
-    const url = window.URL.createObjectURL(blob)
-    const link = document.createElement('a')
-    link.href = url
-    const monthStr = selectedMonth ? `${selectedYear}-${String(selectedMonth).padStart(2, '0')}` : `${selectedYear}`
-    link.download = `qhh-by-producer_${monthStr}.csv`
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
-    window.URL.revokeObjectURL(url)
-  }, [data, selectedYear, selectedMonth])
-
-  // Store export function in ref and create stable wrapper
-  const exportToCSVRef = React.useRef(exportToCSV)
-  exportToCSVRef.current = exportToCSV
-  const stableExportWrapperRef = React.useRef<(() => void) | null>(null)
-  if (!stableExportWrapperRef.current) {
-    stableExportWrapperRef.current = () => {
-      exportToCSVRef.current()
-    }
-  }
-
-  // Register export function ONCE on mount
-  React.useEffect(() => {
-    if (onExportReady && stableExportWrapperRef.current) {
-      onExportReady(stableExportWrapperRef.current)
-    }
-  }, [onExportReady])
 
   return (
     <div className="space-y-6">
@@ -154,9 +157,9 @@ export const QHHByProducerReport: React.FC<QHHByProducerReportProps> = ({
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{topProducer.producer}</div>
+            <div className="text-2xl font-bold">{topProducer?.producer || 'N/A'}</div>
             <p className="text-sm text-muted-foreground">
-              {formatNumber(topProducer.qhh)} QHH
+              {formatNumber(topProducer?.qhh || 0)} QHH
             </p>
           </CardContent>
         </Card>

@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { 
   Table, 
@@ -34,6 +34,9 @@ export const ItemsBySourceReport: React.FC<ItemsBySourceReportProps> = ({
   const [sortColumn, setSortColumn] = useState<keyof ItemsBySourceData>('items')
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc')
 
+  // Derive data safely even when data is undefined
+  const rows = useMemo(() => data ?? [], [data])
+
   // Helper functions for formatting
   const formatNullable = (
     value: number | null, 
@@ -56,70 +59,22 @@ export const ItemsBySourceReport: React.FC<ItemsBySourceReportProps> = ({
     }
   }
 
-  // Loading state
-  if (isLoading || isSummaryLoading) {
-    return (
-      <div className="space-y-6">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {[1, 2, 3].map((i) => (
-            <Card key={i}>
-              <CardHeader>
-                <div className="h-4 bg-muted animate-pulse rounded w-24" />
-              </CardHeader>
-              <CardContent>
-                <div className="h-8 bg-muted animate-pulse rounded w-32" />
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-        <ChartLoading />
-      </div>
-    )
-  }
-
-  // Error state
-  if (error) {
-    return (
-      <Card>
-        <CardContent className="flex items-center justify-center h-96">
-          <div className="text-center space-y-3">
-            <AlertCircle className="h-12 w-12 text-destructive mx-auto" />
-            <div className="text-lg font-medium">Error Loading Data</div>
-            <p className="text-sm text-muted-foreground">
-              {error instanceof Error ? error.message : 'Failed to load items by source data'}
-            </p>
-          </div>
-        </CardContent>
-      </Card>
-    )
-  }
-
-  // Empty state
-  if (!data || data.length === 0) {
-    return (
-      <EmptyState
-        message="No data available"
-        suggestion="No items by source data found for the selected period"
-      />
-    )
-  }
-
   // Calculate summary totals by summing source-level data
-  const totalQHH = data.reduce((sum, item) => sum + item.qhh, 0)
-  const totalQuotes = data.reduce((sum, item) => sum + item.quotes, 0)
-  const totalItems = data.reduce((sum, item) => sum + item.items, 0)
+  const totalQHH = useMemo(() => rows.reduce((sum, item) => sum + item.qhh, 0), [rows])
+  const totalQuotes = useMemo(() => rows.reduce((sum, item) => sum + item.quotes, 0), [rows])
+  const totalItems = useMemo(() => rows.reduce((sum, item) => sum + item.items, 0), [rows])
 
   // Prepare data for bar chart (top 10 by items)
-  const top10Data = [...data]
+  const top10Data = useMemo(() => [...rows]
     .sort((a, b) => b.items - a.items)
     .slice(0, 10)
     .map(item => ({
       name: item.source_name,
       value: item.items
-    }))
+    })), [rows])
 
   // Sort data for table
-  const sortedData = [...data].sort((a, b) => {
+  const sortedData = useMemo(() => [...rows].sort((a, b) => {
     const aVal = a[sortColumn]
     const bVal = b[sortColumn]
     
@@ -130,11 +85,11 @@ export const ItemsBySourceReport: React.FC<ItemsBySourceReportProps> = ({
     
     const comparison = aVal > bVal ? 1 : -1
     return sortDirection === 'asc' ? comparison : -comparison
-  })
+  }), [rows, sortColumn, sortDirection])
 
-  // Export to CSV function
-  const exportToCSV = React.useCallback(() => {
-    if (!sortedData || sortedData.length === 0) {
+  // Export to CSV function - all hooks MUST be called before any early returns
+  const exportToCSV = useCallback(() => {
+    if (sortedData.length === 0) {
       console.warn('No data to export')
       return
     }
@@ -194,9 +149,9 @@ export const ItemsBySourceReport: React.FC<ItemsBySourceReportProps> = ({
   }, [sortedData, selectedYear, selectedMonth])
 
   // Store export function in ref and create stable wrapper
-  const exportToCSVRef = React.useRef(exportToCSV)
+  const exportToCSVRef = useRef(exportToCSV)
   exportToCSVRef.current = exportToCSV
-  const stableExportWrapperRef = React.useRef<(() => void) | null>(null)
+  const stableExportWrapperRef = useRef<(() => void) | null>(null)
   if (!stableExportWrapperRef.current) {
     stableExportWrapperRef.current = () => {
       exportToCSVRef.current()
@@ -204,7 +159,7 @@ export const ItemsBySourceReport: React.FC<ItemsBySourceReportProps> = ({
   }
 
   // Register export function ONCE on mount
-  React.useEffect(() => {
+  useEffect(() => {
     if (onExportReady && stableExportWrapperRef.current) {
       onExportReady(stableExportWrapperRef.current)
     }
@@ -224,6 +179,52 @@ export const ItemsBySourceReport: React.FC<ItemsBySourceReportProps> = ({
       <ArrowUpDown className="ml-1 h-3 w-3" />
     </Button>
   )
+
+  // Early returns AFTER all hooks
+  if (isLoading || isSummaryLoading) {
+    return (
+      <div className="space-y-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {[1, 2, 3].map((i) => (
+            <Card key={i}>
+              <CardHeader>
+                <div className="h-4 bg-muted animate-pulse rounded w-24" />
+              </CardHeader>
+              <CardContent>
+                <div className="h-8 bg-muted animate-pulse rounded w-32" />
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+        <ChartLoading />
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <Card>
+        <CardContent className="flex items-center justify-center h-96">
+          <div className="text-center space-y-3">
+            <AlertCircle className="h-12 w-12 text-destructive mx-auto" />
+            <div className="text-lg font-medium">Error Loading Data</div>
+            <p className="text-sm text-muted-foreground">
+              {error instanceof Error ? error.message : 'Failed to load items by source data'}
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+    )
+  }
+
+  if (rows.length === 0) {
+    return (
+      <EmptyState
+        message="No data available"
+        suggestion="No items by source data found for the selected period"
+      />
+    )
+  }
 
   return (
     <div className="space-y-6">
