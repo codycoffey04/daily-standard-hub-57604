@@ -208,11 +208,6 @@ export const ItemsBySourceReport: React.FC<ItemsBySourceReportProps> = ({
     if (onExportReady && stableExportWrapperRef.current) {
       onExportReady(stableExportWrapperRef.current)
     }
-    return () => {
-      if (onExportReady) {
-        onExportReady(null)
-      }
-    }
   }, [onExportReady])
 
   const SortButton: React.FC<{ column: keyof ItemsBySourceData; label: string }> = ({ 

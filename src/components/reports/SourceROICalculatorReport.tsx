@@ -34,13 +34,6 @@ export const SourceROICalculatorReport: React.FC<SourceROICalculatorReportProps>
     meetingVCGoal
   )
 
-  // Debugging: Log data updates
-  console.log('🔍 ROI Component Render:', {
-    meetingVCGoal,
-    dataLength: data?.length,
-    firstRowLTV: data?.[0]?.ltv_estimate,
-    crossSaleLTV: data?.find(d => d.source_name === 'Cross-Sale')?.ltv_estimate
-  })
 
   const formatCurrency = (value: number): string => `$${formatNumber(Math.round(value))}`
   
@@ -176,11 +169,6 @@ export const SourceROICalculatorReport: React.FC<SourceROICalculatorReportProps>
   React.useEffect(() => {
     if (onExportReady && stableExportWrapperRef.current) {
       onExportReady(stableExportWrapperRef.current)
-    }
-    return () => {
-      if (onExportReady) {
-        onExportReady(null)
-      }
     }
   }, [onExportReady])
 

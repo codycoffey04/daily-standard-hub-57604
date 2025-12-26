@@ -20,14 +20,8 @@ export const QHHBySourceReport: React.FC<QHHBySourceReportProps> = ({
   selectedMonth,
   onExportReady
 }) => {
-  console.log('🎯 === QHHBySourceReport RENDERING ===')
-  console.log('  Props - selectedYear:', selectedYear, 'selectedMonth:', selectedMonth)
-  
   const { data, isLoading, error } = useQHHBySource(selectedYear, selectedMonth)
   const { data: monthlySummary, isLoading: isSummaryLoading } = useMonthlySummary(selectedYear, selectedMonth)
-  
-  console.log('  Hook returned - isLoading:', isLoading, 'hasData:', !!data, 'hasError:', !!error)
-  if (data) console.log('  Data rows:', data.length)
 
   if (isLoading || isSummaryLoading) {
     return (
@@ -138,11 +132,6 @@ export const QHHBySourceReport: React.FC<QHHBySourceReportProps> = ({
   React.useEffect(() => {
     if (onExportReady && stableExportWrapperRef.current) {
       onExportReady(stableExportWrapperRef.current)
-    }
-    return () => {
-      if (onExportReady) {
-        onExportReady(null)
-      }
     }
   }, [onExportReady])
 

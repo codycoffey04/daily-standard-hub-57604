@@ -137,11 +137,6 @@ export const ProducerSourceMatrixQuotesReport: React.FC<ProducerSourceMatrixQuot
     if (onExportReady && stableExportWrapperRef.current) {
       onExportReady(stableExportWrapperRef.current)
     }
-    return () => {
-      if (onExportReady) {
-        onExportReady(null)
-      }
-    }
   }, [onExportReady])
 
   return (

@@ -188,12 +188,6 @@ export const ZipCodePerformanceReport: React.FC<ZipCodePerformanceReportProps> =
     if (onExportReady && stableExportWrapperRef.current) {
       onExportReady(stableExportWrapperRef.current)
     }
-    // Cleanup: clear export function when component unmounts
-    return () => {
-      if (onExportReady) {
-        onExportReady(null)
-      }
-    }
   }, [onExportReady]) // Only depend on onExportReady - wrapper never changes, so we only register once
 
   if (isLoading) return <ChartLoading />

@@ -199,11 +199,6 @@ export const SalesByProducerReport: React.FC<SalesByProducerReportProps> = ({
     if (onExportReady && stableExportWrapperRef.current) {
       onExportReady(stableExportWrapperRef.current)
     }
-    return () => {
-      if (onExportReady) {
-        onExportReady(null)
-      }
-    }
   }, [onExportReady])
 
   if (isLoading || isSummaryLoading) {

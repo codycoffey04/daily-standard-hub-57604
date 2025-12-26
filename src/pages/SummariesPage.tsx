@@ -108,9 +108,10 @@ const SummariesPage: React.FC = () => {
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(
     new Set(['lead-source-analysis']) // Start with lead source analysis expanded
   )
+
   const exportFunctionRef = useRef<(() => void) | null>(null)
-  const [exportReadyTick, setExportReadyTick] = useState(0)
-  
+  const [exportAvailable, setExportAvailable] = useState(false)
+
   // Sidebar collapsed state with localStorage persistence
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
     const stored = localStorage.getItem('reports-sidebar-collapsed')
@@ -154,22 +155,25 @@ const SummariesPage: React.FC = () => {
   const handleReportChange = (reportId: string) => {
     setActiveReportId(reportId)
     exportFunctionRef.current = null
-    setExportReadyTick(t => t + 1)
+    setExportAvailable(false)
   }
 
   const handleSidebarToggle = () => {
     setSidebarCollapsed(prev => !prev)
   }
 
-  // Store export function in ref to avoid state updates that cause re-renders
-  // We bump a tiny tick to re-render ReportHeader so it can enable/disable Export.
+  // Store export function in ref; only update state if availability actually changes
   const handleExportReady = useCallback((fn: (() => void) | null) => {
     exportFunctionRef.current = fn
-    setExportReadyTick(t => t + 1)
+    setExportAvailable(prev => {
+      const next = !!fn
+      return prev !== next ? next : prev
+    })
   }, [])
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const _exportHeaderRerenderKey = exportReadyTick
+  const stableOnExport = useCallback(() => {
+    exportFunctionRef.current?.()
+  }, [])
 
 
   if (!activeReport) {
@@ -208,7 +212,7 @@ const SummariesPage: React.FC = () => {
           selectedMonth={selectedMonth}
           onYearChange={setSelectedYear}
           onMonthChange={setSelectedMonth}
-          onExport={exportFunctionRef.current ? () => exportFunctionRef.current?.() : undefined}
+          onExport={exportAvailable ? stableOnExport : undefined}
         />
         
         <div className="flex-1 overflow-y-auto p-6">
