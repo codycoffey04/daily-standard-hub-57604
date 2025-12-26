@@ -12,9 +12,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { Calendar } from '@/components/ui/calendar'
 import { ChartLoading } from '@/components/ui/chart-loading'
 import { EmptyState } from '@/components/ui/empty-state'
-import { AlertCircle, ArrowUpDown, MapPin, TrendingUp, DollarSign, ShoppingCart } from 'lucide-react'
+import { AlertCircle, ArrowUpDown, MapPin, TrendingUp, DollarSign, ShoppingCart, Calendar as CalendarIcon } from 'lucide-react'
 import { useZipPerformance, ZipPerformanceRow } from '@/hooks/useZipPerformance'
 import { useSourcesForSelection } from '@/hooks/useSourcesForSelection'
 import { useProducersForSelection } from '@/hooks/useProducersForSelection'
@@ -45,9 +47,13 @@ export const ZipCodePerformanceReport: React.FC<ZipCodePerformanceReportProps> =
 
   const defaultRange = useMemo(() => getDefaultDateRange(), [selectedMonth, selectedYear])
 
-  // Filter state
-  const [fromDate, setFromDate] = useState(() => defaultRange.startDate)
-  const [toDate, setToDate] = useState(() => defaultRange.endDate)
+  // Filter state - using Date objects for Calendar component, but convert to strings for API
+  const [fromDateObj, setFromDateObj] = useState<Date>(() => new Date(defaultRange.startDate))
+  const [toDateObj, setToDateObj] = useState<Date>(() => new Date(defaultRange.endDate))
+  
+  // Convert Date objects to YYYY-MM-DD strings for API calls
+  const fromDate = useMemo(() => format(fromDateObj, 'yyyy-MM-dd'), [fromDateObj])
+  const toDate = useMemo(() => format(toDateObj, 'yyyy-MM-dd'), [toDateObj])
   const [selectedProducerId, setSelectedProducerId] = useState<string | null>(null)
   const [selectedSourceId, setSelectedSourceId] = useState<string | null>(null)
   const [minQuotes, setMinQuotes] = useState(1)
@@ -167,16 +173,18 @@ export const ZipCodePerformanceReport: React.FC<ZipCodePerformanceReportProps> =
     }
   }, [data?.rows, sortedRows, fromDate, toDate])
 
-  // Register export function with parent
+  // Register export function with parent - always register, even if data is empty
   useEffect(() => {
     if (onExportReady) {
-      if (data?.rows && data.rows.length > 0) {
-        onExportReady(exportToCSV)
-      } else {
+      onExportReady(exportToCSV)
+    }
+    // Cleanup: clear export function when component unmounts
+    return () => {
+      if (onExportReady) {
         onExportReady(null)
       }
     }
-  }, [onExportReady, exportToCSV, data?.rows])
+  }, [onExportReady, exportToCSV])
 
   if (isLoading) return <ChartLoading />
 
@@ -212,23 +220,55 @@ export const ZipCodePerformanceReport: React.FC<ZipCodePerformanceReportProps> =
           <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4">
             {/* Date Range */}
             <div className="space-y-2">
-              <Label htmlFor="from-date">From Date</Label>
-              <Input
-                id="from-date"
-                type="date"
-                value={fromDate}
-                onChange={(e) => setFromDate(e.target.value)}
-              />
+              <Label>From Date</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "w-full justify-start text-left font-normal",
+                      !fromDateObj && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {fromDateObj ? format(fromDateObj, "MMM dd, yyyy") : <span>Pick a date</span>}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={fromDateObj}
+                    onSelect={(date) => date && setFromDateObj(date)}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
             </div>
             
             <div className="space-y-2">
-              <Label htmlFor="to-date">To Date</Label>
-              <Input
-                id="to-date"
-                type="date"
-                value={toDate}
-                onChange={(e) => setToDate(e.target.value)}
-              />
+              <Label>To Date</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "w-full justify-start text-left font-normal",
+                      !toDateObj && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {toDateObj ? format(toDateObj, "MMM dd, yyyy") : <span>Pick a date</span>}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={toDateObj}
+                    onSelect={(date) => date && setToDateObj(date)}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
             </div>
 
             {/* Producer Filter */}
