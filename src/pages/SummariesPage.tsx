@@ -156,9 +156,9 @@ const SummariesPage: React.FC = () => {
   }
 
   // Wrapper to properly store function in state (prevents React from calling it as functional update)
-  const handleExportReady = (fn: (() => void) | null) => {
-    setExportFunction(() => fn)
-  }
+  const handleExportReady = useCallback((fn: (() => void) | null) => {
+    setExportFunction(() => fn || null)
+  }, [])
 
   const handleSidebarToggle = () => {
     setSidebarCollapsed(prev => !prev)
