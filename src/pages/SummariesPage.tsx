@@ -109,6 +109,7 @@ const SummariesPage: React.FC = () => {
     new Set(['lead-source-analysis']) // Start with lead source analysis expanded
   )
   const exportFunctionRef = useRef<(() => void) | null>(null)
+  const [exportReadyTick, setExportReadyTick] = useState(0)
   
   // Sidebar collapsed state with localStorage persistence
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
@@ -152,7 +153,8 @@ const SummariesPage: React.FC = () => {
 
   const handleReportChange = (reportId: string) => {
     setActiveReportId(reportId)
-    exportFunctionRef.current = null // Clear export function when switching reports
+    exportFunctionRef.current = null
+    setExportReadyTick(t => t + 1)
   }
 
   const handleSidebarToggle = () => {
@@ -160,9 +162,15 @@ const SummariesPage: React.FC = () => {
   }
 
   // Store export function in ref to avoid state updates that cause re-renders
+  // We bump a tiny tick to re-render ReportHeader so it can enable/disable Export.
   const handleExportReady = useCallback((fn: (() => void) | null) => {
     exportFunctionRef.current = fn
+    setExportReadyTick(t => t + 1)
   }, [])
+
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const _exportHeaderRerenderKey = exportReadyTick
+
 
   if (!activeReport) {
     return (
@@ -200,7 +208,7 @@ const SummariesPage: React.FC = () => {
           selectedMonth={selectedMonth}
           onYearChange={setSelectedYear}
           onMonthChange={setSelectedMonth}
-          onExport={() => exportFunctionRef.current?.()}
+          onExport={exportFunctionRef.current ? () => exportFunctionRef.current?.() : undefined}
         />
         
         <div className="flex-1 overflow-y-auto p-6">
