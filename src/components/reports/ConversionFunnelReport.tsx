@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react'
+import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
@@ -13,11 +13,13 @@ import { TrendingDown, TrendingUp, Target, Activity } from 'lucide-react'
 interface ConversionFunnelReportProps {
   selectedYear: number
   selectedMonth: number | null
+  onExportReady?: (exportFn: () => void) => void
 }
 
 export const ConversionFunnelReport: React.FC<ConversionFunnelReportProps> = ({
   selectedYear,
-  selectedMonth
+  selectedMonth,
+  onExportReady
 }) => {
   const [year, setYear] = useState(selectedYear)
   const [month, setMonth] = useState<number | null>(selectedMonth)
@@ -94,6 +96,43 @@ export const ConversionFunnelReport: React.FC<ConversionFunnelReportProps> = ({
     if (rate >= 20) return 'text-yellow-600 dark:text-yellow-400'
     return 'text-red-600 dark:text-red-400'
   }
+
+  const rows = useMemo(() => funnelData ?? [], [funnelData])
+
+  // Export CSV - hooks must be called unconditionally
+  const exportToCSV = useCallback(() => {
+    if (rows.length === 0) return
+
+    const headers = ['Stage', 'Volume', 'Conversion %', 'Drop-off Count', 'Drop-off %']
+    const csvRows = rows.map(s => [
+      s.stage_name,
+      s.stage_value.toString(),
+      s.conversion_rate.toFixed(1),
+      s.drop_off_count.toString(),
+      s.drop_off_rate.toFixed(1)
+    ])
+
+    const csvContent = [headers, ...csvRows].map(row => row.join(',')).join('\n')
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+    const link = document.createElement('a')
+    link.href = URL.createObjectURL(blob)
+    const monthStr = month ? `_${month.toString().padStart(2, '0')}` : ''
+    link.download = `conversion_funnel_${year}${monthStr}.csv`
+    link.click()
+    URL.revokeObjectURL(link.href)
+  }, [rows, year, month])
+
+  const exportRef = useRef(exportToCSV)
+  exportRef.current = exportToCSV
+
+  const stableWrapperRef = useRef<(() => void) | null>(null)
+  if (!stableWrapperRef.current) {
+    stableWrapperRef.current = () => exportRef.current()
+  }
+
+  useEffect(() => {
+    onExportReady?.(stableWrapperRef.current!)
+  }, [onExportReady])
 
   const isLoading = isFunnelLoading || isProducersLoading || isSourcesLoading
   const hasData = funnelData && funnelData.length > 0 && funnelData[0].stage_value > 0

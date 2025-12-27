@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react'
 import { useReviewSummary } from '@/hooks/useReviewSummary'
 import { AccountabilityReviewForm } from '@/components/AccountabilityReviewForm'
 import {
@@ -20,17 +20,61 @@ import { format } from 'date-fns'
 interface ReviewSummaryReportProps {
   selectedYear: number
   selectedMonth: number | null
+  onExportReady?: (exportFn: () => void) => void
 }
 
 export const ReviewSummaryReport: React.FC<ReviewSummaryReportProps> = ({
   selectedYear,
-  selectedMonth
+  selectedMonth,
+  onExportReady
 }) => {
   const { data: reviews, isLoading, error, refetch } = useReviewSummary(selectedYear, selectedMonth)
   
   // State for edit modal
   const [editModalOpen, setEditModalOpen] = useState(false)
   const [selectedReview, setSelectedReview] = useState<typeof reviews[0] | null>(null)
+  
+  const rows = useMemo(() => reviews ?? [], [reviews])
+
+  // Export CSV - hooks must be called unconditionally
+  const exportToCSV = useCallback(() => {
+    if (rows.length === 0) return
+
+    const headers = ['Date', 'Producer', 'Reviewer', 'Call Reviewed', 'Sales Gaps Count', 'Coaching Notes', 'Strengths', 'Action Items', 'Follow-up Required', 'Follow-up Date']
+    const csvRows = rows.map(r => [
+      format(new Date(r.review_date), 'yyyy-MM-dd'),
+      `"${r.producer_name}"`,
+      `"${r.reviewer_name}"`,
+      `"${r.call_reviewed || ''}"`,
+      r.sales_process_gaps.length.toString(),
+      `"${(r.coaching_notes || '').replace(/"/g, '""')}"`,
+      `"${(r.strengths_noted || '').replace(/"/g, '""')}"`,
+      `"${(r.action_items || '').replace(/"/g, '""')}"`,
+      r.follow_up_required ? 'Yes' : 'No',
+      r.follow_up_date ? format(new Date(r.follow_up_date), 'yyyy-MM-dd') : ''
+    ])
+
+    const csvContent = [headers, ...csvRows].map(row => row.join(',')).join('\n')
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+    const link = document.createElement('a')
+    link.href = URL.createObjectURL(blob)
+    const monthStr = selectedMonth ? `_${selectedMonth.toString().padStart(2, '0')}` : ''
+    link.download = `review_summary_${selectedYear}${monthStr}.csv`
+    link.click()
+    URL.revokeObjectURL(link.href)
+  }, [rows, selectedYear, selectedMonth])
+
+  const exportRef = useRef(exportToCSV)
+  exportRef.current = exportToCSV
+
+  const stableWrapperRef = useRef<(() => void) | null>(null)
+  if (!stableWrapperRef.current) {
+    stableWrapperRef.current = () => exportRef.current()
+  }
+
+  useEffect(() => {
+    onExportReady?.(stableWrapperRef.current!)
+  }, [onExportReady])
 
   // Edit handlers
   const handleEditClick = (review: typeof reviews[0]) => {

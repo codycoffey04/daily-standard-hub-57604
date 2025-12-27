@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react'
+import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
@@ -15,11 +15,13 @@ import { useSourcesForSelection } from '@/hooks/useSourcesForSelection'
 interface CommonWeakPointsReportProps {
   selectedYear: number
   selectedMonth: number | null
+  onExportReady?: (exportFn: () => void) => void
 }
 
 const CommonWeakPointsReport: React.FC<CommonWeakPointsReportProps> = ({
   selectedYear,
-  selectedMonth
+  selectedMonth,
+  onExportReady
 }) => {
   const [producerFilter, setProducerFilter] = useState<string | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
@@ -122,6 +124,43 @@ const CommonWeakPointsReport: React.FC<CommonWeakPointsReportProps> = ({
 
     return insights
   }, [weakPoints])
+
+  const rows = useMemo(() => weakPoints ?? [], [weakPoints])
+
+  // Export CSV - hooks must be called unconditionally
+  const exportToCSV = useCallback(() => {
+    if (rows.length === 0) return
+
+    const headers = ['Gap Name', 'Frequency', 'Affected Producers', 'Recent Count (30 Days)', 'Who Has This Issue']
+    const csvRows = rows.map(p => [
+      `"${p.gap_name}"`,
+      p.frequency.toString(),
+      p.affected_producers.toString(),
+      p.recent_count.toString(),
+      `"${p.producer_names}"`
+    ])
+
+    const csvContent = [headers, ...csvRows].map(row => row.join(',')).join('\n')
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+    const link = document.createElement('a')
+    link.href = URL.createObjectURL(blob)
+    const monthStr = selectedMonth ? `_${selectedMonth.toString().padStart(2, '0')}` : ''
+    link.download = `common_weak_points_${selectedYear}${monthStr}.csv`
+    link.click()
+    URL.revokeObjectURL(link.href)
+  }, [rows, selectedYear, selectedMonth])
+
+  const exportRef = useRef(exportToCSV)
+  exportRef.current = exportToCSV
+
+  const stableWrapperRef = useRef<(() => void) | null>(null)
+  if (!stableWrapperRef.current) {
+    stableWrapperRef.current = () => exportRef.current()
+  }
+
+  useEffect(() => {
+    onExportReady?.(stableWrapperRef.current!)
+  }, [onExportReady])
 
   if (isLoading) {
     return (

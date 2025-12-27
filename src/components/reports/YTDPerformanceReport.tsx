@@ -1,5 +1,5 @@
 import * as React from 'react'
-import { useMemo } from 'react'
+import { useMemo, useCallback, useRef, useEffect } from 'react'
 import { Info, LineChart } from 'lucide-react'
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -11,9 +11,10 @@ import { today } from '@/lib/timezone'
 
 interface YTDPerformanceReportProps {
   selectedYear: number
+  onExportReady?: (exportFn: () => void) => void
 }
 
-export default function YTDPerformanceReport({ selectedYear }: YTDPerformanceReportProps) {
+export default function YTDPerformanceReport({ selectedYear, onExportReady }: YTDPerformanceReportProps) {
   // YTD range: Jan 1 → today (if current year) or Dec 31 (past year)
   const [fromDate, toDate] = useMemo(() => {
     const currentYear = new Date().getFullYear()
@@ -38,6 +39,42 @@ export default function YTDPerformanceReport({ selectedYear }: YTDPerformanceRep
 
   // Use totals directly (no merging with any other sources)
   const trendsTotals = trends?.totals ?? { items: 0, households: 0 }
+  const byProducer = useMemo(() => trends?.byProducer ?? [], [trends])
+
+  // Export CSV - hooks must be called unconditionally
+  const exportToCSV = useCallback(() => {
+    if (byProducer.length === 0) return
+
+    const headers = ['Producer', 'Items Sold', 'Sales (HH)']
+    const rows = byProducer.map(p => [
+      p.producerName,
+      p.items.toString(),
+      p.households.toString()
+    ])
+
+    // Add totals row
+    rows.push(['TEAM TOTAL', trendsTotals.items.toString(), trendsTotals.households.toString()])
+
+    const csvContent = [headers, ...rows].map(row => row.join(',')).join('\n')
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+    const link = document.createElement('a')
+    link.href = URL.createObjectURL(blob)
+    link.download = `ytd_performance_${selectedYear}.csv`
+    link.click()
+    URL.revokeObjectURL(link.href)
+  }, [byProducer, trendsTotals, selectedYear])
+
+  const exportRef = useRef(exportToCSV)
+  exportRef.current = exportToCSV
+
+  const stableWrapperRef = useRef<(() => void) | null>(null)
+  if (!stableWrapperRef.current) {
+    stableWrapperRef.current = () => exportRef.current()
+  }
+
+  useEffect(() => {
+    onExportReady?.(stableWrapperRef.current!)
+  }, [onExportReady])
 
   if (isLoading) {
     return (
