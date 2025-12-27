@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react'
+import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '@/integrations/supabase/client'
 import { useAuth } from '@/contexts/AuthContext'
@@ -22,9 +22,10 @@ interface Producer {
 interface ProducerTrendsReportProps {
   selectedYear: number
   selectedMonth: number | null
+  onExportReady?: (exportFn: () => void) => void
 }
 
-export const ProducerTrendsReport: React.FC<ProducerTrendsReportProps> = () => {
+export const ProducerTrendsReport: React.FC<ProducerTrendsReportProps> = ({ onExportReady }) => {
   const { session, loading: authLoading } = useAuth()
   const [dateFrom, setDateFrom] = useState('2025-04-01')
   const [dateTo, setDateTo] = useState(() => {
@@ -60,6 +61,8 @@ export const ProducerTrendsReport: React.FC<ProducerTrendsReportProps> = () => {
     setDateTo(to)
   }
 
+  const byProducer = useMemo(() => trendsData?.byProducer ?? [], [trendsData])
+
   const summaryStats = useMemo(() => {
     if (!trendsData || trendsData.byProducer.length === 0) return null
 
@@ -77,6 +80,39 @@ export const ProducerTrendsReport: React.FC<ProducerTrendsReportProps> = () => {
       avgPolicies
     }
   }, [trendsData])
+
+  // Export CSV - hooks must be called unconditionally
+  const exportToCSV = useCallback(() => {
+    if (byProducer.length === 0) return
+
+    const headers = ['Producer', 'Policies Sold (HH)', 'Items Sold', 'Attach Rate']
+    const rows = byProducer.map(p => [
+      p.producerName,
+      p.households.toString(),
+      p.items.toString(),
+      p.households > 0 ? (p.items / p.households).toFixed(2) : '0.00'
+    ])
+
+    const csvContent = [headers, ...rows].map(row => row.join(',')).join('\n')
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+    const link = document.createElement('a')
+    link.href = URL.createObjectURL(blob)
+    link.download = `producer_trends_${dateFrom}_to_${dateTo}.csv`
+    link.click()
+    URL.revokeObjectURL(link.href)
+  }, [byProducer, dateFrom, dateTo])
+
+  const exportRef = useRef(exportToCSV)
+  exportRef.current = exportToCSV
+
+  const stableWrapperRef = useRef<(() => void) | null>(null)
+  if (!stableWrapperRef.current) {
+    stableWrapperRef.current = () => exportRef.current()
+  }
+
+  useEffect(() => {
+    onExportReady?.(stableWrapperRef.current!)
+  }, [onExportReady])
 
   const getFrameworkBadge = (status: 'Top' | 'Bottom' | 'Outside') => {
     const variants = {
