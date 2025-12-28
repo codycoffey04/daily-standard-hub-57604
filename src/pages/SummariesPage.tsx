@@ -54,7 +54,7 @@ const ReportContent: React.FC<ReportContentProps> = ({
 }) => {
   switch (reportId) {
     case 'monthly-summary':
-      return <MonthlySummaryReport selectedYear={selectedYear} selectedMonth={selectedMonth} />
+      return <MonthlySummaryReport selectedYear={selectedYear} selectedMonth={selectedMonth} onExportReady={onExportReady} />
     case 'qhh-by-source':
       return <QHHBySourceReport selectedYear={selectedYear} selectedMonth={selectedMonth} onExportReady={onExportReady} />
     case 'quotes-by-source':
@@ -73,26 +73,24 @@ const ReportContent: React.FC<ReportContentProps> = ({
       return <ItemsByProducerReport selectedYear={selectedYear} selectedMonth={selectedMonth} onExportReady={onExportReady} />
     case 'items-by-source':
       return <ItemsBySourceReport selectedYear={selectedYear} selectedMonth={selectedMonth} onExportReady={onExportReady} />
-    case 'producer-source-matrix':
-      return <ProducerSourceMatrixReport selectedYear={selectedYear} selectedMonth={selectedMonth} />
     case 'source-roi-calculator':
       return <SourceROICalculatorReport selectedYear={selectedYear} selectedMonth={selectedMonth} onExportReady={onExportReady} />
     case 'sales-by-producer':
       return <SalesByProducerReport selectedYear={selectedYear} selectedMonth={selectedMonth} onExportReady={onExportReady} />
     case 'producer-trends':
-      return <ProducerTrendsReport selectedYear={selectedYear} selectedMonth={selectedMonth} />
+      return <ProducerTrendsReport selectedYear={selectedYear} selectedMonth={selectedMonth} onExportReady={onExportReady} />
     case 'review-summary':
-      return <ReviewSummaryReport selectedYear={selectedYear} selectedMonth={selectedMonth} />
+      return <ReviewSummaryReport selectedYear={selectedYear} selectedMonth={selectedMonth} onExportReady={onExportReady} />
     case 'common-weak-points':
-      return <CommonWeakPointsReport selectedYear={selectedYear} selectedMonth={selectedMonth} />
+      return <CommonWeakPointsReport selectedYear={selectedYear} selectedMonth={selectedMonth} onExportReady={onExportReady} />
     case 'conversion-funnel':
       return <ExecutionFunnelReport selectedYear={selectedYear} selectedMonth={selectedMonth} onExportReady={onExportReady} />
-      case 'ytd-performance':
-        return <YTDPerformanceReport selectedYear={selectedYear} />
+    case 'ytd-performance':
+      return <YTDPerformanceReport selectedYear={selectedYear} onExportReady={onExportReady} />
     case 'zip-code-performance':
       return <ZipCodePerformanceReport selectedYear={selectedYear} selectedMonth={selectedMonth} onExportReady={onExportReady} />
     case 'coaching-effectiveness':
-      return <CoachingEffectivenessReport selectedYear={selectedYear} selectedMonth={selectedMonth} />
+      return <CoachingEffectivenessReport selectedYear={selectedYear} selectedMonth={selectedMonth} onExportReady={onExportReady} />
     default:
       const report = getReportById(reportId)
       return <PlaceholderReport reportTitle={report?.title || 'Unknown Report'} />
