@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react'
+import React, { useMemo, useCallback, useRef, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -12,9 +12,10 @@ import dayjs from 'dayjs'
 interface MonthlySummaryReportProps {
   selectedYear: number
   selectedMonth: number | null
+  onExportReady?: (exportFn: (() => void) | null) => void
 }
 
-const MonthlySummaryReport: React.FC<MonthlySummaryReportProps> = ({ selectedYear, selectedMonth }) => {
+const MonthlySummaryReport: React.FC<MonthlySummaryReportProps> = ({ selectedYear, selectedMonth, onExportReady }) => {
   const queryClient = useQueryClient()
   
   console.log('📊 === MonthlySummaryReport RENDERING ===')
@@ -116,6 +117,58 @@ const MonthlySummaryReport: React.FC<MonthlySummaryReportProps> = ({ selectedYea
       avgQuotesPerHH
     }
   }, [summaryData])
+
+  // Export to CSV function
+  const exportToCSV = useCallback(() => {
+    let csvContent = "Monthly Summary Report\n"
+    csvContent += `Period,${selectedMonth ? `${selectedYear}-${String(selectedMonth).padStart(2, '0')}` : selectedYear}\n\n`
+    csvContent += "Metric,Value\n"
+    csvContent += `Total QHH,${summaryMetrics.totalQHH}\n`
+    csvContent += `Total Quotes,${summaryMetrics.totalQuotes}\n`
+    csvContent += `Avg Framework Compliance,${summaryMetrics.avgFramework.toFixed(1)}%\n`
+    csvContent += `Total Outbound Dials,${summaryMetrics.totalDials}\n`
+    csvContent += `Total Talk Time (hrs),${summaryMetrics.totalTalkTimeHrs}\n`
+    csvContent += `Avg Quotes per Household,${summaryMetrics.avgQuotesPerHH.toFixed(2)}\n\n`
+    
+    // Add top sources for quotes
+    csvContent += "Top Sources for Quotes\n"
+    csvContent += "Rank,Source,Value,Percentage\n"
+    topQuoteSources?.forEach((source, i) => {
+      const pct = summaryMetrics.totalQuotes > 0 
+        ? ((source.metric_value / summaryMetrics.totalQuotes) * 100).toFixed(1) 
+        : '0.0'
+      csvContent += `${i + 1},"${source.source_name}",${source.metric_value},${pct}%\n`
+    })
+    
+    // Add top sources for QHH
+    csvContent += "\nTop Sources for QHH\n"
+    csvContent += "Rank,Source,Value,Percentage\n"
+    topQHHSources?.forEach((source, i) => {
+      const pct = summaryMetrics.totalQHH > 0 
+        ? ((source.metric_value / summaryMetrics.totalQHH) * 100).toFixed(1) 
+        : '0.0'
+      csvContent += `${i + 1},"${source.source_name}",${source.metric_value},${pct}%\n`
+    })
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+    const link = document.createElement('a')
+    link.href = URL.createObjectURL(blob)
+    link.download = `monthly-summary-${selectedYear}-${selectedMonth || 'all'}.csv`
+    link.click()
+  }, [summaryMetrics, topQuoteSources, topQHHSources, selectedYear, selectedMonth])
+
+  // Hook-safe export registration
+  const exportRef = useRef(exportToCSV)
+  exportRef.current = exportToCSV
+
+  const stableWrapperRef = useRef<(() => void) | null>(null)
+  if (!stableWrapperRef.current) {
+    stableWrapperRef.current = () => exportRef.current()
+  }
+
+  useEffect(() => {
+    onExportReady?.(stableWrapperRef.current!)
+  }, [onExportReady])
 
   if (isLoading) {
     return (
