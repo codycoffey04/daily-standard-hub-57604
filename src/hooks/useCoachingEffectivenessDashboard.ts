@@ -132,11 +132,11 @@ export const useCoachingEffectivenessDashboard = (
   return useQuery({
     queryKey,
     queryFn: async (): Promise<CoachingEffectivenessDashboard> => {
-      let metricsRes, progressRes, gapRes, trendRes
+      let metricsRes: any, progressRes: any, gapRes: any, trendRes: any
       
       if (startDate && endDate) {
         // Use date-range functions from migrations
-        [metricsRes, progressRes, gapRes, trendRes] = await Promise.all([
+        const results = await Promise.all([
           // @ts-expect-error - Function exists in database but not in auto-generated types
           supabase.rpc('get_coaching_effectiveness_overall', {
             p_start_date: startDate,
@@ -158,10 +158,14 @@ export const useCoachingEffectivenessDashboard = (
             p_end_date: endDate
           })
         ])
+        metricsRes = results[0]
+        progressRes = results[1]
+        gapRes = results[2]
+        trendRes = results[3]
       } else {
         // Fallback to days_back functions (for backward compatibility)
         const daysBack = timeframe || 30
-        [metricsRes, progressRes, gapRes, trendRes] = await Promise.all([
+        const results = await Promise.all([
           // @ts-expect-error - Function exists in database but not in auto-generated types
           supabase.rpc('get_coaching_effectiveness_metrics', {
             p_days_back: daysBack
@@ -179,6 +183,10 @@ export const useCoachingEffectivenessDashboard = (
             p_weeks_back: 4
           })
         ])
+        metricsRes = results[0]
+        progressRes = results[1]
+        gapRes = results[2]
+        trendRes = results[3]
       }
 
       // Handle errors
