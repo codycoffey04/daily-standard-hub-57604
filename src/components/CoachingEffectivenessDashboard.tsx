@@ -62,11 +62,15 @@ const safeFormatDate = (dateString: string | null | undefined, formatStr: string
 
 interface CoachingEffectivenessDashboardProps {
   initialTimeframe?: number
+  startDate?: string
+  endDate?: string
   hideTimeframeSelector?: boolean
 }
 
 export const CoachingEffectivenessDashboard = ({ 
-  initialTimeframe = 30, 
+  initialTimeframe = 30,
+  startDate,
+  endDate,
   hideTimeframeSelector = false 
 }: CoachingEffectivenessDashboardProps = {}) => {
   const [timeframe, setTimeframe] = useState<number>(initialTimeframe)
@@ -75,10 +79,12 @@ export const CoachingEffectivenessDashboard = ({
     setTimeframe(initialTimeframe)
   }, [initialTimeframe])
 
-  // Use initialTimeframe directly for the query when hideTimeframeSelector is true (controlled mode)
-  // Otherwise use internal state (uncontrolled mode with selector)
-  const queryTimeframe = hideTimeframeSelector ? initialTimeframe : timeframe
-  const { data, isLoading, error } = useCoachingEffectivenessDashboard(queryTimeframe)
+  // Use date range if provided, otherwise use timeframe
+  const { data, isLoading, error } = useCoachingEffectivenessDashboard(
+    startDate,
+    endDate,
+    hideTimeframeSelector ? initialTimeframe : timeframe
+  )
 
   if (isLoading) {
     return (

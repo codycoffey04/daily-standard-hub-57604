@@ -1,6 +1,7 @@
 import React, { useMemo, useCallback, useRef, useEffect } from 'react'
 import { CoachingEffectivenessDashboard } from '@/components/CoachingEffectivenessDashboard'
 import { useCoachingEffectivenessDashboard } from '@/hooks/useCoachingEffectivenessDashboard'
+import { format } from 'date-fns'
 
 interface CoachingEffectivenessReportProps {
   selectedYear: number
@@ -13,11 +14,11 @@ export const CoachingEffectivenessReport: React.FC<CoachingEffectivenessReportPr
   selectedMonth,
   onExportReady
 }) => {
-  const timeframe = useMemo(() => {
+  const dateRange = useMemo(() => {
     const now = new Date()
     
     // Calculate start date
-    const startDate = selectedMonth !== null
+    let startDate = selectedMonth !== null
       ? new Date(selectedYear, selectedMonth - 1, 1)
       : new Date(selectedYear, 0, 1)
     
@@ -31,20 +32,20 @@ export const CoachingEffectivenessReport: React.FC<CoachingEffectivenessReportPr
       endDate = now
     }
     
-    // If start date is in the future, return default
+    // If start date is in the future, use current date
     if (startDate > now) {
-      return 30
+      startDate = now
+      endDate = now
     }
     
-    // Calculate days difference
-    const daysDiff = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24))
-    
-    // Return at least 1 day
-    return Math.max(1, daysDiff)
+    return {
+      startDate: format(startDate, 'yyyy-MM-dd'),
+      endDate: format(endDate, 'yyyy-MM-dd')
+    }
   }, [selectedYear, selectedMonth])
 
   // Fetch data for export
-  const { data } = useCoachingEffectivenessDashboard(timeframe)
+  const { data } = useCoachingEffectivenessDashboard(dateRange.startDate, dateRange.endDate)
   const producerProgress = useMemo(() => data?.producer_progress ?? [], [data])
 
   // Export CSV - hooks must be called unconditionally
@@ -85,7 +86,8 @@ export const CoachingEffectivenessReport: React.FC<CoachingEffectivenessReportPr
 
   return (
     <CoachingEffectivenessDashboard 
-      initialTimeframe={timeframe}
+      startDate={dateRange.startDate}
+      endDate={dateRange.endDate}
       hideTimeframeSelector={true}
     />
   )
