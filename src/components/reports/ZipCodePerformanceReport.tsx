@@ -23,7 +23,7 @@ import { useProducersForSelection } from '@/hooks/useProducersForSelection'
 import { formatNumber, cn, calculateZipHealthStatus } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts'
+import { BarChart, Bar, XAxis, YAxis, Tooltip as RechartsTooltip, ResponsiveContainer, Cell } from 'recharts'
 import { format } from 'date-fns'
 
 interface ZipCodePerformanceReportProps {
@@ -641,7 +641,7 @@ export const ZipCodePerformanceReport: React.FC<ZipCodePerformanceReportProps> =
                 <BarChart data={chartData} layout="vertical" margin={{ left: 50 }}>
                   <XAxis type="number" />
                   <YAxis type="category" dataKey="zip" width={60} />
-                  <Tooltip 
+                  <RechartsTooltip 
                     formatter={(value: number) => [formatNumber(value), 'Quotes']}
                     contentStyle={{ 
                       backgroundColor: 'hsl(var(--background))', 
