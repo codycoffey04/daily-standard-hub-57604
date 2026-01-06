@@ -171,36 +171,9 @@ export const useCoachingEffectivenessDashboard = (
       gapRes = results[2]
       trendRes = results[3]
       
-      // Filter results by date range if provided (client-side filtering as workaround)
-      if (startDate && endDate && metricsRes.data) {
-        // Note: This is a workaround - ideally the database functions would filter
-        // For now, we rely on p_days_back to get approximately the right data
-      }
-        // Fallback to days_back functions (for backward compatibility)
-        const daysBack = timeframe || 30
-        const results = await Promise.all([
-          // @ts-expect-error - Function exists in database but not in auto-generated types
-          supabase.rpc('get_coaching_effectiveness_metrics', {
-            p_days_back: daysBack
-          }),
-          // @ts-expect-error - Function exists in database but not in auto-generated types
-          supabase.rpc('get_producer_progress', {
-            p_days_back: daysBack
-          }),
-          // @ts-expect-error - Function exists in database but not in auto-generated types
-          supabase.rpc('get_gap_analysis', {
-            p_days_back: daysBack
-          }),
-          // @ts-expect-error - Function exists in database but not in auto-generated types
-          supabase.rpc('get_weekly_coaching_trend', {
-            p_weeks_back: 4
-          })
-        ])
-        metricsRes = results[0]
-        progressRes = results[1]
-        gapRes = results[2]
-        trendRes = results[3]
-      }
+      // Note: We're using p_days_back functions which get data from (today - days_back) to today
+      // This is a workaround until date-range functions are applied to the database
+      // The days_back is calculated from the start date to ensure we include the selected month's data
 
       // Handle errors
       if (metricsRes.error) {
