@@ -75,7 +75,10 @@ export const CoachingEffectivenessDashboard = ({
     setTimeframe(initialTimeframe)
   }, [initialTimeframe])
 
-  const { data, isLoading, error } = useCoachingEffectivenessDashboard(timeframe)
+  // Use initialTimeframe directly for the query when hideTimeframeSelector is true (controlled mode)
+  // Otherwise use internal state (uncontrolled mode with selector)
+  const queryTimeframe = hideTimeframeSelector ? initialTimeframe : timeframe
+  const { data, isLoading, error } = useCoachingEffectivenessDashboard(queryTimeframe)
 
   if (isLoading) {
     return (
