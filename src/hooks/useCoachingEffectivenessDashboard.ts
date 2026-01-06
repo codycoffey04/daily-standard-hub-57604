@@ -200,22 +200,43 @@ export const useCoachingEffectivenessDashboard = (
       const trendsRaw = (trendRes.data || []) as any[]
 
       // Transform metrics to match component expectations (always using days_back response structure)
+      const resolutionRate = metricsRaw?.issue_resolution_rate || 0
+      const totalProducers = metricsRaw?.producers_coached || 0
+      const totalReviews = metricsRaw?.total_sessions || 0
+      const avgDaysBetween = 7 // Default value
+      
+      // Calculate effectiveness_score as a composite metric
+      // Based on radar chart: Resolution Rate (40%), Consistency (30%), Coverage (30%)
+      const consistencyScore = avgDaysBetween > 0 
+        ? Math.min(100, (7 / avgDaysBetween) * 100)
+        : 0
+      const coverageScore = totalProducers > 0
+        ? Math.min(100, (totalReviews / totalProducers) * 10)
+        : 0
+      
+      // Weighted composite score
+      const effectivenessScore = Math.round(
+        (resolutionRate * 0.4) + 
+        (consistencyScore * 0.3) + 
+        (coverageScore * 0.3)
+      )
+      
       const transformedMetrics: OverallMetrics | null = metricsRaw ? {
-        overall_score: metricsRaw.overall_score || 0,
-        effectiveness_score: metricsRaw.overall_score || 0,
-        issue_resolution_rate: metricsRaw.issue_resolution_rate || 0,
-        overall_resolution_rate: metricsRaw.issue_resolution_rate || 0,
+        overall_score: effectivenessScore,
+        effectiveness_score: effectivenessScore,
+        issue_resolution_rate: resolutionRate,
+        overall_resolution_rate: resolutionRate,
         total_issues: metricsRaw.total_issues || 0,
         resolved: metricsRaw.resolved || 0,
         metrics_achieved_count: metricsRaw.metrics_achieved_count || 0,
         avg_time_to_improvement: metricsRaw.avg_time_to_improvement || 0,
-        avg_days_between_reviews: 7,
-        producers_coached: metricsRaw.producers_coached || 0,
-        total_producers: metricsRaw.producers_coached || 0,
-        total_sessions: metricsRaw.total_sessions || 0,
-        total_reviews: metricsRaw.total_sessions || 0,
-        trend_direction: metricsRaw.overall_score >= 70 ? 'improving' as const
-          : metricsRaw.overall_score >= 50 ? 'stable' as const
+        avg_days_between_reviews: avgDaysBetween,
+        producers_coached: totalProducers,
+        total_producers: totalProducers,
+        total_sessions: totalReviews,
+        total_reviews: totalReviews,
+        trend_direction: effectivenessScore >= 70 ? 'improving' as const
+          : effectivenessScore >= 50 ? 'stable' as const
           : 'declining' as const
       } : null
 
