@@ -20,7 +20,9 @@ import { AlertCircle, ArrowUpDown, MapPin, TrendingUp, DollarSign, ShoppingCart,
 import { useZipPerformance, ZipPerformanceRow } from '@/hooks/useZipPerformance'
 import { useSourcesForSelection } from '@/hooks/useSourcesForSelection'
 import { useProducersForSelection } from '@/hooks/useProducersForSelection'
-import { formatNumber, cn } from '@/lib/utils'
+import { formatNumber, cn, calculateZipHealthStatus } from '@/lib/utils'
+import { Badge } from '@/components/ui/badge'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts'
 import { format } from 'date-fns'
 
@@ -58,9 +60,10 @@ export const ZipCodePerformanceReport: React.FC<ZipCodePerformanceReportProps> =
   const [selectedSourceId, setSelectedSourceId] = useState<string | null>(null)
   const [minQuotes, setMinQuotes] = useState(1)
   const [includeUnknown, setIncludeUnknown] = useState(false)
+  const [showProblemZipsOnly, setShowProblemZipsOnly] = useState(false)
 
   // Table sorting state
-  const [sortColumn, setSortColumn] = useState<keyof ZipPerformanceRow>('quotes')
+  const [sortColumn, setSortColumn] = useState<keyof ZipPerformanceRow | 'health_status'>('quotes')
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc')
 
   // Fetch data
@@ -85,7 +88,7 @@ export const ZipCodePerformanceReport: React.FC<ZipCodePerformanceReportProps> =
   const formatCurrency = (value: number): string => `$${formatNumber(Math.round(value))}`
 
   // Handle sorting
-  const handleSort = (column: keyof ZipPerformanceRow) => {
+  const handleSort = (column: keyof ZipPerformanceRow | 'health_status') => {
     if (sortColumn === column) {
       setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc')
     } else {
@@ -94,16 +97,50 @@ export const ZipCodePerformanceReport: React.FC<ZipCodePerformanceReportProps> =
     }
   }
 
-  // Sort table data
-  const sortedRows = useMemo(() => {
-    return [...rows].sort((a, b) => {
-      const aVal = a[sortColumn]
-      const bVal = b[sortColumn]
+  // Calculate health status for rows and sort
+  const rowsWithHealth = useMemo(() => {
+    if (!rows.length) return []
+    
+    const rowsWithStatus = rows.map(row => ({
+      ...row,
+      health_status: calculateZipHealthStatus(row.quotes, row.sales, row.conversion_rate)
+    }))
+    
+    return rowsWithStatus.sort((a, b) => {
+      // Custom sorting for health_status
+      if (sortColumn === 'health_status') {
+        const statusOrder = { red: 0, yellow: 1, green: 2 }
+        const aStatus = a.health_status || calculateZipHealthStatus(a.quotes, a.sales, a.conversion_rate)
+        const bStatus = b.health_status || calculateZipHealthStatus(b.quotes, b.sales, b.conversion_rate)
+        const comparison = statusOrder[aStatus] - statusOrder[bStatus]
+        return sortDirection === 'asc' ? comparison : -comparison
+      }
       
+      // Standard sorting for other columns
+      const aVal = a[sortColumn as keyof ZipPerformanceRow]
+      const bVal = b[sortColumn as keyof ZipPerformanceRow]
       const comparison = aVal > bVal ? 1 : -1
       return sortDirection === 'asc' ? comparison : -comparison
     })
   }, [rows, sortColumn, sortDirection])
+
+  // Filter to show only problem ZIPs if filter is enabled
+  const filteredRowsWithHealth = useMemo(() => {
+    if (!showProblemZipsOnly) return rowsWithHealth
+    return rowsWithHealth.filter(row => {
+      const status = row.health_status || calculateZipHealthStatus(row.quotes, row.sales, row.conversion_rate)
+      return status === 'yellow' || status === 'red'
+    })
+  }, [rowsWithHealth, showProblemZipsOnly])
+
+  // Calculate problem ZIPs count
+  const problemZipsCount = useMemo(() => {
+    if (!rows.length) return 0
+    return rows.filter(row => {
+      const status = calculateZipHealthStatus(row.quotes, row.sales, row.conversion_rate)
+      return status === 'yellow' || status === 'red'
+    }).length
+  }, [rows])
 
   // Top 10 zips for chart
   const chartData = useMemo(() => {
@@ -117,9 +154,12 @@ export const ZipCodePerformanceReport: React.FC<ZipCodePerformanceReportProps> =
       }))
   }, [rows])
 
+  // Use filteredRowsWithHealth for display
+  const sortedRows = filteredRowsWithHealth
+
   // Export to CSV function - all hooks MUST be called before any early returns
   const exportToCSV = useCallback(() => {
-    if (sortedRows.length === 0) {
+    if (!sortedRows || sortedRows.length === 0) {
       console.warn('No data to export')
       return
     }
@@ -135,17 +175,22 @@ export const ZipCodePerformanceReport: React.FC<ZipCodePerformanceReportProps> =
     }
 
     // Create CSV headers
-    const headers = ['ZIP Code', 'Quotes', 'Sales', 'Conversion %', 'Premium', 'Items Sold']
+    const headers = ['ZIP Code', 'Status', 'Quotes', 'Sales', 'Conversion %', 'Premium', 'Items Sold']
     
     // Create CSV rows using sortedRows to match what's displayed
-    const csvRows = sortedRows.map(row => [
-      escapeCSV(row.zip_code),
-      escapeCSV(row.quotes),
-      escapeCSV(row.sales),
-      escapeCSV(row.conversion_rate.toFixed(2)),
-      escapeCSV(Math.round(row.premium)),
-      escapeCSV(row.items_sold)
-    ])
+    const csvRows = sortedRows.map(row => {
+      const status = row.health_status || calculateZipHealthStatus(row.quotes, row.sales, row.conversion_rate)
+      const statusText = status === 'green' ? 'Healthy' : status === 'yellow' ? 'Warning' : 'Critical'
+      return [
+        escapeCSV(row.zip_code),
+        escapeCSV(statusText),
+        escapeCSV(row.quotes),
+        escapeCSV(row.sales),
+        escapeCSV(row.conversion_rate.toFixed(2)),
+        escapeCSV(Math.round(row.premium)),
+        escapeCSV(row.items_sold)
+      ]
+    })
 
     // Combine headers and rows
     const csvContent = [
@@ -355,12 +400,30 @@ export const ZipCodePerformanceReport: React.FC<ZipCodePerformanceReportProps> =
                 </label>
               </div>
             </div>
+
+            {/* Problem ZIPs Filter */}
+            <div className="space-y-2">
+              <Label htmlFor="problem-zips" className="block mb-2">Filter</Label>
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="problem-zips"
+                  checked={showProblemZipsOnly}
+                  onCheckedChange={(checked) => setShowProblemZipsOnly(checked as boolean)}
+                />
+                <label
+                  htmlFor="problem-zips"
+                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                >
+                  Problem ZIPs Only
+                </label>
+              </div>
+            </div>
           </div>
         </CardContent>
       </Card>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Unique ZIPs</CardTitle>
@@ -412,6 +475,19 @@ export const ZipCodePerformanceReport: React.FC<ZipCodePerformanceReportProps> =
             )}
           </CardContent>
         </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Problem ZIPs</CardTitle>
+            <AlertCircle className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{problemZipsCount}</div>
+            <p className="text-xs text-muted-foreground">
+              Yellow + Red status ZIPs
+            </p>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Data Table */}
@@ -419,7 +495,7 @@ export const ZipCodePerformanceReport: React.FC<ZipCodePerformanceReportProps> =
         <CardHeader>
           <CardTitle>ZIP Code Performance</CardTitle>
           <CardDescription>
-            Showing {rows.length} ZIP code{rows.length !== 1 ? 's' : ''} • 
+            Showing {sortedRows.length} ZIP code{sortedRows.length !== 1 ? 's' : ''} • 
             {fromDate && toDate && ` ${format(new Date(fromDate), 'MMM dd, yyyy')} - ${format(new Date(toDate), 'MMM dd, yyyy')}`}
           </CardDescription>
         </CardHeader>
@@ -433,6 +509,30 @@ export const ZipCodePerformanceReport: React.FC<ZipCodePerformanceReportProps> =
                       ZIP Code
                       <ArrowUpDown className="ml-2 h-4 w-4" />
                     </Button>
+                  </TableHead>
+                  <TableHead>
+                    <div className="flex items-center gap-1">
+                      <Button variant="ghost" size="sm" onClick={() => handleSort('health_status')}>
+                        Status
+                        <ArrowUpDown className="ml-2 h-4 w-4" />
+                      </Button>
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <button className="text-muted-foreground hover:text-foreground">
+                              <AlertCircle className="h-3 w-3" />
+                            </button>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <div className="space-y-1 text-xs">
+                              <p><strong>🟢 Green:</strong> ≥15% conversion OR &lt;5 quotes</p>
+                              <p><strong>🟡 Yellow:</strong> 5-9 quotes with 0 sales, OR 10+ quotes with &lt;10% conversion</p>
+                              <p><strong>🔴 Red:</strong> 8+ quotes with 0 sales</p>
+                            </div>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    </div>
                   </TableHead>
                   <TableHead className="text-right">
                     <Button variant="ghost" size="sm" onClick={() => handleSort('quotes')}>
@@ -467,16 +567,62 @@ export const ZipCodePerformanceReport: React.FC<ZipCodePerformanceReportProps> =
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {sortedRows.map((row) => (
-                  <TableRow key={row.zip_code}>
-                    <TableCell className="font-medium">{row.zip_code}</TableCell>
-                    <TableCell className="text-right">{formatNumber(row.quotes)}</TableCell>
+                {sortedRows.map((row) => {
+                  const healthStatus = row.health_status || calculateZipHealthStatus(row.quotes, row.sales, row.conversion_rate)
+                  return (
+                    <TableRow key={row.zip_code}>
+                      <TableCell className="font-medium">{row.zip_code}</TableCell>
+                      <TableCell>
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <div className="cursor-help">
+                                <Badge
+                                  className={cn(
+                                    "text-xs",
+                                    healthStatus === 'green' && "bg-success text-success-foreground",
+                                    healthStatus === 'yellow' && "bg-warning text-warning-foreground",
+                                    healthStatus === 'red' && "bg-destructive text-destructive-foreground"
+                                  )}
+                                >
+                                  {healthStatus === 'green' ? 'Healthy' : 
+                                   healthStatus === 'yellow' ? 'Warning' : 'Critical'}
+                                </Badge>
+                              </div>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <div className="space-y-1 text-xs">
+                                <p className="font-semibold">ZIP {row.zip_code}</p>
+                                <p>{row.quotes} quotes, {row.sales} sales</p>
+                                <p>{row.conversion_rate.toFixed(1)}% conversion</p>
+                                {healthStatus === 'red' && (
+                                  <p className="text-destructive font-medium">8+ quotes with 0 sales</p>
+                                )}
+                                {healthStatus === 'yellow' && (
+                                  <p className="text-warning font-medium">
+                                    {row.quotes >= 5 && row.quotes <= 9 && row.sales === 0
+                                      ? '5-9 quotes with 0 sales'
+                                      : '10+ quotes with <10% conversion'}
+                                  </p>
+                                )}
+                                {healthStatus === 'green' && (
+                                  <p className="text-success font-medium">
+                                    {row.quotes < 5 ? 'Insufficient data (<5 quotes)' : '≥15% conversion'}
+                                  </p>
+                                )}
+                              </div>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      </TableCell>
+                      <TableCell className="text-right">{formatNumber(row.quotes)}</TableCell>
                     <TableCell className="text-right">{formatNumber(row.sales)}</TableCell>
                     <TableCell className="text-right">{row.conversion_rate.toFixed(1)}%</TableCell>
                     <TableCell className="text-right">{formatCurrency(row.premium)}</TableCell>
                     <TableCell className="text-right">{formatNumber(row.items_sold)}</TableCell>
                   </TableRow>
-                ))}
+                  )
+                })}
               </TableBody>
             </Table>
           </div>

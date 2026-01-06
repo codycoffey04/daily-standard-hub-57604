@@ -1,5 +1,8 @@
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '@/integrations/supabase/client'
+import { ZipHealthStatus } from '@/lib/utils'
+
+export type { ZipHealthStatus }
 
 export interface ZipPerformanceRow {
   zip_code: string
@@ -8,6 +11,7 @@ export interface ZipPerformanceRow {
   conversion_rate: number  // percentage
   premium: number
   items_sold: number
+  health_status?: ZipHealthStatus  // Optional for backward compatibility
 }
 
 export interface ZipPerformanceSummary {
@@ -22,6 +26,7 @@ export interface ZipPerformanceSummary {
     premium: number
     items_sold: number
   }
+  problem_zips_count?: number  // New field
 }
 
 export interface ZipPerformanceData {
