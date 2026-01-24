@@ -187,3 +187,150 @@ export function formatPremium(premium: number): string {
 export function formatCloseRate(rate: number): string {
   return `${rate.toFixed(1)}%`
 }
+
+/**
+ * Parser for AgencyZoom CSV export
+ *
+ * CSV Format:
+ * Producer,Items,Premium,L&H Premium,Policies,Sales,Points,Revenue
+ * Total,31,"$19,885",0,15,12,320,"$1,790"
+ * Kimberly Fletcher,18,"$11,088",0,8,6,185,$998
+ *
+ * Column mapping:
+ * - Policies → qhh (Quoted Households)
+ * - Items → items
+ * - Premium → premium
+ * - Sales → sales
+ * - Close Rate = calculated as (Sales / Policies) * 100
+ * - L&H Premium, Points, Revenue → ignored
+ */
+export function parseAgencyZoomCSV(csvContent: string): ParseResult {
+  if (!csvContent || csvContent.trim() === '') {
+    return { success: false, error: 'No CSV data provided' }
+  }
+
+  const lines = csvContent.trim().split('\n').filter(line => line.trim() !== '')
+
+  if (lines.length < 2) {
+    return { success: false, error: 'CSV must include a header row and at least one data row' }
+  }
+
+  // Parse header row
+  const headers = parseCSVLine(lines[0]).map(h => h.toLowerCase().trim())
+
+  // Find column indices
+  const columnMap: Record<string, number> = {}
+  headers.forEach((header, index) => {
+    if (header === 'producer' || header === 'name' || header === 'agent') {
+      columnMap['producer'] = index
+    } else if (header === 'items' || header === 'item') {
+      columnMap['items'] = index
+    } else if (header === 'premium' && !header.includes('l&h')) {
+      columnMap['premium'] = index
+    } else if (header === 'policies' || header === 'policy') {
+      columnMap['qhh'] = index // Policies maps to QHH
+    } else if (header === 'sales' || header === 'sold') {
+      columnMap['sales'] = index
+    }
+  })
+
+  // Validate required columns
+  if (columnMap['producer'] === undefined) {
+    columnMap['producer'] = 0 // Default to first column
+  }
+
+  const producers: Record<string, ProducerMetrics> = {}
+  const errors: string[] = []
+
+  // Parse data rows (skip header)
+  for (let i = 1; i < lines.length; i++) {
+    const values = parseCSVLine(lines[i])
+
+    if (values.length < 2) continue
+
+    const rawName = values[columnMap['producer']] || ''
+    const producerKey = normalizeProducerName(rawName)
+
+    if (!producerKey) {
+      // Skip "Total" row and unrecognized names
+      if (!rawName.toLowerCase().includes('total') && !rawName.toLowerCase().includes('team')) {
+        errors.push(`Unrecognized producer: ${rawName}`)
+      }
+      continue
+    }
+
+    const qhh = columnMap['qhh'] !== undefined ? parseNumber(values[columnMap['qhh']] || '0') : 0
+    const sales = columnMap['sales'] !== undefined ? parseNumber(values[columnMap['sales']] || '0') : 0
+
+    const metrics: ProducerMetrics = {
+      qhh,
+      quotes: qhh, // In this context, qhh and quotes are the same
+      sales,
+      items: columnMap['items'] !== undefined ? parseNumber(values[columnMap['items']] || '0') : 0,
+      premium: columnMap['premium'] !== undefined ? parseNumber(values[columnMap['premium']] || '0') : 0,
+      close_rate: qhh > 0 ? (sales / qhh) * 100 : 0
+    }
+
+    producers[producerKey] = metrics
+  }
+
+  if (Object.keys(producers).length === 0) {
+    return {
+      success: false,
+      error: errors.length > 0 ? errors.join('; ') : 'No valid producer data found in CSV'
+    }
+  }
+
+  // Calculate team totals
+  const team = {
+    qhh: 0,
+    quotes: 0,
+    sales: 0,
+    items: 0,
+    premium: 0,
+    close_rate: 0
+  }
+
+  Object.values(producers).forEach(p => {
+    team.qhh += p.qhh
+    team.quotes += p.quotes
+    team.sales += p.sales
+    team.items += p.items
+    team.premium += p.premium
+  })
+
+  team.close_rate = team.qhh > 0 ? (team.sales / team.qhh) * 100 : 0
+
+  return {
+    success: true,
+    data: {
+      producers,
+      team
+    }
+  }
+}
+
+/**
+ * Parse a single CSV line, handling quoted values with commas
+ */
+function parseCSVLine(line: string): string[] {
+  const result: string[] = []
+  let current = ''
+  let inQuotes = false
+
+  for (let i = 0; i < line.length; i++) {
+    const char = line[i]
+
+    if (char === '"') {
+      inQuotes = !inQuotes
+    } else if (char === ',' && !inQuotes) {
+      result.push(current.trim())
+      current = ''
+    } else {
+      current += char
+    }
+  }
+
+  result.push(current.trim())
+  return result
+}

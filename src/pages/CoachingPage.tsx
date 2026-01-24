@@ -151,7 +151,7 @@ const CoachingPage: React.FC = () => {
               <CardHeader>
                 <CardTitle>AgencyZoom Metrics</CardTitle>
                 <CardDescription>
-                  Paste the weekly production data from AgencyZoom
+                  Upload CSV or paste weekly production data from AgencyZoom
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -162,6 +162,7 @@ const CoachingPage: React.FC = () => {
                   onSave={saveMetrics}
                   isSaving={isSaving}
                   hasExistingMetrics={!!metrics}
+                  producers={producers}
                 />
               </CardContent>
             </Card>
