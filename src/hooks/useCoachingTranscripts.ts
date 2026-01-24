@@ -1,9 +1,8 @@
 import { useState, useCallback, useEffect } from 'react'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/integrations/supabase/client'
 import { useAuth } from '@/contexts/AuthContext'
 import { useToast } from '@/hooks/use-toast'
-import { extractTextFromPdf } from '@/utils/pdfExtractor'
 import type { UploadedFile } from '@/components/coaching/TranscriptUploader'
 import type { Database } from '@/integrations/supabase/types'
 
@@ -106,34 +105,14 @@ export function useCoachingTranscripts(weekStart: Date) {
     }))
 
     try {
-      // Step 1: Extract text from PDF client-side
+      // Step 1: Upload to storage (no client-side extraction - Claude reads PDFs directly)
       setFilesByProducer(prev => ({
         ...prev,
         [producerId]: (prev[producerId] || []).map(f =>
-          f.id === localId ? { ...f, progress: 20, extractionStatus: 'processing' as const } : f
+          f.id === localId ? { ...f, progress: 30 } : f
         )
       }))
 
-      let extractedText = ''
-      try {
-        console.log(`[useCoachingTranscripts] Starting extraction for ${file.name}`)
-        extractedText = await extractTextFromPdf(file)
-        console.log(`[useCoachingTranscripts] Extracted ${extractedText.length} characters from ${file.name}`)
-        console.log(`[useCoachingTranscripts] First 100 chars: ${extractedText.substring(0, 100)}`)
-      } catch (extractError) {
-        console.error('[useCoachingTranscripts] PDF text extraction failed:', extractError)
-        // Continue with upload even if extraction fails
-      }
-
-      // Update progress after extraction
-      setFilesByProducer(prev => ({
-        ...prev,
-        [producerId]: (prev[producerId] || []).map(f =>
-          f.id === localId ? { ...f, progress: 50 } : f
-        )
-      }))
-
-      // Step 2: Upload to storage
       const { error: uploadError } = await supabase.storage
         .from('coaching-transcripts')
         .upload(storagePath, file, { upsert: true })
@@ -144,14 +123,11 @@ export function useCoachingTranscripts(weekStart: Date) {
       setFilesByProducer(prev => ({
         ...prev,
         [producerId]: (prev[producerId] || []).map(f =>
-          f.id === localId ? { ...f, progress: 75 } : f
+          f.id === localId ? { ...f, progress: 70 } : f
         )
       }))
 
-      // Step 3: Create transcript record with extracted text
-      console.log(`[useCoachingTranscripts] Inserting transcript record with extracted_text length: ${extractedText?.length || 0}`)
-      console.log(`[useCoachingTranscripts] extraction_status will be: ${extractedText ? 'completed' : 'pending'}`)
-
+      // Step 2: Create transcript record (extraction happens server-side via Claude)
       const { data: transcript, error: insertError } = await supabase
         .from('coaching_transcripts')
         .insert({
@@ -160,8 +136,8 @@ export function useCoachingTranscripts(weekStart: Date) {
           file_name: file.name,
           file_path: storagePath,
           file_size: file.size,
-          extracted_text: extractedText || null,
-          extraction_status: extractedText ? 'completed' : 'pending',
+          extracted_text: null, // Not used - Claude reads PDFs directly
+          extraction_status: 'skipped', // Client-side extraction skipped
           uploaded_by: user?.id
         })
         .select()
@@ -172,7 +148,7 @@ export function useCoachingTranscripts(weekStart: Date) {
         throw insertError
       }
 
-      console.log(`[useCoachingTranscripts] Insert successful, transcript id: ${transcript.id}`)
+      console.log(`[useCoachingTranscripts] Upload successful, transcript id: ${transcript.id}`)
 
       // Update to completed
       setFilesByProducer(prev => ({
@@ -185,7 +161,7 @@ export function useCoachingTranscripts(weekStart: Date) {
                 status: 'completed' as const,
                 progress: 100,
                 storagePath,
-                extractionStatus: extractedText ? 'completed' as const : 'pending' as const
+                extractionStatus: 'skipped' as const
               }
             : f
         )

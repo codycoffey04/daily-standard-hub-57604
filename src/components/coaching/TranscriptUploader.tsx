@@ -3,7 +3,7 @@ import { useDropzone } from 'react-dropzone'
 import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
 import { cn } from '@/lib/utils'
-import { Upload, FileText, X, CheckCircle, AlertCircle, Loader2, FileSearch } from 'lucide-react'
+import { Upload, FileText, X, CheckCircle, AlertCircle, Loader2 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 
 export interface UploadedFile {
@@ -13,7 +13,7 @@ export interface UploadedFile {
   progress: number
   error?: string
   storagePath?: string
-  extractionStatus?: 'pending' | 'processing' | 'completed' | 'failed'
+  extractionStatus?: 'pending' | 'processing' | 'completed' | 'failed' | 'skipped'
 }
 
 interface TranscriptUploaderProps {
@@ -62,38 +62,23 @@ export const TranscriptUploader: React.FC<TranscriptUploaderProps> = ({
     if (status === 'uploading') {
       return <Loader2 className="h-4 w-4 text-primary animate-spin" />
     }
-    // If upload complete but extraction in progress
-    if (status === 'completed' && extractionStatus === 'processing') {
-      return <FileSearch className="h-4 w-4 text-blue-500 animate-pulse" />
-    }
-    // If extraction failed
-    if (extractionStatus === 'failed') {
-      return <AlertCircle className="h-4 w-4 text-orange-500" />
-    }
-    // If extraction complete
-    if (extractionStatus === 'completed') {
-      return <CheckCircle className="h-4 w-4 text-green-500" />
-    }
-    // Upload complete, extraction pending
+    // Upload complete - show success (Claude will read PDFs directly during generation)
     if (status === 'completed') {
-      return <FileText className="h-4 w-4 text-blue-500" />
+      return <CheckCircle className="h-4 w-4 text-green-500" />
     }
     // Default pending
     return <FileText className="h-4 w-4 text-muted-foreground" />
   }
 
-  const getExtractionBadge = (extractionStatus?: UploadedFile['extractionStatus']) => {
-    if (!extractionStatus || extractionStatus === 'pending') {
-      return <Badge variant="secondary" className="text-xs">Awaiting extraction</Badge>
+  const getStatusBadge = (status: UploadedFile['status']) => {
+    if (status === 'completed') {
+      return <Badge variant="secondary" className="text-xs bg-green-100 text-green-700">Uploaded</Badge>
     }
-    if (extractionStatus === 'processing') {
-      return <Badge variant="secondary" className="text-xs bg-blue-100 text-blue-700">Extracting...</Badge>
+    if (status === 'uploading') {
+      return <Badge variant="secondary" className="text-xs bg-blue-100 text-blue-700">Uploading...</Badge>
     }
-    if (extractionStatus === 'completed') {
-      return <Badge variant="secondary" className="text-xs bg-green-100 text-green-700">Ready</Badge>
-    }
-    if (extractionStatus === 'failed') {
-      return <Badge variant="destructive" className="text-xs">Extraction failed</Badge>
+    if (status === 'error') {
+      return <Badge variant="destructive" className="text-xs">Failed</Badge>
     }
     return null
   }
@@ -147,8 +132,7 @@ export const TranscriptUploader: React.FC<TranscriptUploaderProps> = ({
               className={cn(
                 "flex items-center gap-3 p-3 rounded-lg border",
                 file.status === 'error' ? "border-destructive/50 bg-destructive/5" :
-                file.extractionStatus === 'failed' ? "border-orange-300 bg-orange-50" :
-                file.extractionStatus === 'completed' ? "border-green-200 bg-green-50/50" :
+                file.status === 'completed' ? "border-green-200 bg-green-50/50" :
                 "border-border"
               )}
             >
@@ -157,7 +141,7 @@ export const TranscriptUploader: React.FC<TranscriptUploaderProps> = ({
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
                   <p className="text-sm font-medium truncate">{file.file.name}</p>
-                  {file.status === 'completed' && getExtractionBadge(file.extractionStatus)}
+                  {getStatusBadge(file.status)}
                 </div>
                 <p className="text-xs text-muted-foreground">
                   {formatFileSize(file.file.size)}

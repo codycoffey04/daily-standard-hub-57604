@@ -121,15 +121,41 @@ serve(async (req) => {
       throw new Error('No transcripts found for this producer/week')
     }
 
-    // Check if transcripts have extracted text (extracted client-side during upload)
+    // Download PDFs from Supabase Storage and convert to base64
     console.log(`Processing ${transcripts.length} transcripts for ${producer.display_name}`)
-    const transcriptsWithText = transcripts.filter((t: TranscriptData) => t.extracted_text)
 
-    if (transcriptsWithText.length === 0) {
-      throw new Error('No transcripts have extracted text. Please re-upload the PDF files.')
+    const pdfDocuments: Array<{ transcript: TranscriptData; base64: string }> = []
+
+    for (const transcript of transcripts as TranscriptData[]) {
+      console.log(`Downloading PDF: ${transcript.file_path}`)
+
+      const { data: pdfData, error: downloadError } = await supabase.storage
+        .from('coaching-transcripts')
+        .download(transcript.file_path)
+
+      if (downloadError) {
+        console.error(`Failed to download ${transcript.file_name}:`, downloadError)
+        continue
+      }
+
+      // Convert to base64
+      const arrayBuffer = await pdfData.arrayBuffer()
+      const uint8Array = new Uint8Array(arrayBuffer)
+      let binaryString = ''
+      for (let i = 0; i < uint8Array.length; i++) {
+        binaryString += String.fromCharCode(uint8Array[i])
+      }
+      const base64 = btoa(binaryString)
+
+      console.log(`Downloaded ${transcript.file_name}: ${arrayBuffer.byteLength} bytes`)
+      pdfDocuments.push({ transcript, base64 })
     }
 
-    console.log(`Found ${transcriptsWithText.length}/${transcripts.length} transcripts with extracted text`)
+    if (pdfDocuments.length === 0) {
+      throw new Error('No PDFs could be downloaded from storage.')
+    }
+
+    console.log(`Successfully downloaded ${pdfDocuments.length}/${transcripts.length} PDFs`)
 
     // Fetch metrics for this week
     const { data: metricsData, error: metricsError } = await supabase
@@ -179,20 +205,20 @@ serve(async (req) => {
       p => p.display_name.toLowerCase() === producerKey
     )
 
-    // Build transcript texts for Claude
-    const transcriptTexts = transcriptsWithText.map((t: TranscriptData, i: number) => {
-      if (t.extracted_text) {
-        return `### Transcript ${i + 1}: ${t.file_name}
-Date: ${t.call_date || 'Unknown'}
-Duration: ${t.call_duration_seconds ? Math.floor(t.call_duration_seconds / 60) + ' min' : 'Unknown'}
-Direction: ${t.call_direction || 'Unknown'}
-
-${t.extracted_text}`
-      } else {
-        return `### Transcript ${i + 1}: ${t.file_name}
-[Text extraction failed - unable to process this PDF]`
+    // Build document content blocks for Claude (native PDF support)
+    const documentBlocks = pdfDocuments.map((doc, i) => ({
+      type: 'document' as const,
+      source: {
+        type: 'base64' as const,
+        media_type: 'application/pdf' as const,
+        data: doc.base64
       }
-    }).join('\n\n')
+    }))
+
+    // Build text context for the PDFs
+    const transcriptContext = pdfDocuments.map((doc, i) =>
+      `Transcript ${i + 1}: ${doc.transcript.file_name} (Date: ${doc.transcript.call_date || 'Unknown'}, Duration: ${doc.transcript.call_duration_seconds ? Math.floor(doc.transcript.call_duration_seconds / 60) + ' min' : 'Unknown'})`
+    ).join('\n')
 
     // Build Claude prompt
     const systemPrompt = `You are an expert sales coach for Coffey Agencies, an Allstate-exclusive insurance agency.
@@ -215,7 +241,12 @@ Producer profile for ${producer.display_name}:
 - Growth areas: ${producerProfile?.growth_areas?.join(', ') || 'Not specified'}`
 
     const userPrompt = `## Task
-Analyze the following call transcripts and generate a coaching episode for ${producer.display_name}.
+Analyze the attached PDF call transcripts and generate a coaching episode for ${producer.display_name}.
+
+The PDF documents attached above are call recordings from Total Recall. Each PDF contains a transcript with timestamps, speaker labels (Agent/Customer), and the full conversation.
+
+## Transcript Files
+${transcriptContext}
 
 ## This Week's Focus Theme
 ${focusWeek?.theme || 'General Improvement'} (Week ${focusWeekNumber})
@@ -235,9 +266,6 @@ ${JSON.stringify(scorecardConfig, null, 2)}
 
 ## Cross-Sell Triggers to Detect
 ${JSON.stringify(crossSellConfig, null, 2)}
-
-## Transcripts
-${transcriptTexts}
 
 ## Required Output Format
 Return a JSON object with exactly this structure:
@@ -275,7 +303,9 @@ The episode_markdown should follow this structure:
 
 IMPORTANT: Return ONLY the JSON object, no additional text or markdown code blocks.`
 
-    // Call Claude API
+    // Call Claude API with PDF documents
+    console.log(`Sending ${documentBlocks.length} PDF documents to Claude API`)
+
     const claudeResponse = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
@@ -287,7 +317,15 @@ IMPORTANT: Return ONLY the JSON object, no additional text or markdown code bloc
         model: 'claude-sonnet-4-20250514',
         max_tokens: 8000,
         messages: [
-          { role: 'user', content: userPrompt }
+          {
+            role: 'user',
+            content: [
+              // Send PDFs as document blocks first
+              ...documentBlocks,
+              // Then the text prompt
+              { type: 'text', text: userPrompt }
+            ]
+          }
         ],
         system: systemPrompt
       })
@@ -374,7 +412,8 @@ IMPORTANT: Return ONLY the JSON object, no additional text or markdown code bloc
     for (const score of parsedResponse.scores) {
       // Find the transcript by matching index (scores should be in order)
       const transcriptIndex = parsedResponse.scores.indexOf(score)
-      const transcript = transcriptsWithText[transcriptIndex]
+      const pdfDoc = pdfDocuments[transcriptIndex]
+      const transcript = pdfDoc?.transcript
 
       if (transcript) {
         const scoreData = {
@@ -413,7 +452,7 @@ IMPORTANT: Return ONLY the JSON object, no additional text or markdown code bloc
         summary: parsedResponse.summary,
         tokensUsed,
         generationDurationMs: generationDuration,
-        transcriptsProcessed: transcriptsWithText.length
+        transcriptsProcessed: pdfDocuments.length
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
