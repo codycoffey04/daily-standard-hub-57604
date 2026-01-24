@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/integrations/supabase/client'
 import { useAuth } from '@/contexts/AuthContext'
 import { useToast } from '@/hooks/use-toast'
+import { extractTextFromPdf } from '@/utils/pdfExtractor'
 import type { UploadedFile } from '@/components/coaching/TranscriptUploader'
 import type { Database } from '@/integrations/supabase/types'
 
@@ -105,7 +106,32 @@ export function useCoachingTranscripts(weekStart: Date) {
     }))
 
     try {
-      // Upload to storage
+      // Step 1: Extract text from PDF client-side
+      setFilesByProducer(prev => ({
+        ...prev,
+        [producerId]: (prev[producerId] || []).map(f =>
+          f.id === localId ? { ...f, progress: 20, extractionStatus: 'processing' as const } : f
+        )
+      }))
+
+      let extractedText = ''
+      try {
+        extractedText = await extractTextFromPdf(file)
+        console.log(`Extracted ${extractedText.length} characters from ${file.name}`)
+      } catch (extractError) {
+        console.error('PDF text extraction failed:', extractError)
+        // Continue with upload even if extraction fails - Edge Function can try again
+      }
+
+      // Update progress after extraction
+      setFilesByProducer(prev => ({
+        ...prev,
+        [producerId]: (prev[producerId] || []).map(f =>
+          f.id === localId ? { ...f, progress: 50 } : f
+        )
+      }))
+
+      // Step 2: Upload to storage
       const { error: uploadError } = await supabase.storage
         .from('coaching-transcripts')
         .upload(storagePath, file, { upsert: true })
@@ -116,11 +142,11 @@ export function useCoachingTranscripts(weekStart: Date) {
       setFilesByProducer(prev => ({
         ...prev,
         [producerId]: (prev[producerId] || []).map(f =>
-          f.id === localId ? { ...f, progress: 50 } : f
+          f.id === localId ? { ...f, progress: 75 } : f
         )
       }))
 
-      // Create transcript record
+      // Step 3: Create transcript record with extracted text
       const { data: transcript, error: insertError } = await supabase
         .from('coaching_transcripts')
         .insert({
@@ -129,7 +155,8 @@ export function useCoachingTranscripts(weekStart: Date) {
           file_name: file.name,
           file_path: storagePath,
           file_size: file.size,
-          extraction_status: 'pending',
+          extracted_text: extractedText || null,
+          extraction_status: extractedText ? 'completed' : 'pending',
           uploaded_by: user?.id
         })
         .select()
@@ -148,7 +175,7 @@ export function useCoachingTranscripts(weekStart: Date) {
                 status: 'completed' as const,
                 progress: 100,
                 storagePath,
-                extractionStatus: 'pending' as const
+                extractionStatus: extractedText ? 'completed' as const : 'pending' as const
               }
             : f
         )
