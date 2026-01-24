@@ -75,7 +75,8 @@ export function useCoachingTranscripts(weekStart: Date) {
           status: 'completed' as const,
           progress: 100,
           storagePath: t.file_path,
-          extractionStatus: (t.extraction_status as UploadedFile['extractionStatus']) || 'pending'
+          extractionStatus: (t.extraction_status as UploadedFile['extractionStatus']) || 'pending',
+          storedFileSize: t.file_size ?? undefined
         }))
       })
 
