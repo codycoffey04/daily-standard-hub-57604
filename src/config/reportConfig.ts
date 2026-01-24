@@ -10,7 +10,8 @@ import {
   ClipboardList,
   Award,
   MessageSquare,
-  MapPin
+  MapPin,
+  Calendar
 } from 'lucide-react'
 
 export interface ReportConfig {
@@ -109,6 +110,14 @@ export const reportCategories: ReportCategory[] = [
     id: 'producer-analytics',
     title: 'Producer Analytics',
     reports: [
+      {
+        id: 'weekly-producer-summary',
+        title: 'Weekly Producer Summary',
+        icon: Calendar,
+        description: 'Weekly performance summary for coaching workflows',
+        component: 'WeeklyProducerSummaryReport',
+        category: 'producer-analytics'
+      },
       {
         id: 'qhh-by-producer',
         title: 'QHH by Producer by Month',

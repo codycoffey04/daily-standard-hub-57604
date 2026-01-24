@@ -21,6 +21,7 @@ import { ExecutionFunnelReport } from '@/components/reports/ExecutionFunnelRepor
 import YTDPerformanceReport from '@/components/reports/YTDPerformanceReport'
 import { CoachingEffectivenessReport } from '@/components/reports/CoachingEffectivenessReport'
 import { ZipCodePerformanceReport } from '@/components/reports/ZipCodePerformanceReport'
+import { WeeklyProducerSummaryReport } from '@/components/reports/WeeklyProducerSummaryReport'
 import { reportCategories, getReportById } from '@/config/reportConfig'
 import { useIsMobile } from '@/hooks/use-mobile'
 import { cn } from '@/lib/utils'
@@ -91,6 +92,8 @@ const ReportContent: React.FC<ReportContentProps> = ({
       return <ZipCodePerformanceReport selectedYear={selectedYear} selectedMonth={selectedMonth} onExportReady={onExportReady} />
     case 'coaching-effectiveness':
       return <CoachingEffectivenessReport selectedYear={selectedYear} selectedMonth={selectedMonth} onExportReady={onExportReady} />
+    case 'weekly-producer-summary':
+      return <WeeklyProducerSummaryReport selectedYear={selectedYear} selectedMonth={selectedMonth} onExportReady={onExportReady} />
     default:
       const report = getReportById(reportId)
       return <PlaceholderReport reportTitle={report?.title || 'Unknown Report'} />
