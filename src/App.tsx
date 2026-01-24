@@ -21,6 +21,7 @@ import ImporterPage from "./pages/ImporterPage";
 import { AccountabilityReviewsPage } from "./pages/AccountabilityReviewsPage";
 import SalesServicePage from "./pages/SalesServicePage";
 import { AdminReviewsPage } from "./pages/AdminReviewsPage";
+import CoachingPage from "./pages/CoachingPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient({
@@ -80,15 +81,25 @@ const App = () => (
                     </ProtectedRoute>
                   } 
                 />
-                <Route 
-                  path="/summaries" 
+                <Route
+                  path="/summaries"
                   element={
                     <ProtectedRoute requiresOwnerManager>
                       <AppLayout>
                         <SummariesPage />
                       </AppLayout>
                     </ProtectedRoute>
-                  } 
+                  }
+                />
+                <Route
+                  path="/coaching"
+                  element={
+                    <ProtectedRoute requiresOwnerManager>
+                      <AppLayout>
+                        <CoachingPage />
+                      </AppLayout>
+                    </ProtectedRoute>
+                  }
                 />
                 <Route 
                   path="/accountability" 

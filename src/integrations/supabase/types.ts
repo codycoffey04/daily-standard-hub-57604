@@ -29,6 +29,7 @@ export type Database = {
           quick_meeting_notes: string | null
           reviewer_id: string | null
           sales_checklist: string | null
+          updated_at: string
           weak_steps: string[] | null
         }
         Insert: {
@@ -45,6 +46,7 @@ export type Database = {
           quick_meeting_notes?: string | null
           reviewer_id?: string | null
           sales_checklist?: string | null
+          updated_at?: string
           weak_steps?: string[] | null
         }
         Update: {
@@ -61,6 +63,7 @@ export type Database = {
           quick_meeting_notes?: string | null
           reviewer_id?: string | null
           sales_checklist?: string | null
+          updated_at?: string
           weak_steps?: string[] | null
         }
         Relationships: [
@@ -82,6 +85,13 @@ export type Database = {
             foreignKeyName: "accountability_reviews_daily_entry_id_fkey"
             columns: ["daily_entry_id"]
             isOneToOne: true
+            referencedRelation: "premium_by_entry"
+            referencedColumns: ["daily_entry_id"]
+          },
+          {
+            foreignKeyName: "accountability_reviews_daily_entry_id_fkey"
+            columns: ["daily_entry_id"]
+            isOneToOne: true
             referencedRelation: "yesterday_status"
             referencedColumns: ["entry_id"]
           },
@@ -94,12 +104,376 @@ export type Database = {
           },
         ]
       }
+      coaching_episodes: {
+        Row: {
+          close_rate: number | null
+          created_at: string
+          created_by: string | null
+          episode_content: string
+          episode_summary: string | null
+          episode_title: string
+          error_message: string | null
+          focus_theme: string
+          focus_week_number: number | null
+          generation_duration_ms: number | null
+          id: string
+          items: number | null
+          metrics_id: string | null
+          model_used: string | null
+          override_reason: string | null
+          premium: number | null
+          producer_id: string
+          published_at: string | null
+          qhh: number | null
+          quotes: number | null
+          sales: number | null
+          status: string
+          tokens_used: number | null
+          updated_at: string
+          week_end: string
+          week_start: string
+        }
+        Insert: {
+          close_rate?: number | null
+          created_at?: string
+          created_by?: string | null
+          episode_content: string
+          episode_summary?: string | null
+          episode_title: string
+          error_message?: string | null
+          focus_theme: string
+          focus_week_number?: number | null
+          generation_duration_ms?: number | null
+          id?: string
+          items?: number | null
+          metrics_id?: string | null
+          model_used?: string | null
+          override_reason?: string | null
+          premium?: number | null
+          producer_id: string
+          published_at?: string | null
+          qhh?: number | null
+          quotes?: number | null
+          sales?: number | null
+          status?: string
+          tokens_used?: number | null
+          updated_at?: string
+          week_end: string
+          week_start: string
+        }
+        Update: {
+          close_rate?: number | null
+          created_at?: string
+          created_by?: string | null
+          episode_content?: string
+          episode_summary?: string | null
+          episode_title?: string
+          error_message?: string | null
+          focus_theme?: string
+          focus_week_number?: number | null
+          generation_duration_ms?: number | null
+          id?: string
+          items?: number | null
+          metrics_id?: string | null
+          model_used?: string | null
+          override_reason?: string | null
+          premium?: number | null
+          producer_id?: string
+          published_at?: string | null
+          qhh?: number | null
+          quotes?: number | null
+          sales?: number | null
+          status?: string
+          tokens_used?: number | null
+          updated_at?: string
+          week_end?: string
+          week_start?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "coaching_episodes_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coaching_episodes_metrics_id_fkey"
+            columns: ["metrics_id"]
+            isOneToOne: false
+            referencedRelation: "coaching_metrics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coaching_episodes_producer_id_fkey"
+            columns: ["producer_id"]
+            isOneToOne: false
+            referencedRelation: "producers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      coaching_framework_config: {
+        Row: {
+          active: boolean
+          config_data: Json
+          config_type: string
+          created_at: string
+          created_by: string | null
+          id: string
+          updated_at: string
+          version: number
+        }
+        Insert: {
+          active?: boolean
+          config_data: Json
+          config_type: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          updated_at?: string
+          version?: number
+        }
+        Update: {
+          active?: boolean
+          config_data?: Json
+          config_type?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          updated_at?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "coaching_framework_config_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      coaching_metrics: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          producer_metrics: Json
+          raw_paste: string | null
+          team_close_rate: number | null
+          team_items: number | null
+          team_premium: number | null
+          team_qhh: number | null
+          team_quotes: number | null
+          team_sales: number | null
+          week_end: string
+          week_start: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          producer_metrics: Json
+          raw_paste?: string | null
+          team_close_rate?: number | null
+          team_items?: number | null
+          team_premium?: number | null
+          team_qhh?: number | null
+          team_quotes?: number | null
+          team_sales?: number | null
+          week_end: string
+          week_start: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          producer_metrics?: Json
+          raw_paste?: string | null
+          team_close_rate?: number | null
+          team_items?: number | null
+          team_premium?: number | null
+          team_qhh?: number | null
+          team_quotes?: number | null
+          team_sales?: number | null
+          week_end?: string
+          week_start?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "coaching_metrics_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      coaching_scores: {
+        Row: {
+          call_outcome: string | null
+          cross_sell_triggers_detected: Json | null
+          episode_id: string | null
+          id: string
+          improvement_areas: Json | null
+          overall_score: number | null
+          scored_at: string
+          specific_feedback: string | null
+          step_1_opening: number | null
+          step_2_discovery: number | null
+          step_3_quoting: number | null
+          step_4_ask_for_sale: number | null
+          step_5_closing: number | null
+          step_6_follow_up: number | null
+          step_7_multi_line: number | null
+          step_8_referral_ask: number | null
+          strengths: Json | null
+          transcript_id: string
+        }
+        Insert: {
+          call_outcome?: string | null
+          cross_sell_triggers_detected?: Json | null
+          episode_id?: string | null
+          id?: string
+          improvement_areas?: Json | null
+          overall_score?: number | null
+          scored_at?: string
+          specific_feedback?: string | null
+          step_1_opening?: number | null
+          step_2_discovery?: number | null
+          step_3_quoting?: number | null
+          step_4_ask_for_sale?: number | null
+          step_5_closing?: number | null
+          step_6_follow_up?: number | null
+          step_7_multi_line?: number | null
+          step_8_referral_ask?: number | null
+          strengths?: Json | null
+          transcript_id: string
+        }
+        Update: {
+          call_outcome?: string | null
+          cross_sell_triggers_detected?: Json | null
+          episode_id?: string | null
+          id?: string
+          improvement_areas?: Json | null
+          overall_score?: number | null
+          scored_at?: string
+          specific_feedback?: string | null
+          step_1_opening?: number | null
+          step_2_discovery?: number | null
+          step_3_quoting?: number | null
+          step_4_ask_for_sale?: number | null
+          step_5_closing?: number | null
+          step_6_follow_up?: number | null
+          step_7_multi_line?: number | null
+          step_8_referral_ask?: number | null
+          strengths?: Json | null
+          transcript_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "coaching_scores_episode_id_fkey"
+            columns: ["episode_id"]
+            isOneToOne: false
+            referencedRelation: "coaching_episodes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coaching_scores_transcript_id_fkey"
+            columns: ["transcript_id"]
+            isOneToOne: false
+            referencedRelation: "coaching_transcripts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      coaching_transcripts: {
+        Row: {
+          call_date: string | null
+          call_direction: string | null
+          call_duration_seconds: number | null
+          created_at: string
+          customer_phone: string | null
+          episode_id: string | null
+          extracted_text: string | null
+          extraction_error: string | null
+          extraction_status: string
+          file_name: string
+          file_path: string
+          file_size: number
+          id: string
+          producer_id: string
+          uploaded_by: string | null
+          week_start: string
+        }
+        Insert: {
+          call_date?: string | null
+          call_direction?: string | null
+          call_duration_seconds?: number | null
+          created_at?: string
+          customer_phone?: string | null
+          episode_id?: string | null
+          extracted_text?: string | null
+          extraction_error?: string | null
+          extraction_status?: string
+          file_name: string
+          file_path: string
+          file_size: number
+          id?: string
+          producer_id: string
+          uploaded_by?: string | null
+          week_start: string
+        }
+        Update: {
+          call_date?: string | null
+          call_direction?: string | null
+          call_duration_seconds?: number | null
+          created_at?: string
+          customer_phone?: string | null
+          episode_id?: string | null
+          extracted_text?: string | null
+          extraction_error?: string | null
+          extraction_status?: string
+          file_name?: string
+          file_path?: string
+          file_size?: number
+          id?: string
+          producer_id?: string
+          uploaded_by?: string | null
+          week_start?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "coaching_transcripts_episode_id_fkey"
+            columns: ["episode_id"]
+            isOneToOne: false
+            referencedRelation: "coaching_episodes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coaching_transcripts_producer_id_fkey"
+            columns: ["producer_id"]
+            isOneToOne: false
+            referencedRelation: "producers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coaching_transcripts_uploaded_by_fkey"
+            columns: ["uploaded_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       daily_entries: {
         Row: {
           created_at: string
           created_by: string | null
           entry_date: string
           entry_month: string
+          framework_status: string | null
           id: string
           items_total: number
           locked_after: string
@@ -116,6 +490,7 @@ export type Database = {
           created_by?: string | null
           entry_date: string
           entry_month: string
+          framework_status?: string | null
           id?: string
           items_total?: number
           locked_after?: string
@@ -132,6 +507,7 @@ export type Database = {
           created_by?: string | null
           entry_date?: string
           entry_month?: string
+          framework_status?: string | null
           id?: string
           items_total?: number
           locked_after?: string
@@ -200,6 +576,13 @@ export type Database = {
             foreignKeyName: "daily_entry_sources_daily_entry_id_fkey"
             columns: ["daily_entry_id"]
             isOneToOne: false
+            referencedRelation: "premium_by_entry"
+            referencedColumns: ["daily_entry_id"]
+          },
+          {
+            foreignKeyName: "daily_entry_sources_daily_entry_id_fkey"
+            columns: ["daily_entry_id"]
+            isOneToOne: false
             referencedRelation: "yesterday_status"
             referencedColumns: ["entry_id"]
           },
@@ -208,6 +591,103 @@ export type Database = {
             columns: ["source_id"]
             isOneToOne: false
             referencedRelation: "sources"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      manager_reviews: {
+        Row: {
+          action_items: string | null
+          call_reviewed: string | null
+          coaching_notes: string | null
+          created_at: string | null
+          created_by: string | null
+          daily_entry_id: string | null
+          follow_up_date: string | null
+          follow_up_required: boolean | null
+          id: string
+          producer_id: string
+          review_date: string
+          reviewer_id: string | null
+          sales_process_gaps: string[] | null
+          strengths_noted: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          action_items?: string | null
+          call_reviewed?: string | null
+          coaching_notes?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          daily_entry_id?: string | null
+          follow_up_date?: string | null
+          follow_up_required?: boolean | null
+          id?: string
+          producer_id: string
+          review_date: string
+          reviewer_id?: string | null
+          sales_process_gaps?: string[] | null
+          strengths_noted?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          action_items?: string | null
+          call_reviewed?: string | null
+          coaching_notes?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          daily_entry_id?: string | null
+          follow_up_date?: string | null
+          follow_up_required?: boolean | null
+          id?: string
+          producer_id?: string
+          review_date?: string
+          reviewer_id?: string | null
+          sales_process_gaps?: string[] | null
+          strengths_noted?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "manager_reviews_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "manager_reviews_daily_entry_id_fkey"
+            columns: ["daily_entry_id"]
+            isOneToOne: false
+            referencedRelation: "daily_entries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "manager_reviews_daily_entry_id_fkey"
+            columns: ["daily_entry_id"]
+            isOneToOne: false
+            referencedRelation: "entry_status"
+            referencedColumns: ["entry_id"]
+          },
+          {
+            foreignKeyName: "manager_reviews_daily_entry_id_fkey"
+            columns: ["daily_entry_id"]
+            isOneToOne: false
+            referencedRelation: "premium_by_entry"
+            referencedColumns: ["daily_entry_id"]
+          },
+          {
+            foreignKeyName: "manager_reviews_daily_entry_id_fkey"
+            columns: ["daily_entry_id"]
+            isOneToOne: false
+            referencedRelation: "yesterday_status"
+            referencedColumns: ["entry_id"]
+          },
+          {
+            foreignKeyName: "manager_reviews_reviewer_id_fkey"
+            columns: ["reviewer_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -279,6 +759,7 @@ export type Database = {
           created_at: string | null
           created_by: string | null
           current_carrier: string | null
+          customer_name: string | null
           daily_entry_id: string | null
           id: string
           is_bundle: boolean | null
@@ -288,6 +769,7 @@ export type Database = {
           lines_quoted: number | null
           notes: string | null
           opted_into_hearsay: boolean | null
+          phone: string | null
           product_lines: string[]
           qcn: string | null
           quick_action_status: string
@@ -298,6 +780,7 @@ export type Database = {
           created_at?: string | null
           created_by?: string | null
           current_carrier?: string | null
+          customer_name?: string | null
           daily_entry_id?: string | null
           id?: string
           is_bundle?: boolean | null
@@ -307,6 +790,7 @@ export type Database = {
           lines_quoted?: number | null
           notes?: string | null
           opted_into_hearsay?: boolean | null
+          phone?: string | null
           product_lines: string[]
           qcn?: string | null
           quick_action_status: string
@@ -317,6 +801,7 @@ export type Database = {
           created_at?: string | null
           created_by?: string | null
           current_carrier?: string | null
+          customer_name?: string | null
           daily_entry_id?: string | null
           id?: string
           is_bundle?: boolean | null
@@ -326,6 +811,7 @@ export type Database = {
           lines_quoted?: number | null
           notes?: string | null
           opted_into_hearsay?: boolean | null
+          phone?: string | null
           product_lines?: string[]
           qcn?: string | null
           quick_action_status?: string
@@ -353,6 +839,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "entry_status"
             referencedColumns: ["entry_id"]
+          },
+          {
+            foreignKeyName: "quoted_households_new_daily_entry_id_fkey"
+            columns: ["daily_entry_id"]
+            isOneToOne: false
+            referencedRelation: "premium_by_entry"
+            referencedColumns: ["daily_entry_id"]
           },
           {
             foreignKeyName: "quoted_households_new_daily_entry_id_fkey"
@@ -465,8 +958,128 @@ export type Database = {
             foreignKeyName: "reviews_daily_entry_id_fkey"
             columns: ["daily_entry_id"]
             isOneToOne: false
+            referencedRelation: "premium_by_entry"
+            referencedColumns: ["daily_entry_id"]
+          },
+          {
+            foreignKeyName: "reviews_daily_entry_id_fkey"
+            columns: ["daily_entry_id"]
+            isOneToOne: false
             referencedRelation: "yesterday_status"
             referencedColumns: ["entry_id"]
+          },
+        ]
+      }
+      sales_from_old_quotes: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          daily_entry_id: string | null
+          id: string
+          items_sold: number
+          lead_source_id: string
+          notes: string | null
+          premium: number
+          zip_code: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          daily_entry_id?: string | null
+          id?: string
+          items_sold: number
+          lead_source_id: string
+          notes?: string | null
+          premium: number
+          zip_code?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          daily_entry_id?: string | null
+          id?: string
+          items_sold?: number
+          lead_source_id?: string
+          notes?: string | null
+          premium?: number
+          zip_code?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sales_from_old_quotes_daily_entry_id_fkey"
+            columns: ["daily_entry_id"]
+            isOneToOne: false
+            referencedRelation: "daily_entries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sales_from_old_quotes_daily_entry_id_fkey"
+            columns: ["daily_entry_id"]
+            isOneToOne: false
+            referencedRelation: "entry_status"
+            referencedColumns: ["entry_id"]
+          },
+          {
+            foreignKeyName: "sales_from_old_quotes_daily_entry_id_fkey"
+            columns: ["daily_entry_id"]
+            isOneToOne: false
+            referencedRelation: "premium_by_entry"
+            referencedColumns: ["daily_entry_id"]
+          },
+          {
+            foreignKeyName: "sales_from_old_quotes_daily_entry_id_fkey"
+            columns: ["daily_entry_id"]
+            isOneToOne: false
+            referencedRelation: "yesterday_status"
+            referencedColumns: ["entry_id"]
+          },
+          {
+            foreignKeyName: "sales_from_old_quotes_lead_source_id_fkey"
+            columns: ["lead_source_id"]
+            isOneToOne: false
+            referencedRelation: "sources"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      source_costs: {
+        Row: {
+          cost: number
+          created_at: string
+          created_by: string | null
+          id: string
+          month: string
+          notes: string | null
+          source_id: string
+          updated_at: string
+        }
+        Insert: {
+          cost: number
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          month: string
+          notes?: string | null
+          source_id: string
+          updated_at?: string
+        }
+        Update: {
+          cost?: number
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          month?: string
+          notes?: string | null
+          source_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "source_costs_source_id_fkey"
+            columns: ["source_id"]
+            isOneToOne: false
+            referencedRelation: "sources"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -579,6 +1192,23 @@ export type Database = {
           },
         ]
       }
+      premium_by_entry: {
+        Row: {
+          daily_entry_id: string | null
+          entry_month: string | null
+          producer_id: string | null
+          total_premium: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "daily_entries_producer_id_fkey"
+            columns: ["producer_id"]
+            isOneToOne: false
+            referencedRelation: "producers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       yesterday_status: {
         Row: {
           created_at: string | null
@@ -643,28 +1273,396 @@ export type Database = {
       }
     }
     Functions: {
-      current_producer_id: {
-        Args: Record<PropertyKey, never>
+      _metrics_window: {
+        Args: { from_date: string; to_date: string }
+        Returns: {
+          ft_source_id: string
+          has_qh: boolean
+          lead_id: string
+          qh_is_sold: boolean
+          qh_sold_items: number
+          qh_sold_premium: number
+          quotes_lines: number
+        }[]
+      }
+      _month_bounds: {
+        Args: { month_ym: string }
+        Returns: {
+          from_date: string
+          to_date: string
+        }[]
+      }
+      analytics_zip_performance_json: {
+        Args: {
+          p_date_end: string
+          p_date_start: string
+          p_include_unknown?: boolean
+          p_min_quotes?: number
+          p_producer_id?: string
+          p_source_id?: string
+        }
+        Returns: Json
+      }
+      bump_daily_entry_source_for_pair: {
+        Args: { _daily_entry_id: string; _source_id: string }
+        Returns: undefined
+      }
+      bump_daily_entry_source_for_pair_v2: {
+        Args: { _daily_entry_id: string; _source_id: string }
+        Returns: undefined
+      }
+      calculate_framework_status: {
+        Args: {
+          p_items_total: number
+          p_outbound_dials: number
+          p_qhh_total: number
+          p_talk_minutes: number
+        }
         Returns: string
       }
-      get_qhh_details_for_review: {
-        Args: Record<PropertyKey, never> | { p_daily_entry_id: string }
+      current_producer_id: { Args: never; Returns: string }
+      debug_mtd_producer_metrics: {
+        Args: never
         Returns: {
-          current_carrier: string
-          id: string
-          is_bundle: boolean
-          lead_id: string
-          lead_source_id: string
-          lines_quoted: number
-          notes: string
-          opted_into_hearsay: boolean
-          product_lines: string[]
-          qcn: string
-          quick_action_status: string
-          quoted_premium: number
+          debug_info: string
+        }[]
+      }
+      elapsed_working_days_in_month: { Args: { d: string }; Returns: number }
+      get_coaching_effectiveness_metrics: {
+        Args: { p_days_back?: number }
+        Returns: Json
+      }
+      get_common_weak_points: {
+        Args: { from_date: string; producer_filter?: string; to_date: string }
+        Returns: {
+          affected_producers: number
+          frequency: number
+          gap_name: string
+          producer_names: string
+          recent_count: number
+        }[]
+      }
+      get_conversion_funnel:
+        | {
+            Args: { from_date: string; to_date: string }
+            Returns: {
+              stage_name: string
+              stage_no: number
+              value: number
+            }[]
+          }
+        | {
+            Args: {
+              from_date: string
+              producer_filter: string
+              source_filter: string
+              to_date: string
+            }
+            Returns: {
+              stage_name: string
+              stage_no: number
+              value: number
+            }[]
+          }
+      get_execution_benchmarks_by_source: {
+        Args: {
+          from_date: string
+          min_pair_dials: number
+          min_pair_qhh: number
+          min_pair_shh: number
+          source_filter: string
+          to_date: string
+        }
+        Returns: {
+          attach_rate_excellent: number
+          attach_rate_normal: number
+          close_rate_excellent: number
+          close_rate_normal: number
+          quote_rate_excellent: number
+          quote_rate_normal: number
+          source_id: string
           source_name: string
+          total_pairs: number
+        }[]
+      }
+      get_execution_efficiency_metrics: {
+        Args: {
+          commission_pct: number
+          from_date: string
+          producer_filter: string
+          source_filter: string
+          to_date: string
+        }
+        Returns: {
+          attach_rate: number
+          close_rate_pcts: number
+          dials: number
+          est_commission: number
+          households_sold: number
+          items_sold: number
+          policies_sold: number
+          qhh: number
+        }[]
+      }
+      get_execution_funnel: {
+        Args: { from_date: string; to_date: string }
+        Returns: {
+          dials: number
+          households_sold: number
+          items_sold: number
+          lines_quoted: number
+          policies_sold: number
+          premium_total: number
+          qhh: number
+        }[]
+      }
+      get_focus_week_number: {
+        Args: { cycle_start_date?: string; target_date: string }
+        Returns: number
+      }
+      get_gap_analysis: { Args: { p_days_back?: number }; Returns: Json }
+      get_items_by_source: {
+        Args: { from_date: string; to_date: string }
+        Returns: {
+          items: number
+          qhh: number
+          quotes: number
+          source_id: string
+          source_name: string
+        }[]
+      }
+      get_monthly_summary:
+        | {
+            Args: { from_date: string; to_date: string }
+            Returns: {
+              avg_qhh_per_producer: number
+              avg_quotes_per_producer: number
+              bottom_framework_entries: number
+              framework_compliance_pct: number
+              month_date: string
+              month_name: string
+              outside_framework_entries: number
+              qhh_to_quote_conversion: number
+              top_framework_entries: number
+              total_dials: number
+              total_entries: number
+              total_items: number
+              total_qhh: number
+              total_quotes: number
+              total_talk_minutes: number
+              unique_producers: number
+            }[]
+          }
+        | {
+            Args: { p_month: number; p_year: number }
+            Returns: {
+              avg_quotes_per_household: number
+              length: number
+              total_dials: number
+              total_qhh: number
+              total_quotes: number
+              total_talk_time: number
+            }[]
+          }
+        | {
+            Args: { target_month?: string }
+            Returns: {
+              avg_quotes_per_household: number
+              total_dials: number
+              total_qhh: number
+              total_quotes: number
+              total_talk_time: number
+            }[]
+          }
+      get_my_roles: {
+        Args: never
+        Returns: Database["public"]["Enums"]["app_role"][]
+      }
+      get_producer_baseline: {
+        Args: { p_days_back?: number; p_producer_id: string }
+        Returns: Json
+      }
+      get_producer_comparison: {
+        Args: { from_date: string; to_date: string }
+        Returns: {
+          avg_daily_dials: number
+          avg_daily_items: number
+          avg_daily_qhh: number
+          avg_daily_quotes: number
+          avg_daily_talk_time: number
+          bottom_framework_days: number
+          framework_compliance_pct: number
+          outside_framework_days: number
+          producer_id: string
+          producer_name: string
+          top_framework_days: number
+          total_days: number
+          total_items: number
+          total_qhh: number
+          total_quotes: number
+          total_sold_items: number
+          total_sold_premium: number
+        }[]
+      }
+      get_producer_current: {
+        Args: { p_days_back?: number; p_producer_id: string }
+        Returns: Json
+      }
+      get_producer_execution_leaderboard: {
+        Args: {
+          from_date: string
+          min_dials?: number
+          min_pair_dials?: number
+          min_pair_qhh?: number
+          min_pair_shh?: number
+          min_qhh?: number
+          min_shh?: number
+          source_filter?: string
+          to_date: string
+        }
+        Returns: {
+          attach_bench_excellent: number
+          attach_bench_normal: number
+          attach_guidance: string
+          attach_rate: number
+          close_bench_excellent: number
+          close_bench_normal: number
+          close_guidance: string
+          close_rate: number
+          producer_id: string
+          producer_name: string
+          quote_bench_excellent: number
+          quote_bench_normal: number
+          quote_guidance: string
+          quote_rate: number
+          total_dials: number
+          total_items: number
+          total_premium: number
+          total_qhh: number
+          total_shh: number
+        }[]
+      }
+      get_producer_progress: { Args: { p_days_back?: number }; Returns: Json }
+      get_producer_trends_v3: {
+        Args: { from_date: string; producer_ids?: string[]; to_date: string }
+        Returns: {
+          days_bottom: number
+          days_outside: number
+          days_top: number
+          entry_date: string
+          framework_status: string
+          items: number
+          outbound_dials: number
+          producer_id: string
+          producer_name: string
+          qhh: number
+          quotes: number
+          sold_households: number
+          sold_items: number
+          sold_premium: number
+          talk_minutes: number
+        }[]
+      }
+      get_qhh_details_for_review:
+        | {
+            Args: never
+            Returns: {
+              current_carrier: string
+              id: string
+              is_bundle: boolean
+              lead_id: string
+              lead_source_id: string
+              lines_quoted: number
+              notes: string
+              opted_into_hearsay: boolean
+              product_lines: string[]
+              qcn: string
+              quick_action_status: string
+              quoted_premium: number
+              source_name: string
+              zip_code: string
+            }[]
+          }
+        | {
+            Args: { p_daily_entry_id: string }
+            Returns: {
+              current_carrier: string
+              id: string
+              is_bundle: boolean
+              lead_id: string
+              lead_source_id: string
+              lines_quoted: number
+              notes: string
+              opted_into_hearsay: boolean
+              product_lines: string[]
+              qcn: string
+              quick_action_status: string
+              quoted_premium: number
+              source_name: string
+              zip_code: string
+            }[]
+          }
+      get_source_roi:
+        | {
+            Args: {
+              from_date: string
+              meeting_vc_goal?: boolean
+              to_date: string
+            }
+            Returns: {
+              cost_per_item: number
+              cost_per_qhh: number
+              items: number
+              ltv_estimate: number
+              qhh: number
+              quotes: number
+              recommendation: string
+              roi: number
+              sold_premium_total: number
+              source_id: string
+              source_name: string
+              spend: number
+            }[]
+          }
+        | {
+            Args: {
+              from_date: string
+              meeting_vc_goal: boolean
+              source_id_param: string
+              to_date: string
+            }
+            Returns: {
+              roi_data: Json
+            }[]
+          }
+      get_week_end: { Args: { target_date: string }; Returns: string }
+      get_week_start: { Args: { target_date: string }; Returns: string }
+      get_weekly_coaching_trend: {
+        Args: { p_weeks_back?: number }
+        Returns: Json
+      }
+      get_ytd_performance: {
+        Args: { from_ym: string; to_ym: string }
+        Returns: {
+          households_sold: number
+          items_sold: number
+          lines_quoted: number
+          policies_sold: number
+          qhh: number
+          ym: string
+        }[]
+      }
+      get_zip_performance: {
+        Args: { from_date: string; to_date: string }
+        Returns: {
+          households_sold: number
+          lines_quoted: number
           zip_code: string
         }[]
+      }
+      has_my_role: {
+        Args: { _role: Database["public"]["Enums"]["app_role"] }
+        Returns: boolean
       }
       has_role: {
         Args: {
@@ -673,26 +1671,17 @@ export type Database = {
         }
         Returns: boolean
       }
-      is_manager_or_owner: {
-        Args: { _user_id: string }
-        Returns: boolean
-      }
-      is_owner_manager: {
-        Args: Record<PropertyKey, never>
-        Returns: boolean
-      }
-      jsonb_diff: {
-        Args: { l: Json; r: Json }
-        Returns: Json
-      }
+      is_manager_or_owner: { Args: { _user_id: string }; Returns: boolean }
+      is_owner_manager: { Args: never; Returns: boolean }
+      is_staff:
+        | { Args: never; Returns: boolean }
+        | { Args: { _user_id: string }; Returns: boolean }
+      jsonb_diff: { Args: { l: Json; r: Json }; Returns: Json }
       mtd_producer_metrics: {
         Args: { d?: string }
         Returns: {
           conversion: number
           items: number
-          office_total_items: number
-          office_vc_badge: string
-          office_vc_pace: number
           producer_id: string
           producer_name: string
           qhh: number
@@ -703,10 +1692,60 @@ export type Database = {
           yesterday_status: string
         }[]
       }
-      safe_is_manager_or_owner: {
-        Args: Record<PropertyKey, never>
-        Returns: boolean
+      rebuild_all_rollups: { Args: never; Returns: undefined }
+      recalc_daily_entry_items_and_sales: {
+        Args: { p_daily_entry_id: string }
+        Returns: undefined
       }
+      refresh_recent_rollups: { Args: { p_days?: number }; Returns: undefined }
+      refresh_rollups_for_daily_entry: {
+        Args: { p_daily_entry_id: string }
+        Returns: undefined
+      }
+      refresh_rollups_for_key: {
+        Args: { p_entry_date: string; p_producer_id: string }
+        Returns: undefined
+      }
+      rpc_get_execution_benchmarks_by_source: {
+        Args: {
+          min_pair_dials?: number
+          min_pair_qhh?: number
+          min_pair_shh?: number
+          month_ym: string
+          source_filter?: string
+        }
+        Returns: {
+          attach_rate_excellent: number
+          attach_rate_normal: number
+          close_rate_excellent: number
+          close_rate_normal: number
+          quote_rate_excellent: number
+          quote_rate_normal: number
+          source_id: string
+          source_name: string
+          total_pairs: number
+        }[]
+      }
+      rpc_get_monthly_summary: {
+        Args: { month_ym: string }
+        Returns: {
+          avg_quotes_per_household: number
+          framework_compliance_pct: number
+          total_dials: number
+          total_qhh: number
+          total_quotes: number
+          total_talk_time: number
+        }[]
+      }
+      rpc_get_top_sources_by_month: {
+        Args: { metric_type: string; month_ym: string }
+        Returns: {
+          metric_value: number
+          source_id: string
+          source_name: string
+        }[]
+      }
+      safe_is_manager_or_owner: { Args: never; Returns: boolean }
       save_daily_entry: {
         Args: {
           p_by_source?: Json
@@ -719,13 +1758,18 @@ export type Database = {
         }
         Returns: string
       }
+      sync_daily_entry_sources: {
+        Args: { _from: string; _to: string }
+        Returns: number
+      }
       user_is_producer_of: {
         Args: { target_producer_id: string }
         Returns: boolean
       }
+      working_days_in_month: { Args: { d: string }; Returns: number }
     }
     Enums: {
-      app_role: "owner" | "manager" | "producer" | "reviewer"
+      app_role: "owner" | "manager" | "producer" | "reviewer" | "sales_service"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -853,7 +1897,9 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["owner", "manager", "producer", "reviewer"],
+      app_role: ["owner", "manager", "producer", "reviewer", "sales_service"],
     },
   },
 } as const
+A new version of Supabase CLI is available: v2.72.7 (currently installed v2.40.7)
+We recommend updating regularly for new features and bug fixes: https://supabase.com/docs/guides/cli/getting-started#updating-the-supabase-cli

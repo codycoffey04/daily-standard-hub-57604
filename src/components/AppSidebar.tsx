@@ -2,17 +2,18 @@ import React from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
 import { Button } from '@/components/ui/button'
-import { 
-  Calendar, 
-  Users, 
-  Settings, 
-  BarChart, 
-  Upload, 
+import {
+  Calendar,
+  Users,
+  Settings,
+  BarChart,
+  Upload,
   ClipboardCheck,
   Database,
   Menu,
   X,
-  Home
+  Home,
+  BookOpen
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { ensureRolesLoaded, fetchMyRoles } from '@/lib/roles'
@@ -47,10 +48,16 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({ collapsed, onToggle }) =
       icon: Users,
       allowedRoles: ['owner', 'manager']
     },
-    { 
-      href: '/summaries', 
-      label: 'Summaries', 
+    {
+      href: '/summaries',
+      label: 'Summaries',
       icon: BarChart,
+      allowedRoles: ['owner', 'manager']
+    },
+    {
+      href: '/coaching',
+      label: 'Coaching',
+      icon: BookOpen,
       allowedRoles: ['owner', 'manager']
     },
     { 
