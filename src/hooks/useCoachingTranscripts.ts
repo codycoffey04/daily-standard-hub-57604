@@ -116,11 +116,13 @@ export function useCoachingTranscripts(weekStart: Date) {
 
       let extractedText = ''
       try {
+        console.log(`[useCoachingTranscripts] Starting extraction for ${file.name}`)
         extractedText = await extractTextFromPdf(file)
-        console.log(`Extracted ${extractedText.length} characters from ${file.name}`)
+        console.log(`[useCoachingTranscripts] Extracted ${extractedText.length} characters from ${file.name}`)
+        console.log(`[useCoachingTranscripts] First 100 chars: ${extractedText.substring(0, 100)}`)
       } catch (extractError) {
-        console.error('PDF text extraction failed:', extractError)
-        // Continue with upload even if extraction fails - Edge Function can try again
+        console.error('[useCoachingTranscripts] PDF text extraction failed:', extractError)
+        // Continue with upload even if extraction fails
       }
 
       // Update progress after extraction
@@ -147,6 +149,9 @@ export function useCoachingTranscripts(weekStart: Date) {
       }))
 
       // Step 3: Create transcript record with extracted text
+      console.log(`[useCoachingTranscripts] Inserting transcript record with extracted_text length: ${extractedText?.length || 0}`)
+      console.log(`[useCoachingTranscripts] extraction_status will be: ${extractedText ? 'completed' : 'pending'}`)
+
       const { data: transcript, error: insertError } = await supabase
         .from('coaching_transcripts')
         .insert({
@@ -162,7 +167,12 @@ export function useCoachingTranscripts(weekStart: Date) {
         .select()
         .single()
 
-      if (insertError) throw insertError
+      if (insertError) {
+        console.error('[useCoachingTranscripts] Insert error:', insertError)
+        throw insertError
+      }
+
+      console.log(`[useCoachingTranscripts] Insert successful, transcript id: ${transcript.id}`)
 
       // Update to completed
       setFilesByProducer(prev => ({
