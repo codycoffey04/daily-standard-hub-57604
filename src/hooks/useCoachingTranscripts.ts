@@ -137,7 +137,7 @@ export function useCoachingTranscripts(weekStart: Date) {
           file_path: storagePath,
           file_size: file.size,
           extracted_text: null, // Not used - Claude reads PDFs directly
-          extraction_status: 'skipped', // Client-side extraction skipped
+          extraction_status: 'completed', // Mark as completed - Claude reads PDFs directly during generation
           uploaded_by: user?.id
         })
         .select()
@@ -161,7 +161,7 @@ export function useCoachingTranscripts(weekStart: Date) {
                 status: 'completed' as const,
                 progress: 100,
                 storagePath,
-                extractionStatus: 'skipped' as const
+                extractionStatus: 'completed' as const
               }
             : f
         )
