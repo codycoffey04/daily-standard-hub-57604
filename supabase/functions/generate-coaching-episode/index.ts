@@ -157,7 +157,7 @@ serve(async (req) => {
 
     console.log(`Successfully downloaded ${pdfDocuments.length}/${transcripts.length} PDFs`)
 
-    // Fetch metrics for this week
+    // Fetch AgencyZoom metrics for this week (Sales, Items, Premium)
     const { data: metricsData, error: metricsError } = await supabase
       .from('coaching_metrics')
       .select('*')
@@ -169,10 +169,58 @@ serve(async (req) => {
     }
 
     const producerKey = producer.display_name.toLowerCase()
-    const producerMetrics = (metricsData.producer_metrics as Record<string, ProducerMetrics>)[producerKey]
+    const azMetrics = (metricsData.producer_metrics as Record<string, ProducerMetrics>)[producerKey]
 
-    if (!producerMetrics) {
+    if (!azMetrics) {
       throw new Error(`Metrics not found for producer: ${producer.display_name}`)
+    }
+
+    // Fetch TDS activity data (QHH, Quotes from daily_entries + quoted_households)
+    console.log(`Fetching TDS activity data for ${weekStart} to ${weekEnd}`)
+
+    // Get daily_entry IDs for this producer/week
+    const { data: entries, error: entriesErr } = await supabase
+      .from('daily_entries')
+      .select('id')
+      .eq('producer_id', producerId)
+      .gte('entry_date', weekStart)
+      .lte('entry_date', weekEnd)
+
+    let tdsQhh = 0
+    let tdsQuotes = 0
+
+    if (!entriesErr && entries && entries.length > 0) {
+      const entryIds = entries.map(e => e.id)
+
+      // Get quoted_households for those entries
+      const { data: qhRows, error: qhErr } = await supabase
+        .from('quoted_households')
+        .select('lead_id, lines_quoted')
+        .in('daily_entry_id', entryIds)
+
+      if (!qhErr && qhRows) {
+        // QHH = distinct lead_id count
+        const uniqueLeads = new Set<string>()
+        for (const row of qhRows) {
+          if (row.lead_id) {
+            uniqueLeads.add(row.lead_id)
+          }
+          tdsQuotes += row.lines_quoted || 0
+        }
+        tdsQhh = uniqueLeads.size
+      }
+    }
+
+    console.log(`TDS activity: QHH=${tdsQhh}, Quotes=${tdsQuotes}`)
+
+    // Merge: TDS for QHH/Quotes, AgencyZoom for Sales/Items/Premium
+    const producerMetrics: ProducerMetrics = {
+      qhh: tdsQhh > 0 ? tdsQhh : azMetrics.qhh,
+      quotes: tdsQuotes > 0 ? tdsQuotes : azMetrics.quotes,
+      sales: azMetrics.sales,
+      items: azMetrics.items,
+      premium: azMetrics.premium,
+      close_rate: tdsQhh > 0 ? (azMetrics.sales / tdsQhh) * 100 : azMetrics.close_rate
     }
 
     // Fetch coaching framework configs
@@ -253,13 +301,13 @@ ${focusWeek?.theme || 'General Improvement'} (Week ${focusWeekNumber})
 Focus question: "${focusWeek?.focus_question || 'How can we improve?'}"
 Challenge: "${focusWeek?.challenge || 'Apply one new technique this week'}"
 
-## Weekly Metrics (from AgencyZoom)
-- QHH: ${producerMetrics.qhh}
-- Quotes: ${producerMetrics.quotes}
-- Sales: ${producerMetrics.sales}
-- Items: ${producerMetrics.items}
-- Premium: $${producerMetrics.premium.toFixed(2)}
-- Close Rate: ${producerMetrics.close_rate}%
+## Weekly Metrics
+- QHH: ${producerMetrics.qhh} (from TDS activity)
+- Quotes: ${producerMetrics.quotes} (lines quoted from TDS)
+- Sales: ${producerMetrics.sales} (from AgencyZoom)
+- Items: ${producerMetrics.items} (from AgencyZoom)
+- Premium: $${producerMetrics.premium.toFixed(2)} (from AgencyZoom)
+- Close Rate: ${producerMetrics.close_rate.toFixed(1)}%
 
 ## Scorecard Criteria (0-2 scale: 0=Missed, 1=Partial, 2=Strong)
 ${JSON.stringify(scorecardConfig, null, 2)}
