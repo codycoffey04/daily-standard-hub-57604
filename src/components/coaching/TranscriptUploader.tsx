@@ -14,6 +14,7 @@ export interface UploadedFile {
   error?: string
   storagePath?: string
   extractionStatus?: 'pending' | 'processing' | 'completed' | 'failed' | 'skipped'
+  storedFileSize?: number // For files loaded from DB where File object is a dummy
 }
 
 interface TranscriptUploaderProps {
@@ -144,7 +145,7 @@ export const TranscriptUploader: React.FC<TranscriptUploaderProps> = ({
                   {getStatusBadge(file.status)}
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  {formatFileSize(file.file.size)}
+                  {formatFileSize(file.storedFileSize ?? file.file.size)}
                   {file.error && (
                     <span className="text-destructive ml-2">{file.error}</span>
                   )}
