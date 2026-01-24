@@ -3,7 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Badge } from '@/components/ui/badge'
-import { Copy, Download, Eye, Code, CheckCircle, User } from 'lucide-react'
+import { Copy, Download, Eye, Code, CheckCircle, User, Headphones } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 import ReactMarkdown from 'react-markdown'
 import { ScoreBreakdown } from './ScoreBreakdown'
@@ -71,6 +71,26 @@ export const EpisodeViewer: React.FC<EpisodeViewerProps> = ({
       title: 'Downloaded',
       description: 'Episode markdown file downloaded'
     })
+  }
+
+  const getNotebookLMPrompt = () => {
+    return `This is a personalized weekly sales coaching session for an insurance producer named ${producer.display_name}. The hosts should sound like supportive but direct sales coaches — encouraging but not soft. Focus on the specific call examples. Make it feel like a real coaching conversation, not a corporate training video. Keep the energy up.`
+  }
+
+  const handleCopyNotebookLMPrompt = async () => {
+    try {
+      await navigator.clipboard.writeText(getNotebookLMPrompt())
+      toast({
+        title: 'Copied',
+        description: 'NotebookLM prompt copied to clipboard'
+      })
+    } catch (error) {
+      toast({
+        title: 'Copy failed',
+        description: 'Could not copy to clipboard',
+        variant: 'destructive'
+      })
+    }
   }
 
   const formatPremium = (premium: number | null): string => {
@@ -149,6 +169,10 @@ export const EpisodeViewer: React.FC<EpisodeViewerProps> = ({
               <CheckCircle className="h-4 w-4" />
               Scores ({scores.length})
             </TabsTrigger>
+            <TabsTrigger value="notebooklm" className="flex items-center gap-1">
+              <Headphones className="h-4 w-4" />
+              NotebookLM
+            </TabsTrigger>
             <TabsTrigger value="raw" className="flex items-center gap-1">
               <Code className="h-4 w-4" />
               Raw Markdown
@@ -163,6 +187,54 @@ export const EpisodeViewer: React.FC<EpisodeViewerProps> = ({
 
           <TabsContent value="scores" className="mt-4">
             <ScoreBreakdown scores={scores} />
+          </TabsContent>
+
+          <TabsContent value="notebooklm" className="mt-4">
+            <div className="space-y-4">
+              <div className="p-4 bg-muted/50 rounded-lg space-y-4">
+                <h4 className="font-medium flex items-center gap-2">
+                  <Headphones className="h-4 w-4" />
+                  NotebookLM Audio Overview Settings
+                </h4>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <p className="text-sm font-medium text-muted-foreground">Format</p>
+                    <Badge variant="secondary" className="text-sm">Deep Dive</Badge>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-sm font-medium text-muted-foreground">Length</p>
+                    <Badge variant="secondary" className="text-sm">Long</Badge>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm font-medium text-muted-foreground">Focus Prompt</p>
+                    <Button variant="outline" size="sm" onClick={handleCopyNotebookLMPrompt}>
+                      <Copy className="h-3 w-3 mr-1" />
+                      Copy Prompt
+                    </Button>
+                  </div>
+                  <div className="p-3 bg-background border rounded-lg text-sm">
+                    {getNotebookLMPrompt()}
+                  </div>
+                </div>
+              </div>
+
+              <div className="p-4 border rounded-lg space-y-3">
+                <h4 className="font-medium">How to Use</h4>
+                <ol className="text-sm text-muted-foreground space-y-2 list-decimal list-inside">
+                  <li>Download the episode markdown using the button above</li>
+                  <li>Go to <span className="font-mono text-foreground">notebooklm.google.com</span></li>
+                  <li>Create a new notebook and upload the markdown file</li>
+                  <li>Click "Audio Overview" → Customize</li>
+                  <li>Set format to <strong>Deep Dive</strong> and length to <strong>Long</strong></li>
+                  <li>Paste the focus prompt above into the customization field</li>
+                  <li>Generate the audio</li>
+                </ol>
+              </div>
+            </div>
           </TabsContent>
 
           <TabsContent value="raw" className="mt-4">
