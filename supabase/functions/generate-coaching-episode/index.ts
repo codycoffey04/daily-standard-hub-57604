@@ -1,5 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3"
+// @ts-ignore - pdf-parse works in Deno via esm.sh
+import pdfParse from "https://esm.sh/pdf-parse@1.1.1"
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -16,6 +18,7 @@ interface TranscriptData {
   file_name: string
   file_path: string
   extracted_text: string | null
+  extraction_status: string | null
   call_date: string | null
   call_duration_seconds: number | null
   call_direction: string | null
@@ -59,6 +62,104 @@ interface ClaudeResponse {
   scores: ScoreResult[]
   episode_markdown: string
   summary: string
+}
+
+/**
+ * Extract text from a PDF file stored in Supabase Storage
+ */
+async function extractPdfText(
+  supabase: ReturnType<typeof createClient>,
+  filePath: string
+): Promise<string> {
+  console.log(`Extracting text from: ${filePath}`)
+
+  // Download the PDF from storage
+  const { data: fileData, error: downloadError } = await supabase
+    .storage
+    .from('coaching-transcripts')
+    .download(filePath)
+
+  if (downloadError || !fileData) {
+    throw new Error(`Failed to download PDF: ${downloadError?.message || 'No data'}`)
+  }
+
+  // Convert blob to array buffer
+  const arrayBuffer = await fileData.arrayBuffer()
+  const buffer = new Uint8Array(arrayBuffer)
+
+  // Parse PDF and extract text
+  try {
+    const pdfData = await pdfParse(buffer)
+    const text = pdfData.text?.trim() || ''
+    console.log(`Extracted ${text.length} characters from ${filePath}`)
+    return text
+  } catch (parseError) {
+    console.error(`PDF parse error for ${filePath}:`, parseError)
+    throw new Error(`Failed to parse PDF: ${parseError}`)
+  }
+}
+
+/**
+ * Extract text from all transcripts that don't have extracted_text yet
+ */
+async function extractAllTranscriptTexts(
+  supabase: ReturnType<typeof createClient>,
+  transcripts: TranscriptData[]
+): Promise<TranscriptData[]> {
+  const updatedTranscripts: TranscriptData[] = []
+
+  for (const transcript of transcripts) {
+    if (transcript.extracted_text) {
+      // Already has text, use as-is
+      updatedTranscripts.push(transcript)
+      continue
+    }
+
+    // Mark as processing
+    await supabase
+      .from('coaching_transcripts')
+      .update({ extraction_status: 'processing' })
+      .eq('id', transcript.id)
+
+    try {
+      // Extract text from PDF
+      const extractedText = await extractPdfText(supabase, transcript.file_path)
+
+      // Update the transcript record
+      const { error: updateError } = await supabase
+        .from('coaching_transcripts')
+        .update({
+          extracted_text: extractedText,
+          extraction_status: 'completed'
+        })
+        .eq('id', transcript.id)
+
+      if (updateError) {
+        console.error(`Failed to update transcript ${transcript.id}:`, updateError)
+      }
+
+      updatedTranscripts.push({
+        ...transcript,
+        extracted_text: extractedText,
+        extraction_status: 'completed'
+      })
+    } catch (error) {
+      console.error(`Failed to extract text from ${transcript.file_name}:`, error)
+
+      // Mark as failed
+      await supabase
+        .from('coaching_transcripts')
+        .update({ extraction_status: 'failed' })
+        .eq('id', transcript.id)
+
+      updatedTranscripts.push({
+        ...transcript,
+        extraction_status: 'failed'
+      })
+    }
+  }
+
+  return updatedTranscripts
 }
 
 serve(async (req) => {
@@ -120,6 +221,18 @@ serve(async (req) => {
       throw new Error('No transcripts found for this producer/week')
     }
 
+    // Extract text from PDFs if not already done
+    console.log(`Processing ${transcripts.length} transcripts for ${producer.display_name}`)
+    const processedTranscripts = await extractAllTranscriptTexts(supabase, transcripts)
+
+    // Check if all transcripts have text
+    const transcriptsWithText = processedTranscripts.filter(t => t.extracted_text)
+    if (transcriptsWithText.length === 0) {
+      throw new Error('Failed to extract text from any transcripts. Please check the PDF files.')
+    }
+
+    console.log(`Successfully extracted text from ${transcriptsWithText.length}/${transcripts.length} transcripts`)
+
     // Fetch metrics for this week
     const { data: metricsData, error: metricsError } = await supabase
       .from('coaching_metrics')
@@ -151,7 +264,6 @@ serve(async (req) => {
     const scorecardConfig = configs.find(c => c.config_type === 'scorecard')?.config_data
     const crossSellConfig = configs.find(c => c.config_type === 'cross_sell_triggers')?.config_data
     const focusRotationConfig = configs.find(c => c.config_type === 'focus_rotation')?.config_data
-    const episodeTemplateConfig = configs.find(c => c.config_type === 'episode_template')?.config_data
     const producerProfilesConfig = configs.find(c => c.config_type === 'producer_profiles')?.config_data
 
     // Calculate focus week number
@@ -169,9 +281,8 @@ serve(async (req) => {
       p => p.display_name.toLowerCase() === producerKey
     )
 
-    // Extract text from PDFs if not already done
-    // For now, we'll use extracted_text if available, or note that extraction is needed
-    const transcriptTexts = transcripts.map((t: TranscriptData, i: number) => {
+    // Build transcript texts for Claude
+    const transcriptTexts = processedTranscripts.map((t: TranscriptData, i: number) => {
       if (t.extracted_text) {
         return `### Transcript ${i + 1}: ${t.file_name}
 Date: ${t.call_date || 'Unknown'}
@@ -181,7 +292,7 @@ Direction: ${t.call_direction || 'Unknown'}
 ${t.extracted_text}`
       } else {
         return `### Transcript ${i + 1}: ${t.file_name}
-[Text extraction pending - file uploaded but not yet processed]`
+[Text extraction failed - unable to process this PDF]`
       }
     }).join('\n\n')
 
@@ -365,7 +476,7 @@ IMPORTANT: Return ONLY the JSON object, no additional text or markdown code bloc
     for (const score of parsedResponse.scores) {
       // Find the transcript by matching index (scores should be in order)
       const transcriptIndex = parsedResponse.scores.indexOf(score)
-      const transcript = transcripts[transcriptIndex]
+      const transcript = processedTranscripts[transcriptIndex]
 
       if (transcript) {
         const scoreData = {
@@ -403,7 +514,8 @@ IMPORTANT: Return ONLY the JSON object, no additional text or markdown code bloc
         episodeId,
         summary: parsedResponse.summary,
         tokensUsed,
-        generationDurationMs: generationDuration
+        generationDurationMs: generationDuration,
+        transcriptsProcessed: transcriptsWithText.length
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )

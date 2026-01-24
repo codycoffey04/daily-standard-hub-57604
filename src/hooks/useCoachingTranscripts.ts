@@ -74,7 +74,8 @@ export function useCoachingTranscripts(weekStart: Date) {
           file: new File([], t.file_name, { type: 'application/pdf' }),
           status: 'completed' as const,
           progress: 100,
-          storagePath: t.file_path
+          storagePath: t.file_path,
+          extractionStatus: (t.extraction_status as UploadedFile['extractionStatus']) || 'pending'
         }))
       })
 
@@ -146,7 +147,8 @@ export function useCoachingTranscripts(weekStart: Date) {
                 id: transcript.id,
                 status: 'completed' as const,
                 progress: 100,
-                storagePath
+                storagePath,
+                extractionStatus: 'pending' as const
               }
             : f
         )
