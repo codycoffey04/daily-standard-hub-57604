@@ -382,7 +382,7 @@ export type Database = {
           {
             foreignKeyName: "coaching_scores_transcript_id_fkey"
             columns: ["transcript_id"]
-            isOneToOne: false
+            isOneToOne: true
             referencedRelation: "coaching_transcripts"
             referencedColumns: ["id"]
           },
@@ -1901,5 +1901,3 @@ export const Constants = {
     },
   },
 } as const
-A new version of Supabase CLI is available: v2.72.7 (currently installed v2.40.7)
-We recommend updating regularly for new features and bug fixes: https://supabase.com/docs/guides/cli/getting-started#updating-the-supabase-cli
