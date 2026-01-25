@@ -379,13 +379,14 @@ This is NOT a data dump. It's a story about a team trying to hit a goal. The dat
 - Rank by Items (highest first)
 - Combine sources per mapping rules (e.g., "Crystal" + "Crystal Brozio" = "Crystal (CSR)")
 - Highlight top source with 🔥
-- Flag concerning sources with ⚠️
+- Flag low-performing sources with ⚠️
 
 After the table, add insights:
-- Call out what's working (referrals, cross-sales, CSR production)
-- Call out what's not (Net Leads low conversion, etc.)
-- Reference specific conversion rates when relevant
-- Compare high-value sources (referrals close at X%) vs low-value (Net Leads close at Y%)
+- Call out what's producing the most Items and Premium
+- Compare sources: "Referrals: 12 items. Net Leads: 5 items. CSR sources: 8 items."
+- Note which sources punch above their weight (high premium per item)
+- DO NOT reference close rates for lead sources — we don't have QHH by source
+- Focus on volume and premium production, not conversion rates
 
 ### 6. Coaching Notes (AI-Generated)
 - 2-3 sentences per producer MAX
