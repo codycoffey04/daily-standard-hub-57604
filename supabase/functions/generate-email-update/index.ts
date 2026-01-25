@@ -488,9 +488,9 @@ ${comparisonData && weeklyTeamItems > 0 ? `**WoW Deltas (This Week vs Last Week)
 
 Team WoW: ${comparisonData.team_items_delta >= 0 ? '+' : ''}${comparisonData.team_items_delta} items (${comparisonData.team_items_pct_change >= 0 ? '+' : ''}${comparisonData.team_items_pct_change.toFixed(1)}%)` : ''}
 
-## TDS Activity Data (Quotes & Close Rate)
-| Producer | QHH | Quotes | Sales | Close Rate | Pipeline (Unsold) |
-|----------|-----|--------|-------|------------|-------------------|
+## TDS Activity Data MTD (Same Timeframe as Production)
+| Producer | QHH MTD | Quotes MTD | Sales MTD | Close Rate | Pipeline (Unsold) |
+|----------|---------|------------|-----------|------------|-------------------|
 ${producerData.map(p => `| ${p.name} | ${p.qhh} | ${p.quotes} | ${p.sales} | ${p.close_rate.toFixed(1)}% | ${p.pipeline} households |`).join('\n')}
 | **TEAM** | **${metrics.team_qhh}** | **${metrics.team_quotes}** | **${metrics.team_sales}** | **${metrics.team_qhh > 0 ? ((metrics.team_sales / metrics.team_qhh) * 100).toFixed(1) : 0}%** | **${metrics.team_qhh - metrics.team_sales}** |
 

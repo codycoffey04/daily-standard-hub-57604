@@ -47,7 +47,8 @@ const EmailUpdatesPage: React.FC = () => {
     isSaving: isSavingProduction,
     refetch: refetchMetrics,
     periodStartStr,
-    periodEndStr
+    periodEndStr,
+    mtdStartStr
   } = useEmailMetrics(selectedPeriodStart, periodType)
 
   const {
@@ -234,16 +235,16 @@ const EmailUpdatesPage: React.FC = () => {
           {/* TDS Activity */}
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">TDS Activity</CardTitle>
+              <CardTitle className="text-base">MTD TDS Activity</CardTitle>
               <CardDescription>
-                Automatically pulled from daily entries for the selected period
+                Automatically pulled from daily entries (Month-to-Date to match production data)
               </CardDescription>
             </CardHeader>
             <CardContent>
               <TDSActivityPreview
                 tdsActivity={tdsActivity}
                 isLoading={tdsLoading}
-                periodStartStr={periodStartStr}
+                periodStartStr={mtdStartStr}
                 periodEndStr={periodEndStr}
                 onRefresh={() => refetchMetrics()}
               />

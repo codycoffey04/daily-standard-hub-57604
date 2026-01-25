@@ -64,6 +64,13 @@ export function useEmailMetrics(periodStart: Date, periodType: PeriodType = 'wee
   }, [periodStart, periodType])
   const periodEndStr = formatDateForDB(periodEnd)
 
+  // Calculate MTD dates for TDS activity (always month start to period end)
+  const mtdStartStr = useMemo(() => {
+    const mtdStart = new Date(periodStart)
+    mtdStart.setDate(1) // First of the month
+    return formatDateForDB(mtdStart)
+  }, [periodStart])
+
   // Fetch existing metrics for this period
   const {
     data: metrics,
@@ -85,9 +92,10 @@ export function useEmailMetrics(periodStart: Date, periodType: PeriodType = 'wee
     }
   })
 
-  // Fetch TDS activity data for the period
+  // Fetch TDS activity data for MTD (month start to period end)
+  // This matches the MTD production data timeframe for accurate Close Rate and Pipeline calculations
   const { data: tdsActivity, isLoading: tdsLoading } = useQuery({
-    queryKey: ['email-tds-activity', periodStartStr, periodEndStr],
+    queryKey: ['email-tds-activity', mtdStartStr, periodEndStr],
     queryFn: async () => {
       // Get all producers
       const { data: producers } = await supabase
@@ -97,11 +105,11 @@ export function useEmailMetrics(periodStart: Date, periodType: PeriodType = 'wee
 
       if (!producers || producers.length === 0) return null
 
-      // Get daily entries for the period
+      // Get daily entries for MTD (month start to period end)
       const { data: entries } = await supabase
         .from('daily_entries')
         .select('id, producer_id, outbound_dials, talk_minutes')
-        .gte('entry_date', periodStartStr)
+        .gte('entry_date', mtdStartStr)
         .lte('entry_date', periodEndStr)
 
       if (!entries) return null
@@ -457,6 +465,8 @@ export function useEmailMetrics(periodStart: Date, periodType: PeriodType = 'wee
     isSaving: saveMutation.isPending,
     refetch,
     periodStartStr,
-    periodEndStr
+    periodEndStr,
+    // MTD dates for TDS activity display
+    mtdStartStr
   }
 }

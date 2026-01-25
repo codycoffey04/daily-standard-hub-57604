@@ -57,7 +57,7 @@ export const TDSActivityPreview: React.FC<TDSActivityPreviewProps> = ({
         <div className="flex items-center justify-between">
           <h3 className="text-sm font-medium flex items-center gap-2">
             <Activity className="h-4 w-4" />
-            TDS Activity (Auto-Pulled)
+            MTD TDS Activity (Auto-Pulled)
           </h3>
         </div>
         <div className="space-y-2">
@@ -77,10 +77,10 @@ export const TDSActivityPreview: React.FC<TDSActivityPreviewProps> = ({
         <div className="flex items-center gap-2">
           <h3 className="text-sm font-medium flex items-center gap-2">
             <Activity className="h-4 w-4" />
-            TDS Activity (Auto-Pulled)
+            MTD TDS Activity (Auto-Pulled)
           </h3>
           <Badge variant="outline" className="text-xs">
-            {periodStartStr} to {periodEndStr}
+            MTD: {periodStartStr} to {periodEndStr}
           </Badge>
         </div>
         {onRefresh && (
