@@ -156,18 +156,30 @@ export function useEmailMetrics(periodStart: Date, periodType: PeriodType = 'wee
   // Parse raw paste on change
   const parsedProduction = useMemo<ParsedMetrics | null>(() => {
     if (!rawProductionPaste.trim()) {
-      setParseError(null)
       return null
     }
 
     const result = parseAgencyZoomCSV(rawProductionPaste)
     if (!result.success) {
-      setParseError(result.error || 'Failed to parse production metrics')
       return null
     }
 
-    setParseError(null)
     return result.data || null
+  }, [rawProductionPaste])
+
+  // Update parse error state separately to avoid infinite loop
+  useEffect(() => {
+    if (!rawProductionPaste.trim()) {
+      setParseError(null)
+      return
+    }
+
+    const result = parseAgencyZoomCSV(rawProductionPaste)
+    if (!result.success) {
+      setParseError(result.error || 'Failed to parse production metrics')
+    } else {
+      setParseError(null)
+    }
   }, [rawProductionPaste])
 
   // Reset raw paste when period changes and we have saved metrics

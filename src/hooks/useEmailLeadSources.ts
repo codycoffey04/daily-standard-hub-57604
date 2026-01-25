@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/integrations/supabase/client'
 import { useToast } from '@/hooks/use-toast'
@@ -70,21 +70,32 @@ export function useEmailLeadSources(emailMetricsId: string | undefined) {
   // Parse raw paste and apply mappings
   const parsedLeadSources = useMemo<ParsedSourceWithMapping[] | null>(() => {
     if (!rawLeadSourcePaste.trim()) {
-      setParseError(null)
       return null
     }
 
     const result = parseAgencyZoomLeadSourceCSV(rawLeadSourcePaste)
     if (!result.success || !result.data) {
-      setParseError(result.error || 'Failed to parse lead source data')
       return null
     }
-
-    setParseError(null)
 
     // Apply source mappings and combine
     return combineSourcesByMapping(result.data.sources, sourceMappings)
   }, [rawLeadSourcePaste, sourceMappings])
+
+  // Update parse error state separately to avoid infinite loop
+  useEffect(() => {
+    if (!rawLeadSourcePaste.trim()) {
+      setParseError(null)
+      return
+    }
+
+    const result = parseAgencyZoomLeadSourceCSV(rawLeadSourcePaste)
+    if (!result.success || !result.data) {
+      setParseError(result.error || 'Failed to parse lead source data')
+    } else {
+      setParseError(null)
+    }
+  }, [rawLeadSourcePaste])
 
   // Calculate totals from parsed data
   const parsedTotals = useMemo(() => {
