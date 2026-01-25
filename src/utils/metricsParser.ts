@@ -334,3 +334,232 @@ function parseCSVLine(line: string): string[] {
   result.push(current.trim())
   return result
 }
+
+// ============================================================================
+// LEAD SOURCE CSV PARSER
+// ============================================================================
+
+/**
+ * Lead source metrics from AgencyZoom
+ */
+export interface LeadSourceMetrics {
+  source_name_raw: string
+  items: number
+  premium: number
+  policies: number
+  sales: number
+  points: number
+}
+
+/**
+ * Parsed lead source data with source mappings applied
+ */
+export interface ParsedLeadSourceMetrics {
+  sources: LeadSourceMetrics[]
+  team: {
+    items: number
+    premium: number
+    policies: number
+    sales: number
+    points: number
+  }
+}
+
+export interface LeadSourceParseResult {
+  success: boolean
+  data?: ParsedLeadSourceMetrics
+  error?: string
+}
+
+/**
+ * Source mapping configuration
+ * Maps raw AgencyZoom source names to display names with CSR attribution
+ */
+export interface SourceMapping {
+  raw_names: string[]
+  display_name: string
+  is_csr: boolean
+  attributed_to?: string
+}
+
+/**
+ * Apply source mappings to normalize source names
+ */
+export function applySourceMapping(
+  rawName: string,
+  mappings: SourceMapping[]
+): { display_name: string; is_csr: boolean; attributed_to?: string } | null {
+  const lowerName = rawName.toLowerCase().trim()
+
+  for (const mapping of mappings) {
+    for (const raw of mapping.raw_names) {
+      if (raw.toLowerCase().trim() === lowerName) {
+        return {
+          display_name: mapping.display_name,
+          is_csr: mapping.is_csr,
+          attributed_to: mapping.attributed_to
+        }
+      }
+    }
+  }
+
+  return null
+}
+
+/**
+ * Parser for AgencyZoom Lead Source CSV export
+ *
+ * CSV Format:
+ * Lead Source,Items,Premium,L&H Premium,Policies,Sales,Points,Revenue
+ * Total,31,"$19,885",0,15,12,320,"$1,790"
+ * Net Leads,12,"$8,500",0,6,5,120,"$750"
+ * Crystal,8,"$5,200",0,4,3,85,"$450"
+ *
+ * Column mapping:
+ * - Lead Source / Source Name → source_name_raw
+ * - Items → items
+ * - Premium → premium (ignore L&H Premium)
+ * - Policies → policies
+ * - Sales → sales
+ * - Points → points
+ * - Revenue → ignored
+ */
+export function parseAgencyZoomLeadSourceCSV(csvContent: string): LeadSourceParseResult {
+  if (!csvContent || csvContent.trim() === '') {
+    return { success: false, error: 'No CSV data provided' }
+  }
+
+  const lines = csvContent.trim().split('\n').filter(line => line.trim() !== '')
+
+  if (lines.length < 2) {
+    return { success: false, error: 'CSV must include a header row and at least one data row' }
+  }
+
+  // Parse header row
+  const headers = parseCSVLine(lines[0]).map(h => h.toLowerCase().trim())
+
+  // Find column indices
+  const columnMap: Record<string, number> = {}
+  headers.forEach((header, index) => {
+    if (header === 'lead source' || header === 'source' || header === 'source name') {
+      columnMap['source'] = index
+    } else if (header === 'items' || header === 'item') {
+      columnMap['items'] = index
+    } else if (header === 'premium' && !header.includes('l&h')) {
+      columnMap['premium'] = index
+    } else if (header === 'policies' || header === 'policy') {
+      columnMap['policies'] = index
+    } else if (header === 'sales' || header === 'sold') {
+      columnMap['sales'] = index
+    } else if (header === 'points' || header === 'point') {
+      columnMap['points'] = index
+    }
+  })
+
+  // Validate required columns
+  if (columnMap['source'] === undefined) {
+    columnMap['source'] = 0 // Default to first column
+  }
+
+  const sources: LeadSourceMetrics[] = []
+
+  // Parse data rows (skip header)
+  for (let i = 1; i < lines.length; i++) {
+    const values = parseCSVLine(lines[i])
+
+    if (values.length < 2) continue
+
+    const rawName = values[columnMap['source']] || ''
+
+    // Skip "Total" row
+    if (rawName.toLowerCase().includes('total') || rawName.toLowerCase().includes('team')) {
+      continue
+    }
+
+    // Skip empty source names
+    if (!rawName.trim()) {
+      continue
+    }
+
+    const metrics: LeadSourceMetrics = {
+      source_name_raw: rawName.trim(),
+      items: columnMap['items'] !== undefined ? parseNumber(values[columnMap['items']] || '0') : 0,
+      premium: columnMap['premium'] !== undefined ? parseNumber(values[columnMap['premium']] || '0') : 0,
+      policies: columnMap['policies'] !== undefined ? parseNumber(values[columnMap['policies']] || '0') : 0,
+      sales: columnMap['sales'] !== undefined ? parseNumber(values[columnMap['sales']] || '0') : 0,
+      points: columnMap['points'] !== undefined ? parseNumber(values[columnMap['points']] || '0') : 0
+    }
+
+    sources.push(metrics)
+  }
+
+  if (sources.length === 0) {
+    return {
+      success: false,
+      error: 'No valid lead source data found in CSV'
+    }
+  }
+
+  // Calculate team totals
+  const team = {
+    items: 0,
+    premium: 0,
+    policies: 0,
+    sales: 0,
+    points: 0
+  }
+
+  sources.forEach(s => {
+    team.items += s.items
+    team.premium += s.premium
+    team.policies += s.policies
+    team.sales += s.sales
+    team.points += s.points
+  })
+
+  return {
+    success: true,
+    data: {
+      sources,
+      team
+    }
+  }
+}
+
+/**
+ * Combine sources with the same mapped name
+ * Used when multiple raw names map to the same display name (e.g., Crystal + Crystal Brozio)
+ */
+export function combineSourcesByMapping(
+  sources: LeadSourceMetrics[],
+  mappings: SourceMapping[]
+): Array<LeadSourceMetrics & { mapped_source_name: string; is_csr: boolean; attributed_to?: string }> {
+  const combined = new Map<string, LeadSourceMetrics & { mapped_source_name: string; is_csr: boolean; attributed_to?: string }>()
+
+  for (const source of sources) {
+    const mapping = applySourceMapping(source.source_name_raw, mappings)
+    const displayName = mapping?.display_name || source.source_name_raw
+    const isCsr = mapping?.is_csr || false
+    const attributedTo = mapping?.attributed_to
+
+    const existing = combined.get(displayName)
+    if (existing) {
+      // Combine metrics
+      existing.items += source.items
+      existing.premium += source.premium
+      existing.policies += source.policies
+      existing.sales += source.sales
+      existing.points += source.points
+    } else {
+      combined.set(displayName, {
+        ...source,
+        mapped_source_name: displayName,
+        is_csr: isCsr,
+        attributed_to: attributedTo
+      })
+    }
+  }
+
+  // Sort by items descending
+  return Array.from(combined.values()).sort((a, b) => b.items - a.items)
+}

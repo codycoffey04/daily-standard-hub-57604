@@ -13,7 +13,8 @@ import {
   Menu,
   X,
   Home,
-  BookOpen
+  BookOpen,
+  Mail
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { ensureRolesLoaded, fetchMyRoles } from '@/lib/roles'
@@ -60,7 +61,13 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({ collapsed, onToggle }) =
       icon: BookOpen,
       allowedRoles: ['owner', 'manager']
     },
-    { 
+    {
+      href: '/email-updates',
+      label: 'Email Updates',
+      icon: Mail,
+      allowedRoles: ['owner', 'manager']
+    },
+    {
       href: '/accountability', 
       label: 'Accountability', 
       icon: ClipboardCheck,

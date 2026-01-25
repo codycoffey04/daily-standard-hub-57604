@@ -595,6 +595,216 @@ export type Database = {
           },
         ]
       }
+      email_lead_source_metrics: {
+        Row: {
+          attributed_to: string | null
+          created_at: string
+          email_metrics_id: string
+          id: string
+          is_csr_source: boolean | null
+          items: number | null
+          mapped_source_name: string | null
+          points: number | null
+          policies: number | null
+          premium: number | null
+          sales: number | null
+          source_name_raw: string
+          tds_source_id: string | null
+        }
+        Insert: {
+          attributed_to?: string | null
+          created_at?: string
+          email_metrics_id: string
+          id?: string
+          is_csr_source?: boolean | null
+          items?: number | null
+          mapped_source_name?: string | null
+          points?: number | null
+          policies?: number | null
+          premium?: number | null
+          sales?: number | null
+          source_name_raw: string
+          tds_source_id?: string | null
+        }
+        Update: {
+          attributed_to?: string | null
+          created_at?: string
+          email_metrics_id?: string
+          id?: string
+          is_csr_source?: boolean | null
+          items?: number | null
+          mapped_source_name?: string | null
+          points?: number | null
+          policies?: number | null
+          premium?: number | null
+          sales?: number | null
+          source_name_raw?: string
+          tds_source_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_lead_source_metrics_email_metrics_id_fkey"
+            columns: ["email_metrics_id"]
+            isOneToOne: false
+            referencedRelation: "email_metrics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "email_lead_source_metrics_tds_source_id_fkey"
+            columns: ["tds_source_id"]
+            isOneToOne: false
+            referencedRelation: "sources"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      email_metrics: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          period_end: string
+          period_start: string
+          period_type: string
+          producer_metrics: Json
+          raw_lead_source_paste: string | null
+          raw_production_paste: string | null
+          tds_activity_metrics: Json | null
+          team_items: number | null
+          team_policies: number | null
+          team_premium: number | null
+          team_qhh: number | null
+          team_quotes: number | null
+          team_sales: number | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          period_end: string
+          period_start: string
+          period_type: string
+          producer_metrics?: Json
+          raw_lead_source_paste?: string | null
+          raw_production_paste?: string | null
+          tds_activity_metrics?: Json | null
+          team_items?: number | null
+          team_policies?: number | null
+          team_premium?: number | null
+          team_qhh?: number | null
+          team_quotes?: number | null
+          team_sales?: number | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          period_end?: string
+          period_start?: string
+          period_type?: string
+          producer_metrics?: Json
+          raw_lead_source_paste?: string | null
+          raw_production_paste?: string | null
+          tds_activity_metrics?: Json | null
+          team_items?: number | null
+          team_policies?: number | null
+          team_premium?: number | null
+          team_qhh?: number | null
+          team_quotes?: number | null
+          team_sales?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_metrics_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      email_updates: {
+        Row: {
+          announcements: string | null
+          comparison_data: Json | null
+          created_at: string
+          created_by: string | null
+          email_metrics_id: string
+          email_type: string
+          generation_duration_ms: number | null
+          html_content: string
+          id: string
+          markdown_content: string
+          model_used: string | null
+          period_end: string
+          period_start: string
+          previous_period_id: string | null
+          subject_line: string
+          tokens_used: number | null
+        }
+        Insert: {
+          announcements?: string | null
+          comparison_data?: Json | null
+          created_at?: string
+          created_by?: string | null
+          email_metrics_id: string
+          email_type: string
+          generation_duration_ms?: number | null
+          html_content: string
+          id?: string
+          markdown_content: string
+          model_used?: string | null
+          period_end: string
+          period_start: string
+          previous_period_id?: string | null
+          subject_line: string
+          tokens_used?: number | null
+        }
+        Update: {
+          announcements?: string | null
+          comparison_data?: Json | null
+          created_at?: string
+          created_by?: string | null
+          email_metrics_id?: string
+          email_type?: string
+          generation_duration_ms?: number | null
+          html_content?: string
+          id?: string
+          markdown_content?: string
+          model_used?: string | null
+          period_end?: string
+          period_start?: string
+          previous_period_id?: string | null
+          subject_line?: string
+          tokens_used?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_updates_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "email_updates_email_metrics_id_fkey"
+            columns: ["email_metrics_id"]
+            isOneToOne: false
+            referencedRelation: "email_metrics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "email_updates_previous_period_id_fkey"
+            columns: ["previous_period_id"]
+            isOneToOne: false
+            referencedRelation: "email_metrics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       manager_reviews: {
         Row: {
           action_items: string | null

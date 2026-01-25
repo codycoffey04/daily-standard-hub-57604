@@ -22,6 +22,7 @@ import { AccountabilityReviewsPage } from "./pages/AccountabilityReviewsPage";
 import SalesServicePage from "./pages/SalesServicePage";
 import { AdminReviewsPage } from "./pages/AdminReviewsPage";
 import CoachingPage from "./pages/CoachingPage";
+import EmailUpdatesPage from "./pages/EmailUpdatesPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient({
@@ -101,7 +102,17 @@ const App = () => (
                     </ProtectedRoute>
                   }
                 />
-                <Route 
+                <Route
+                  path="/email-updates"
+                  element={
+                    <ProtectedRoute requiresOwnerManager>
+                      <AppLayout>
+                        <EmailUpdatesPage />
+                      </AppLayout>
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
                   path="/accountability" 
                   element={
                     <ProtectedRoute>
