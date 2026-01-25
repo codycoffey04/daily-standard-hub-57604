@@ -262,10 +262,13 @@ serve(async (req) => {
     const remainingWorkdays = totalWorkdays - elapsedWorkdays
 
     const vcTarget = vcTargets?.[vcTargets?.focus_state as keyof VCTargets] || 76
-    const expectedItems = (vcTarget * elapsedWorkdays / totalWorkdays)
-    const vcPace = expectedItems > 0 ? (metrics.team_items / expectedItems) * 100 : 0
+    // % of Target = Current Items ÷ Target (e.g., 68/76 = 89.5%)
+    const pctOfTarget = vcTarget > 0 ? (metrics.team_items / vcTarget) * 100 : 0
+    // Projected Finish = (Current Items ÷ Days Elapsed) × Total Workdays
     const projectedItems = elapsedWorkdays > 0 ? (metrics.team_items / elapsedWorkdays) * totalWorkdays : 0
-    const itemsNeeded = vcTarget - metrics.team_items
+    // On Pace = Projected Finish ≥ Target
+    const onPace = projectedItems >= vcTarget
+    const itemsNeeded = Math.max(0, vcTarget - metrics.team_items)
     const dailyItemsNeeded = remainingWorkdays > 0 ? itemsNeeded / remainingWorkdays : 0
 
     // Build producer data for email
@@ -498,14 +501,14 @@ ${producerData.map(p => `| ${p.name} | ${p.quotes} | ${p.projected_quotes.toFixe
 
 ## ${vcTargets?.focus_state || 'GA'} VC Pacing (Target: ${vcTarget} items)
 - Current Items: ${metrics.team_items}
-- Expected by now: ${expectedItems.toFixed(0)} items (${elapsedWorkdays} workdays elapsed)
-- VC Pace: ${vcPace.toFixed(0)}%
+- % of Target: ${pctOfTarget.toFixed(1)}% (${metrics.team_items}/${vcTarget})
 - Projected finish: ${projectedItems.toFixed(0)} items
 - Items needed: ${itemsNeeded} more
+- Workdays elapsed: ${elapsedWorkdays} of ${totalWorkdays}
 - Workdays remaining: ${remainingWorkdays}
 - Daily items needed: ${dailyItemsNeeded.toFixed(1)}/day
 
-${vcPace >= 100 ? '✅ ON PACE to hit VC' : `⚠️ BEHIND PACE — need ${itemsNeeded} items in ${remainingWorkdays} days`}
+${onPace ? '✅ ON PACE to hit VC' : `⚠️ BEHIND PACE — need ${itemsNeeded} items in ${remainingWorkdays} days (${dailyItemsNeeded.toFixed(1)}/day)`}
 
 ## Lead Source Performance (Ranked by Items)
 | Source | Items | Premium | Sales |
