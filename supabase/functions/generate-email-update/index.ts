@@ -57,23 +57,22 @@ interface ComparisonData {
   }>
 }
 
-interface EmailTemplateSettings {
-  weekly: {
-    sections: string[]
-    emojis: Record<string, string>
-    table_style: Record<string, string>
-  }
-  monthly: {
-    sections: string[]
-  }
-  signature: string
-  closing_phrase: string
-}
-
 interface VCTargets {
   GA: number
   AL: number
   focus_state: string
+  monthly_multiplier?: number
+}
+
+interface CSRTier {
+  min: number
+  max: number
+  bonus: number
+  label: string
+}
+
+interface CSRTiersConfig {
+  tiers: CSRTier[]
 }
 
 serve(async (req) => {
@@ -137,8 +136,31 @@ serve(async (req) => {
     }
 
     const vcTargets = configs?.find(c => c.config_type === 'email_vc_targets')?.config_data as VCTargets | undefined
-    const csrTiers = configs?.find(c => c.config_type === 'email_csr_tiers')?.config_data
-    const templateSettings = configs?.find(c => c.config_type === 'email_template_settings')?.config_data as EmailTemplateSettings | undefined
+    const csrTiersConfig = configs?.find(c => c.config_type === 'email_csr_tiers')?.config_data as CSRTiersConfig | undefined
+
+    // Fetch previous week's email for coaching rotation context
+    let previousEmailContent: string | null = null
+    const prevEmailStart = new Date(metrics.period_start)
+    if (emailType === 'weekly') {
+      prevEmailStart.setDate(prevEmailStart.getDate() - 7)
+    } else {
+      prevEmailStart.setMonth(prevEmailStart.getMonth() - 1)
+    }
+
+    const { data: prevEmail } = await supabase
+      .from('email_updates')
+      .select('markdown_content')
+      .eq('email_type', emailType)
+      .eq('period_start', prevEmailStart.toISOString().split('T')[0])
+      .maybeSingle()
+
+    if (prevEmail?.markdown_content) {
+      // Extract just the coaching notes section for context
+      const coachingMatch = prevEmail.markdown_content.match(/## 🧠 Coaching Notes[\s\S]*?(?=##|$)/i)
+      if (coachingMatch) {
+        previousEmailContent = coachingMatch[0].trim()
+      }
+    }
 
     // Calculate comparison data if previous period exists
     let comparisonData: ComparisonData | null = null
@@ -161,10 +183,6 @@ serve(async (req) => {
 
       if (prevData) {
         previousMetrics = prevData
-        const calcDelta = (curr: number, prev: number) => ({
-          delta: curr - prev,
-          pct: prev > 0 ? ((curr - prev) / prev) * 100 : 0
-        })
 
         comparisonData = {
           team_items_delta: (metrics.team_items || 0) - (prevData.team_items || 0),
@@ -196,27 +214,37 @@ serve(async (req) => {
       }
     }
 
-    // Calculate VC pacing
-    const today = new Date()
-    const monthStart = new Date(today.getFullYear(), today.getMonth(), 1)
-    const monthEnd = new Date(today.getFullYear(), today.getMonth() + 1, 0)
+    // Calculate VC pacing based on period end date
+    const periodEndDate = new Date(metrics.period_end)
+    const monthStart = new Date(periodEndDate.getFullYear(), periodEndDate.getMonth(), 1)
+    const monthEnd = new Date(periodEndDate.getFullYear(), periodEndDate.getMonth() + 1, 0)
     const totalWorkdays = getWorkdaysInMonth(monthStart, monthEnd)
-    const elapsedWorkdays = getWorkdaysBetween(monthStart, today)
+    const elapsedWorkdays = getWorkdaysBetween(monthStart, periodEndDate)
+    const remainingWorkdays = totalWorkdays - elapsedWorkdays
 
     const vcTarget = vcTargets?.[vcTargets?.focus_state as keyof VCTargets] || 76
     const expectedItems = (vcTarget * elapsedWorkdays / totalWorkdays)
-    const vcPace = metrics.team_items > 0 ? (metrics.team_items / expectedItems) * 100 : 0
+    const vcPace = expectedItems > 0 ? (metrics.team_items / expectedItems) * 100 : 0
     const projectedItems = elapsedWorkdays > 0 ? (metrics.team_items / elapsedWorkdays) * totalWorkdays : 0
+    const itemsNeeded = vcTarget - metrics.team_items
+    const dailyItemsNeeded = remainingWorkdays > 0 ? itemsNeeded / remainingWorkdays : 0
 
     // Build producer data for email
     const producerMetrics = metrics.producer_metrics as Record<string, ProducerProductionMetrics>
     const tdsActivity = metrics.tds_activity_metrics as Record<string, TDSActivityMetrics>
+
+    // Calculate quote pace (target: 200/month per producer)
+    const MONTHLY_QUOTE_TARGET = 200
+    const expectedQuotesPerProducer = (MONTHLY_QUOTE_TARGET * elapsedWorkdays / totalWorkdays)
 
     // Merge production and TDS data
     const producerData = Object.entries(producerMetrics).map(([name, prod]) => {
       const activity = tdsActivity?.[name] || { qhh: 0, quotes: 0, dials: 0, talk_minutes: 0 }
       const closeRate = activity.qhh > 0 ? (prod.sales / activity.qhh) * 100 : 0
       const delta = comparisonData?.producer_deltas?.[name]
+      const pipeline = activity.qhh - prod.sales // Households quoted but not sold
+      const quotePace = expectedQuotesPerProducer > 0 ? (activity.quotes / expectedQuotesPerProducer) * 100 : 0
+      const projectedQuotes = elapsedWorkdays > 0 ? (activity.quotes / elapsedWorkdays) * totalWorkdays : 0
 
       return {
         name,
@@ -227,11 +255,14 @@ serve(async (req) => {
         talk_minutes: activity.talk_minutes,
         close_rate: closeRate,
         items_delta: delta?.items_delta || 0,
-        items_pct: delta?.items_pct || 0
+        items_pct: delta?.items_pct || 0,
+        pipeline,
+        quote_pace: quotePace,
+        projected_quotes: projectedQuotes
       }
     }).sort((a, b) => b.items - a.items)
 
-    // Build lead source data
+    // Build lead source data with sales data for conversion
     const leadSourceData = (leadSources as LeadSourceMetrics[] || []).map(s => ({
       name: s.mapped_source_name || s.source_name_raw,
       items: s.items,
@@ -248,88 +279,117 @@ serve(async (req) => {
       premium: csrSources.reduce((sum, s) => sum + s.premium, 0)
     }
 
-    // Build Claude prompt
-    const emojis = templateSettings?.weekly?.emojis || { up: '🔺', down: '🔻', warning: '⚠️', success: '✅', fire: '🔥' }
+    // Build the full framework system prompt
+    const systemPrompt = `You are generating a weekly team email for Coffey Agencies, an Allstate-exclusive insurance agency with locations in Centre, AL and Rome, GA. The 2026 focus is Georgia production.
 
-    const systemPrompt = `You are an expert sales manager at Coffey Agencies, an Allstate-exclusive insurance agency.
-You write concise, data-driven team update emails that motivate producers while being honest about performance.
+## Your Role
+You write like a direct, no-BS agency owner who cares about results but also genuinely wants the team to succeed. You're encouraging but not soft. You use data to make points, not generalities.
 
-Your writing style:
-- Direct and actionable, not fluffy
-- Use specific numbers and percentages
-- Celebrate wins but address gaps honestly
-- Rotate coaching pressure - don't hammer the same person every week
-- Push close rate if volume is fine, push volume if close rate is fine
+## Email Framework — Follow This Structure Exactly
 
-Email formatting:
-- Use Outlook-compatible HTML tables (inline styles, no CSS classes)
-- Table headers: blue background (#1e40af), white text
-- Alternating row colors for readability
-- Keep emojis to: ${emojis.up} (up), ${emojis.down} (down), ${emojis.warning} (warning), ${emojis.success} (success), ${emojis.fire} (fire)
-- Sign off with "${templateSettings?.closing_phrase || 'LFG.'} ${emojis.fire}" and "${templateSettings?.signature || 'Cody'}"`
+### 1. Opening Hook (1-2 sentences)
+- Set the tone for the week
+- Be honest, not fluffy
+- Reference where we stand (items, VC pace, momentum)
+- If it's a big moment (end of month, Q1, etc.), acknowledge the stakes
 
-    const weekLabel = emailType === 'weekly'
-      ? `Week of ${new Date(metrics.period_start).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`
-      : `${new Date(metrics.period_start).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}`
+### 2. Production Table
+- Columns: Producer, Items, Premium, Policies, Sales
+- Include WoW deltas with 🔺/🔻 below the table
+- Bold the Team total row
+- Note: Data comes from AgencyZoom (source of truth)
 
-    const userPrompt = `## Task
-Generate a ${emailType} team update email for Coffey Agencies.
+### 3. GA VC Pacing Section
+- Target: ${vcTarget} items (Georgia 2026 baseline)
+- Show: Current items, Projected finish, Gap
+- Calculate days remaining in month
+- Calculate daily items needed to hit target
+- Be direct about whether we're on pace or not
 
-## Period
-${weekLabel} (${metrics.period_start} to ${metrics.period_end})
+### 4. Quotes & Close Rate Table
+- Columns: Producer, QHH, Quotes, Sales, Close Rate
+- Close Rate = Sales ÷ QHH (AgencyZoom Sales, TDS QHH)
+- Flag best close rate with ✅
+- Bold Team total row
+- Add context below: who's leading in efficiency vs volume
+- Note quote pace vs 200/month target
 
-## Team Production Data (AgencyZoom - Source of Truth)
-| Producer | Sales | Items | Premium | Policies |${comparisonData ? ' Items Delta |' : ''}
-|----------|-------|-------|---------|----------|${comparisonData ? '-------------|' : ''}
-${producerData.map(p => `| ${p.name} | ${p.sales} | ${p.items} | $${p.premium.toLocaleString()} | ${p.policies} |${comparisonData ? ` ${p.items_delta >= 0 ? '+' : ''}${p.items_delta} (${p.items_pct >= 0 ? '+' : ''}${p.items_pct.toFixed(1)}%) |` : ''}`).join('\n')}
-| **TEAM** | ${metrics.team_sales} | ${metrics.team_items} | $${Number(metrics.team_premium).toLocaleString()} | ${metrics.team_policies} |${comparisonData ? ` ${comparisonData.team_items_delta >= 0 ? '+' : ''}${comparisonData.team_items_delta} (${comparisonData.team_items_pct_change >= 0 ? '+' : ''}${comparisonData.team_items_pct_change.toFixed(1)}%) |` : ''}
+### 5. Lead Source Performance Table
+- Columns: Source, Items, Premium, Sales
+- Rank by Items (highest first)
+- Combine sources per mapping rules (e.g., "Crystal" + "Crystal Brozio" = "Crystal (CSR)")
+- Highlight top source with 🔥
+- Flag concerning sources with ⚠️
 
-## TDS Activity Data
-| Producer | QHH | Quotes | Dials | Talk Time | Close Rate |
-|----------|-----|--------|-------|-----------|------------|
-${producerData.map(p => `| ${p.name} | ${p.qhh} | ${p.quotes} | ${p.dials} | ${Math.floor(p.talk_minutes / 60)}h ${p.talk_minutes % 60}m | ${p.close_rate.toFixed(1)}% |`).join('\n')}
-| **TEAM** | ${metrics.team_qhh} | ${metrics.team_quotes} | - | - | ${metrics.team_qhh > 0 ? ((metrics.team_sales / metrics.team_qhh) * 100).toFixed(1) : 0}% |
+After the table, add insights:
+- Call out what's working (referrals, cross-sales, CSR production)
+- Call out what's not (Net Leads low conversion, etc.)
+- Reference specific conversion rates when relevant
+- Compare high-value sources (referrals close at X%) vs low-value (Net Leads close at Y%)
 
-## ${vcTargets?.focus_state || 'GA'} VC Pacing (Target: ${vcTarget} items)
-- Current Items: ${metrics.team_items}
-- Expected by now: ${expectedItems.toFixed(0)} items
-- VC Pace: ${vcPace.toFixed(0)}%
-- Projected finish: ${projectedItems.toFixed(0)} items
-- Gap: ${(vcTarget - projectedItems).toFixed(0)} items to close
-- Workdays remaining: ${totalWorkdays - elapsedWorkdays}
+### 6. Coaching Notes (AI-Generated)
+- 2-3 sentences per producer
+- Reference specific numbers from their data
+- Be constructive but direct
+- If volume is good but close rate is low → push follow-up/conversion
+- If close rate is good but volume is low → push more quotes
+- Calculate opportunities sitting in pipeline (QHH - Sales = households that haven't bought)
+- IMPORTANT: Don't hammer the same producer two weeks in a row — rotate pressure
 
-## Lead Source Performance (Ranked by Items)
-${leadSourceData.length > 0 ? leadSourceData.map((s, i) => `${i + 1}. ${s.name}: ${s.items} items, $${s.premium.toLocaleString()} premium${s.is_csr ? ' [CSR]' : ''}`).join('\n') : 'No lead source data available'}
+### 7. CSR Section (if CSR data present)
+- Highlight CSR referral production
+- Compare to other sources ("more than Net Leads, more than Walk-Ins")
+- Call out specific CSRs doing well
+- Call out CSRs who should step up (tactfully)
+- Reference incentive tier requirements:
+  - 🥇 Top: $2,000 — 5 ALR, 5 Referrals, 25 Cross-Sell Quotes, 5 Reviews
+  - 🥈 Mid: $1,250 — 3 ALR, 3 Referrals, 15 Cross-Sell Quotes, 3 Reviews
+  - 🥉 Bottom: $750 — 2 ALR, 2 Referrals, 10 Cross-Sell Quotes, 2 Reviews
 
-## CSR Performance
-${csrSources.length > 0 ? `CSR Referrals: ${csrTotals.items} items, $${csrTotals.premium.toLocaleString()} premium` : 'No CSR data'}
+### 8. Life Insurance Update (if mentioned in announcements)
+- Current life apps submitted/pending
+- Reminder: Need 3 life apps issued by 2/28/2026 for Allstate Q1 promo
+- Encourage team to send life opportunities to Aleeah
 
-${announcements ? `## Announcements to Include\n${announcements}` : ''}
+### 9. Announcements (from additional context)
+- Policy changes, personnel updates, promos
+- Google Ads updates
+- Anything else provided in context
 
-## Required Email Sections (${emailType})
-${emailType === 'weekly' ? `
-1. Opening hook - 1-2 sentences, honest not fluffy, set the tone
-2. Production table - Items, Premium, Sales, Policies by producer with WoW deltas (${emojis.up}/${emojis.down})
-3. ${vcTargets?.focus_state || 'GA'} VC Pacing - Current vs ${vcTarget}-item target, gap, projection
-4. Quotes & Close Rate table - By producer, ranked by close rate, flag best performer
-5. Lead Source Performance table - Ranked by Items, highlight top (${emojis.fire}), flag concerning (${emojis.warning})
-6. Coaching Notes - 2-3 sentences per producer based on their metrics vs team avg
-7. CSR Section - If CSR data present, highlight CSR referral production
-8. Announcements - Include any from the announcements section above
-9. Week Focus - Clear expectations for coming week, bullet list
-10. Closing - "${templateSettings?.closing_phrase || 'LFG.'} ${emojis.fire}" with signature` :
-`
-1. Opening hook - Set the tone for the month
-2. Monthly production summary - Team totals with MoM comparison
-3. VC Final Status - Did we hit target? Celebrate or address gap
-4. Producer rankings - Full month performance
-5. Lead Source Analysis - What worked, what didn't
-6. CSR Bonus Status - Who qualified for which tier
-7. Month highlights - Best week, standout performances
-8. Next month focus - Set expectations
-9. Closing - Motivational close with signature`}
+### 10. Week Focus Section
+- Bullet list of 6-8 priorities
+- Tie back to gaps identified in the data
+- Be specific (e.g., "Kimberly: 20 quotes this week")
+- Always include: referrals, cross-sell, follow-ups, Google reviews
+
+### 11. Closing
+- Callback to the narrative (if we started behind, note progress)
+- Reinforce the goal
+- End with: LFG. 🔥
+- Sign with: — Cody
+
+## Formatting Rules
+
+- Use tables for data (Production, Quotes, Lead Sources, CSR Tiers)
+- Use prose for insights and coaching
+- Emojis sparingly: 🔺🔻⚠️✅🔥
+- WoW deltas format: 🔺 Maria +13 items WoW | 🔺 Kimberly +18 items WoW
+- Bold important numbers and names
+- Keep paragraphs short (2-3 sentences max)
+- No fluff, no corporate speak
+
+## Rules — Do Not Break
+
+1. NEVER invent numbers — only use data provided
+2. NEVER hammer the same producer two weeks in a row
+3. NEVER spotlight high close rate if quote volume is very low
+4. ALWAYS calculate Close Rate as: AgencyZoom Sales ÷ TDS QHH
+5. ALWAYS reference the ${vcTarget}-item GA VC target
+6. ALWAYS include Lead Source insights when data is provided
+7. Ignore Revenue column from AgencyZoom (known to be inaccurate)
 
 ## Output Format
+
 Return a JSON object with exactly this structure:
 {
   "subject_line": "<email subject line>",
@@ -347,6 +407,87 @@ For html_content:
 - Use <strong> for emphasis, not <b>
 
 IMPORTANT: Return ONLY the JSON object, no additional text or markdown code blocks.`
+
+    // Build week/month label
+    const periodEndDateObj = new Date(metrics.period_end)
+    const weekLabel = emailType === 'weekly'
+      ? `Week of ${new Date(metrics.period_start).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} (as of ${periodEndDateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })})`
+      : `${new Date(metrics.period_start).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}`
+
+    // Build WoW deltas string
+    const wowDeltasStr = producerData
+      .map(p => `${p.items_delta >= 0 ? '🔺' : '🔻'} ${p.name} ${p.items_delta >= 0 ? '+' : ''}${p.items_delta} items WoW`)
+      .join(' | ')
+
+    // Build user prompt with all data
+    const userPrompt = `## Task
+Generate a ${emailType} team update email for Coffey Agencies.
+
+## Period
+${weekLabel} (${metrics.period_start} to ${metrics.period_end})
+
+## Team Production Data (AgencyZoom - Source of Truth)
+| Producer | Items | Premium | Policies | Sales |
+|----------|-------|---------|----------|-------|
+${producerData.map(p => `| ${p.name} | ${p.items} | $${p.premium.toLocaleString()} | ${p.policies} | ${p.sales} |`).join('\n')}
+| **TEAM** | **${metrics.team_items}** | **$${Number(metrics.team_premium).toLocaleString()}** | **${metrics.team_policies}** | **${metrics.team_sales}** |
+
+${comparisonData ? `**WoW Deltas:** ${wowDeltasStr}
+
+Team: ${comparisonData.team_items_delta >= 0 ? '+' : ''}${comparisonData.team_items_delta} items (${comparisonData.team_items_pct_change >= 0 ? '+' : ''}${comparisonData.team_items_pct_change.toFixed(1)}%) WoW` : ''}
+
+## TDS Activity Data (Quotes & Close Rate)
+| Producer | QHH | Quotes | Sales | Close Rate | Pipeline (Unsold) |
+|----------|-----|--------|-------|------------|-------------------|
+${producerData.map(p => `| ${p.name} | ${p.qhh} | ${p.quotes} | ${p.sales} | ${p.close_rate.toFixed(1)}% | ${p.pipeline} households |`).join('\n')}
+| **TEAM** | **${metrics.team_qhh}** | **${metrics.team_quotes}** | **${metrics.team_sales}** | **${metrics.team_qhh > 0 ? ((metrics.team_sales / metrics.team_qhh) * 100).toFixed(1) : 0}%** | **${metrics.team_qhh - metrics.team_sales}** |
+
+## Quote Pace (Target: 200/month per producer)
+| Producer | Quotes MTD | Projected | Status |
+|----------|------------|-----------|--------|
+${producerData.map(p => `| ${p.name} | ${p.quotes} | ${p.projected_quotes.toFixed(0)} | ${p.quote_pace >= 90 ? '✅ On track' : '⚠️ Behind'} |`).join('\n')}
+
+## ${vcTargets?.focus_state || 'GA'} VC Pacing (Target: ${vcTarget} items)
+- Current Items: ${metrics.team_items}
+- Expected by now: ${expectedItems.toFixed(0)} items (${elapsedWorkdays} workdays elapsed)
+- VC Pace: ${vcPace.toFixed(0)}%
+- Projected finish: ${projectedItems.toFixed(0)} items
+- Items needed: ${itemsNeeded} more
+- Workdays remaining: ${remainingWorkdays}
+- Daily items needed: ${dailyItemsNeeded.toFixed(1)}/day
+
+${vcPace >= 100 ? '✅ ON PACE to hit VC' : `⚠️ BEHIND PACE — need ${itemsNeeded} items in ${remainingWorkdays} days`}
+
+## Lead Source Performance (Ranked by Items)
+| Source | Items | Premium | Sales |
+|--------|-------|---------|-------|
+${leadSourceData.length > 0 ? leadSourceData.map((s, i) => `| ${i === 0 ? '🔥 ' : ''}${s.name}${s.is_csr ? ' [CSR]' : ''} | ${s.items} | $${s.premium.toLocaleString()} | ${s.sales} |`).join('\n') : '| No lead source data | - | - | - |'}
+
+${csrSources.length > 0 ? `## CSR Performance
+CSR Referrals Total: **${csrTotals.items} items**, $${csrTotals.premium.toLocaleString()} premium
+
+${csrSources.map(s => `- ${s.name}: ${s.items} items, $${s.premium.toLocaleString()} premium`).join('\n')}` : ''}
+
+## CSR Monthly Incentive Tiers (Reference)
+| Tier | Bonus | Requirements |
+|------|-------|--------------|
+| 🥇 Top | $2,000 | 5 ALR, 5 Referrals, 25 Cross-Sell Quotes, 5 Reviews |
+| 🥈 Mid | $1,250 | 3 ALR, 3 Referrals, 15 Cross-Sell Quotes, 3 Reviews |
+| 🥉 Bottom | $750 | 2 ALR, 2 Referrals, 10 Cross-Sell Quotes, 2 Reviews |
+
+${previousEmailContent ? `## Previous Week's Coaching Notes (For Rotation Reference)
+${previousEmailContent}
+
+⚠️ IMPORTANT: Do NOT repeat the same pressure points. Rotate to different areas this week.` : ''}
+
+${announcements ? `## Announcements/Context to Include
+${announcements}` : ''}
+
+## Notes for Generation
+- Life insurance reminder: Send opportunities to Aleeah (need 3 life apps issued by 2/28/2026 for Q1 promo)
+- Always ask for Google reviews on every win
+- Always ask for referrals on every sale
+- Lead Manager should be worked daily`
 
     // Call Claude API
     console.log(`Generating ${emailType} email for period ${metrics.period_start}`)
