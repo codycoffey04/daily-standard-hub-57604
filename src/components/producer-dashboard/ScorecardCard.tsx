@@ -21,10 +21,12 @@ export const ScorecardCard: React.FC<ScorecardCardProps> = ({ scorecard }) => {
     return 'text-destructive'
   }
 
+  // Close rate color: agency avg is ~25%
   const getCloseRateColor = (rate: number): string => {
     if (rate >= 30) return 'text-success'
-    if (rate >= 20) return 'text-warning'
-    return 'text-muted-foreground'
+    if (rate >= 22) return 'text-foreground'
+    if (rate >= 15) return 'text-warning'
+    return 'text-destructive'
   }
 
   return (
@@ -66,7 +68,7 @@ export const ScorecardCard: React.FC<ScorecardCardProps> = ({ scorecard }) => {
             <div className={`text-2xl font-bold ${getComplianceColor(scorecard.framework_compliance_pct)}`}>
               {scorecard.framework_compliance_pct}%
             </div>
-            <div className="text-xs text-muted-foreground">TOP Days</div>
+            <div className="text-xs text-muted-foreground">In Framework</div>
           </div>
         </div>
       </CardContent>

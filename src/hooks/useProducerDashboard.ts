@@ -17,6 +17,9 @@ export interface TeamStanding {
   producer_id: string
   producer_name: string
   items: number
+  qhh: number
+  sales: number
+  close_rate: number
   rank: number
   is_me: boolean
 }
@@ -32,6 +35,7 @@ export interface ProducerDashboardPace {
   current_items: number
   workdays_elapsed: number
   workdays_remaining: number
+  workdays_total: number
   items_per_day_needed: number
   on_pace: boolean
 }
@@ -46,10 +50,9 @@ export interface ProducerDashboardVCCountdown {
 }
 
 export interface ProducerDashboardStreaks {
-  win_streak: number
-  is_hot: boolean
+  framework_streak: number
   recent_items_3d: number
-  velocity_vs_avg: number
+  avg_items_per_day: number
 }
 
 export interface ProducerDashboardData {
@@ -111,6 +114,9 @@ function parseProducerDashboardData(raw: unknown): ProducerDashboardData | null 
               producer_id: String(standing.producer_id || ''),
               producer_name: String(standing.producer_name || ''),
               items: toNum(standing.items),
+              qhh: toNum(standing.qhh),
+              sales: toNum(standing.sales),
+              close_rate: toNum(standing.close_rate),
               rank: toNum(standing.rank),
               is_me: toBool(standing.is_me),
             }
@@ -122,6 +128,7 @@ function parseProducerDashboardData(raw: unknown): ProducerDashboardData | null 
       current_items: toNum(pace.current_items),
       workdays_elapsed: toNum(pace.workdays_elapsed),
       workdays_remaining: toNum(pace.workdays_remaining),
+      workdays_total: toNum(pace.workdays_total),
       items_per_day_needed: toNum(pace.items_per_day_needed),
       on_pace: toBool(pace.on_pace),
     },
@@ -134,10 +141,9 @@ function parseProducerDashboardData(raw: unknown): ProducerDashboardData | null 
       producer_contribution_pct: toNum(vc_countdown.producer_contribution_pct),
     },
     streaks: {
-      win_streak: toNum(streaks.win_streak),
-      is_hot: toBool(streaks.is_hot),
+      framework_streak: toNum(streaks.framework_streak),
       recent_items_3d: toNum(streaks.recent_items_3d),
-      velocity_vs_avg: toNum(streaks.velocity_vs_avg),
+      avg_items_per_day: toNum(streaks.avg_items_per_day),
     },
   }
 }

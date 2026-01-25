@@ -1,6 +1,6 @@
 import React from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Flame, Zap } from 'lucide-react'
+import { Flame, Zap, TrendingUp } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { ProducerDashboardStreaks } from '@/hooks/useProducerDashboard'
 
@@ -24,6 +24,14 @@ export const StreakCard: React.FC<StreakCardProps> = ({ streaks }) => {
     return 'text-muted-foreground'
   }
 
+  // Hot streak: 5+ items in 3 days OR velocity > 1.5x average
+  const isHot = streaks.recent_items_3d >= 5 ||
+    (streaks.avg_items_per_day > 0 && (streaks.recent_items_3d / 3) > (streaks.avg_items_per_day * 1.5))
+
+  const velocityVsAvg = streaks.avg_items_per_day > 0
+    ? ((streaks.recent_items_3d / 3) / streaks.avg_items_per_day).toFixed(1)
+    : '0'
+
   return (
     <Card>
       <CardHeader className="pb-2">
@@ -33,24 +41,35 @@ export const StreakCard: React.FC<StreakCardProps> = ({ streaks }) => {
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-3">
-        {/* Win Streak */}
+        {/* Framework Streak */}
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-2">
-            <Zap className={cn('h-4 w-4', getStreakColor(streaks.win_streak))} />
-            <span className="text-sm text-muted-foreground">TOP Streak</span>
+            <Zap className={cn('h-4 w-4', getStreakColor(streaks.framework_streak))} />
+            <span className="text-sm text-muted-foreground">Framework Streak</span>
           </div>
           <div className="flex items-center space-x-1">
-            <span className={cn('font-bold', getStreakColor(streaks.win_streak))}>
-              {streaks.win_streak} {streaks.win_streak === 1 ? 'day' : 'days'}
+            <span className={cn('font-bold', getStreakColor(streaks.framework_streak))}>
+              {streaks.framework_streak} {streaks.framework_streak === 1 ? 'day' : 'days'}
             </span>
-            {getFireEmojis(streaks.win_streak) && (
-              <span className="text-base">{getFireEmojis(streaks.win_streak)}</span>
+            {getFireEmojis(streaks.framework_streak) && (
+              <span className="text-base">{getFireEmojis(streaks.framework_streak)}</span>
             )}
           </div>
         </div>
 
-        {/* Hot Streak Alert */}
-        {streaks.is_hot && (
+        {/* Hot Streak */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-2">
+            <TrendingUp className={cn('h-4 w-4', isHot ? 'text-orange-500' : 'text-muted-foreground')} />
+            <span className="text-sm text-muted-foreground">Hot Streak</span>
+          </div>
+          <span className={cn('font-bold', isHot ? 'text-orange-500' : 'text-muted-foreground')}>
+            {streaks.recent_items_3d} items (3d)
+          </span>
+        </div>
+
+        {/* Hot Streak Alert Banner */}
+        {isHot && (
           <div className="bg-gradient-to-r from-orange-500/20 to-red-500/20 border border-orange-500/30 rounded-lg p-3 animate-pulse">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-2">
@@ -60,22 +79,9 @@ export const StreakCard: React.FC<StreakCardProps> = ({ streaks }) => {
                 </span>
               </div>
               <span className="text-xs text-muted-foreground">
-                {streaks.recent_items_3d} items in 3 days
+                {velocityVsAvg}x your usual pace
               </span>
             </div>
-            <p className="text-xs text-muted-foreground mt-1">
-              {streaks.velocity_vs_avg}x your usual pace
-            </p>
-          </div>
-        )}
-
-        {/* No hot streak - show recent activity */}
-        {!streaks.is_hot && (
-          <div className="text-xs text-muted-foreground">
-            Recent: {streaks.recent_items_3d} items in last 3 days
-            {streaks.velocity_vs_avg > 0 && (
-              <span className="ml-1">({streaks.velocity_vs_avg}x avg)</span>
-            )}
           </div>
         )}
       </CardContent>

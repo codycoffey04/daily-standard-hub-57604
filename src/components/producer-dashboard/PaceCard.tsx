@@ -84,9 +84,14 @@ export const PaceCard: React.FC<PaceCardProps> = ({ pace, vcCountdown }) => {
               style={{ width: `${Math.min(100, (vcCountdown.agency_current / vcCountdown.agency_target) * 100)}%` }}
             />
           </div>
-          <div className="flex justify-between text-xs text-muted-foreground">
-            <span>{vcCountdown.agency_gap} to go</span>
-            <span>Your share: {vcCountdown.producer_contribution_pct}%</span>
+          <div className="flex justify-between items-center text-xs">
+            <span className="text-muted-foreground">{vcCountdown.agency_gap} to go • {vcCountdown.days_remaining} days</span>
+            <div className="flex items-center space-x-1 bg-primary/10 px-2 py-1 rounded-full">
+              <span className="text-primary font-semibold">
+                {vcCountdown.producer_contribution_pct}%
+              </span>
+              <span className="text-muted-foreground">your share</span>
+            </div>
           </div>
         </div>
       </CardContent>
