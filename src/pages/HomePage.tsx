@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button'
 import { DailyEntryForm } from '@/components/DailyEntryForm'
 import { YesterdayStatusBanner } from '@/components/YesterdayStatusBanner'
-import { PacingCard } from '@/components/PacingCard'
+import { ProducerDashboard } from '@/components/producer-dashboard'
 import { Calendar } from 'lucide-react'
 
 const HomePage: React.FC = () => {
@@ -15,7 +15,6 @@ const HomePage: React.FC = () => {
   const [producerData, setProducerData] = useState<any>(null)
   const [todayEntry, setTodayEntry] = useState<any>(null)
   const [yesterdayStatus, setYesterdayStatus] = useState<any>(null)
-  const [mtdMetrics, setMtdMetrics] = useState<any>(null)
 
   useEffect(() => {
     if (profile?.producer_id) {
@@ -25,7 +24,7 @@ const HomePage: React.FC = () => {
 
   const loadProducerData = async () => {
     if (!profile?.producer_id) return
-    
+
     setLoading(true)
     try {
       // Load producer info
@@ -65,15 +64,10 @@ const HomePage: React.FC = () => {
         .eq('producer_id', profile.producer_id)
         .maybeSingle()
 
-      // Load MTD metrics
-      const { data: metrics } = await supabase
-        .rpc('mtd_producer_metrics')
-
       setProducerData(producer)
       setTodayEntry(entry)
       setYesterdayStatus(status)
-      setMtdMetrics(Array.isArray(metrics) ? metrics.find((m: any) => m.producer_id === profile.producer_id) : null)
-      
+
     } catch (error) {
       console.error('Error loading producer data:', error)
     } finally {
@@ -83,6 +77,8 @@ const HomePage: React.FC = () => {
 
   const handleEntrySubmitted = () => {
     loadProducerData() // Refresh data after submission
+    // Trigger dashboard refresh via custom event
+    window.dispatchEvent(new CustomEvent('producer-dashboard-refresh'))
   }
 
   if (loading) {
@@ -190,13 +186,8 @@ const HomePage: React.FC = () => {
               </CardContent>
             </Card>
 
-            {/* MTD Metrics */}
-            {mtdMetrics && (
-              <PacingCard 
-                metrics={mtdMetrics}
-                className=""
-              />
-            )}
+            {/* Producer Dashboard */}
+            <ProducerDashboard producerId={profile?.producer_id} />
           </div>
         </div>
       </div>
