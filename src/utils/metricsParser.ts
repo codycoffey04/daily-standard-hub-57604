@@ -377,7 +377,7 @@ export interface LeadSourceParseResult {
  */
 export interface SourceMapping {
   raw_names: string[]
-  display_name: string
+  mapped_name: string  // Display name in emails
   is_csr: boolean
   attributed_to?: string
 }
@@ -388,14 +388,14 @@ export interface SourceMapping {
 export function applySourceMapping(
   rawName: string,
   mappings: SourceMapping[]
-): { display_name: string; is_csr: boolean; attributed_to?: string } | null {
+): { mapped_name: string; is_csr: boolean; attributed_to?: string } | null {
   const lowerName = rawName.toLowerCase().trim()
 
   for (const mapping of mappings) {
     for (const raw of mapping.raw_names) {
       if (raw.toLowerCase().trim() === lowerName) {
         return {
-          display_name: mapping.display_name,
+          mapped_name: mapping.mapped_name,
           is_csr: mapping.is_csr,
           attributed_to: mapping.attributed_to
         }
@@ -538,7 +538,7 @@ export function combineSourcesByMapping(
 
   for (const source of sources) {
     const mapping = applySourceMapping(source.source_name_raw, mappings)
-    const displayName = mapping?.display_name || source.source_name_raw
+    const displayName = mapping?.mapped_name || source.source_name_raw
     const isCsr = mapping?.is_csr || false
     const attributedTo = mapping?.attributed_to
 
