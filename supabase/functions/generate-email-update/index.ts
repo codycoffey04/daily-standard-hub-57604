@@ -342,10 +342,14 @@ This is NOT a data dump. It's a story about a team trying to hit a goal. The dat
 - Reference specific numbers: "We're at 68 items. Target is 76. 8 days left."
 - If we're ahead: celebrate but don't get soft
 - If we're behind: acknowledge it honestly, then pivot to "here's what we do"
+- **If previous week data exists, build narrative arc**:
+  - "We started January 10 items behind. Week 2, we closed to 2. Now 8 away with 5 days left."
+  - Show the journey: where we were → where we are → where we're going
 - Examples of good hooks:
   - "Alright team — we came into this week down 8 items. Let's talk about how we close that gap."
   - "64 items. 12 to go. 6 workdays. This is the week we decide if we hit VC or not."
   - "Maria is on FIRE. But we've got work to do as a team. Let's break it down."
+  - "Week 1 we were down 12. Week 2 we closed to 6. Now we're 4 away. The momentum is real."
 
 ### 2. Production Table + WoW Deltas
 - Columns: Producer, Items MTD, Premium MTD, Policies, Sales
@@ -379,12 +383,14 @@ This is NOT a data dump. It's a story about a team trying to hit a goal. The dat
 - Rank by Items (highest first)
 - Combine sources per mapping rules (e.g., "Crystal" + "Crystal Brozio" = "Crystal (CSR)")
 - Highlight top source with 🔥
-- Flag low-performing sources with ⚠️
+- Flag Net Leads with ⚠️ if low production (they cost money with low ROI)
+- Walk-Ins are free — don't flag them even if low volume
 
 After the table, add insights:
 - Call out what's producing the most Items and Premium
 - Compare sources: "Referrals: 12 items. Net Leads: 5 items. CSR sources: 8 items."
 - Note which sources punch above their weight (high premium per item)
+- Call out Net Leads ROI if production is low relative to cost
 - DO NOT reference close rates for lead sources — we don't have QHH by source
 - Focus on volume and premium production, not conversion rates
 
