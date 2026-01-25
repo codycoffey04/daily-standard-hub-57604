@@ -431,6 +431,9 @@ After the table, add insights:
 - Tie back to gaps identified in the data
 - Be specific (e.g., "Kimberly: 20 quotes this week")
 - Always include: referrals, cross-sell, follow-ups, Google reviews
+- **Lead Manager terminology**: Lead Manager is our CRM tool for tasks, to-dos, appointments, and follow-ups.
+  - ✅ Correct: "Clear Lead Manager daily — every task, to-do, and follow-up completed"
+  - ❌ Wrong: "Work Lead Manager daily — those leads get cold fast" (leads don't "get cold" in Lead Manager; it's a task management tool)
 
 ### 11. Closing (2-3 sentences MAX)
 - Callback to the opening — tie the narrative together
@@ -574,7 +577,7 @@ ${announcements}` : ''}
 - Life insurance reminder: Send opportunities to Aleeah (need 3 life apps issued by 2/28/2026 for Q1 promo)
 - Always ask for Google reviews on every win
 - Always ask for referrals on every sale
-- Lead Manager should be worked daily`
+- Clear Lead Manager daily (CRM tasks, to-dos, appointments, follow-ups)`
 
     // Call Claude API
     console.log(`Generating ${emailType} email for period ${metrics.period_start}`)
