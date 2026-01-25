@@ -29,10 +29,17 @@ const EmailUpdatesPage: React.FC = () => {
   const {
     metrics,
     isLoading: metricsLoading,
-    rawProductionPaste,
-    setRawProductionPaste,
-    parsedProduction,
-    parseError: productionParseError,
+    // MTD production
+    rawMtdProductionPaste,
+    setRawMtdProductionPaste,
+    parsedMtdProduction,
+    mtdParseError,
+    // Weekly production
+    rawWeeklyProductionPaste,
+    setRawWeeklyProductionPaste,
+    parsedWeeklyProduction,
+    weeklyParseError,
+    // TDS activity
     tdsActivity,
     tdsLoading,
     deltas,
@@ -179,15 +186,19 @@ const EmailUpdatesPage: React.FC = () => {
               <CardHeader>
                 <CardTitle className="text-base">Production Data</CardTitle>
                 <CardDescription>
-                  Upload AgencyZoom producer breakdown (Sales, Items, Premium)
+                  Upload MTD for VC pacing, weekly for WoW deltas
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 <ProductionMetricsInput
-                  rawPaste={rawProductionPaste}
-                  onRawPasteChange={setRawProductionPaste}
-                  parsedMetrics={parsedProduction}
-                  parseError={productionParseError}
+                  rawMtdPaste={rawMtdProductionPaste}
+                  onRawMtdPasteChange={setRawMtdProductionPaste}
+                  parsedMtdMetrics={parsedMtdProduction}
+                  mtdParseError={mtdParseError}
+                  rawWeeklyPaste={rawWeeklyProductionPaste}
+                  onRawWeeklyPasteChange={setRawWeeklyProductionPaste}
+                  parsedWeeklyMetrics={parsedWeeklyProduction}
+                  weeklyParseError={weeklyParseError}
                   onSave={handleSaveProduction}
                   isSaving={isSavingProduction}
                   hasExistingMetrics={!!metrics}

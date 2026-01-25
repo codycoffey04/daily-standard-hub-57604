@@ -669,6 +669,7 @@ export type Database = {
           producer_metrics: Json
           raw_lead_source_paste: string | null
           raw_production_paste: string | null
+          raw_weekly_production_paste: string | null
           tds_activity_metrics: Json | null
           team_items: number | null
           team_policies: number | null
@@ -677,6 +678,11 @@ export type Database = {
           team_quotes: number | null
           team_sales: number | null
           updated_at: string
+          weekly_producer_metrics: Json | null
+          weekly_team_items: number | null
+          weekly_team_policies: number | null
+          weekly_team_premium: number | null
+          weekly_team_sales: number | null
         }
         Insert: {
           created_at?: string
@@ -688,6 +694,7 @@ export type Database = {
           producer_metrics?: Json
           raw_lead_source_paste?: string | null
           raw_production_paste?: string | null
+          raw_weekly_production_paste?: string | null
           tds_activity_metrics?: Json | null
           team_items?: number | null
           team_policies?: number | null
@@ -696,6 +703,11 @@ export type Database = {
           team_quotes?: number | null
           team_sales?: number | null
           updated_at?: string
+          weekly_producer_metrics?: Json | null
+          weekly_team_items?: number | null
+          weekly_team_policies?: number | null
+          weekly_team_premium?: number | null
+          weekly_team_sales?: number | null
         }
         Update: {
           created_at?: string
@@ -707,6 +719,7 @@ export type Database = {
           producer_metrics?: Json
           raw_lead_source_paste?: string | null
           raw_production_paste?: string | null
+          raw_weekly_production_paste?: string | null
           tds_activity_metrics?: Json | null
           team_items?: number | null
           team_policies?: number | null
@@ -715,6 +728,11 @@ export type Database = {
           team_quotes?: number | null
           team_sales?: number | null
           updated_at?: string
+          weekly_producer_metrics?: Json | null
+          weekly_team_items?: number | null
+          weekly_team_policies?: number | null
+          weekly_team_premium?: number | null
+          weekly_team_sales?: number | null
         }
         Relationships: [
           {

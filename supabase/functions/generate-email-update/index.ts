@@ -162,9 +162,15 @@ serve(async (req) => {
       }
     }
 
-    // Calculate comparison data if previous period exists
+    // Calculate WoW deltas using the weekly data (not MTD minus previous MTD)
     let comparisonData: ComparisonData | null = null
     let previousMetrics = null
+
+    // Get weekly production data for WoW deltas
+    const weeklyProducerMetrics = metrics.weekly_producer_metrics as Record<string, ProducerProductionMetrics> || {}
+    const weeklyTeamItems = metrics.weekly_team_items || 0
+    const weeklyTeamPremium = Number(metrics.weekly_team_premium) || 0
+    const weeklyTeamSales = metrics.weekly_team_sales || 0
 
     if (compareWithPreviousPeriod) {
       const prevPeriodStart = new Date(metrics.period_start)
@@ -184,24 +190,27 @@ serve(async (req) => {
       if (prevData) {
         previousMetrics = prevData
 
+        // Use weekly data for WoW comparison
+        const prevWeeklyTeamItems = prevData.weekly_team_items || 0
+        const prevWeeklyTeamPremium = Number(prevData.weekly_team_premium) || 0
+        const prevWeeklyTeamSales = prevData.weekly_team_sales || 0
+        const prevWeeklyProducers = prevData.weekly_producer_metrics as Record<string, ProducerProductionMetrics> || {}
+
         comparisonData = {
-          team_items_delta: (metrics.team_items || 0) - (prevData.team_items || 0),
-          team_items_pct_change: prevData.team_items > 0 ? ((metrics.team_items - prevData.team_items) / prevData.team_items) * 100 : 0,
-          team_premium_delta: Number(metrics.team_premium || 0) - Number(prevData.team_premium || 0),
-          team_premium_pct_change: Number(prevData.team_premium) > 0 ? ((Number(metrics.team_premium) - Number(prevData.team_premium)) / Number(prevData.team_premium)) * 100 : 0,
-          team_sales_delta: (metrics.team_sales || 0) - (prevData.team_sales || 0),
-          team_sales_pct_change: prevData.team_sales > 0 ? ((metrics.team_sales - prevData.team_sales) / prevData.team_sales) * 100 : 0,
+          team_items_delta: weeklyTeamItems - prevWeeklyTeamItems,
+          team_items_pct_change: prevWeeklyTeamItems > 0 ? ((weeklyTeamItems - prevWeeklyTeamItems) / prevWeeklyTeamItems) * 100 : 0,
+          team_premium_delta: weeklyTeamPremium - prevWeeklyTeamPremium,
+          team_premium_pct_change: prevWeeklyTeamPremium > 0 ? ((weeklyTeamPremium - prevWeeklyTeamPremium) / prevWeeklyTeamPremium) * 100 : 0,
+          team_sales_delta: weeklyTeamSales - prevWeeklyTeamSales,
+          team_sales_pct_change: prevWeeklyTeamSales > 0 ? ((weeklyTeamSales - prevWeeklyTeamSales) / prevWeeklyTeamSales) * 100 : 0,
           team_qhh_delta: (metrics.team_qhh || 0) - (prevData.team_qhh || 0),
           team_qhh_pct_change: prevData.team_qhh > 0 ? ((metrics.team_qhh - prevData.team_qhh) / prevData.team_qhh) * 100 : 0,
           producer_deltas: {}
         }
 
-        // Calculate per-producer deltas
-        const currentProducers = metrics.producer_metrics as Record<string, ProducerProductionMetrics>
-        const prevProducers = prevData.producer_metrics as Record<string, ProducerProductionMetrics>
-
-        for (const [key, curr] of Object.entries(currentProducers)) {
-          const prev = prevProducers[key]
+        // Calculate per-producer deltas using weekly data
+        for (const [key, curr] of Object.entries(weeklyProducerMetrics)) {
+          const prev = prevWeeklyProducers[key]
           if (prev) {
             comparisonData.producer_deltas[key] = {
               items_delta: curr.items - prev.items,
@@ -209,6 +218,36 @@ serve(async (req) => {
               premium_delta: curr.premium - prev.premium,
               premium_pct: prev.premium > 0 ? ((curr.premium - prev.premium) / prev.premium) * 100 : 0
             }
+          } else {
+            // No previous data for this producer, delta is just this week's data
+            comparisonData.producer_deltas[key] = {
+              items_delta: curr.items,
+              items_pct: 0,
+              premium_delta: curr.premium,
+              premium_pct: 0
+            }
+          }
+        }
+      } else if (Object.keys(weeklyProducerMetrics).length > 0) {
+        // No previous week data, but we have this week's data
+        comparisonData = {
+          team_items_delta: weeklyTeamItems,
+          team_items_pct_change: 0,
+          team_premium_delta: weeklyTeamPremium,
+          team_premium_pct_change: 0,
+          team_sales_delta: weeklyTeamSales,
+          team_sales_pct_change: 0,
+          team_qhh_delta: metrics.team_qhh || 0,
+          team_qhh_pct_change: 0,
+          producer_deltas: {}
+        }
+
+        for (const [key, curr] of Object.entries(weeklyProducerMetrics)) {
+          comparisonData.producer_deltas[key] = {
+            items_delta: curr.items,
+            items_pct: 0,
+            premium_delta: curr.premium,
+            premium_pct: 0
           }
         }
       }
@@ -414,9 +453,13 @@ IMPORTANT: Return ONLY the JSON object, no additional text or markdown code bloc
       ? `Week of ${new Date(metrics.period_start).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} (as of ${periodEndDateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })})`
       : `${new Date(metrics.period_start).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}`
 
-    // Build WoW deltas string
-    const wowDeltasStr = producerData
-      .map(p => `${p.items_delta >= 0 ? '🔺' : '🔻'} ${p.name} ${p.items_delta >= 0 ? '+' : ''}${p.items_delta} items WoW`)
+    // Build WoW deltas string using weekly data
+    const weeklyWowDeltasStr = Object.entries(weeklyProducerMetrics)
+      .map(([name, data]) => {
+        const delta = comparisonData?.producer_deltas?.[name]
+        const itemsDelta = delta?.items_delta || data.items
+        return `${itemsDelta >= 0 ? '🔺' : '🔻'} ${name} ${itemsDelta >= 0 ? '+' : ''}${itemsDelta} items WoW`
+      })
       .join(' | ')
 
     // Build user prompt with all data
@@ -426,15 +469,21 @@ Generate a ${emailType} team update email for Coffey Agencies.
 ## Period
 ${weekLabel} (${metrics.period_start} to ${metrics.period_end})
 
-## Team Production Data (AgencyZoom - Source of Truth)
-| Producer | Items | Premium | Policies | Sales |
-|----------|-------|---------|----------|-------|
+## MTD Team Production Data (AgencyZoom - Source of Truth for VC Pacing)
+| Producer | Items MTD | Premium MTD | Policies | Sales |
+|----------|-----------|-------------|----------|-------|
 ${producerData.map(p => `| ${p.name} | ${p.items} | $${p.premium.toLocaleString()} | ${p.policies} | ${p.sales} |`).join('\n')}
 | **TEAM** | **${metrics.team_items}** | **$${Number(metrics.team_premium).toLocaleString()}** | **${metrics.team_policies}** | **${metrics.team_sales}** |
 
-${comparisonData ? `**WoW Deltas:** ${wowDeltasStr}
+## This Week's Production (For WoW Deltas)
+| Producer | Items This Week | Premium This Week |
+|----------|-----------------|-------------------|
+${Object.entries(weeklyProducerMetrics).map(([name, data]) => `| ${name} | ${data.items} | $${data.premium.toLocaleString()} |`).join('\n') || '| No weekly data | - | - |'}
+| **TEAM** | **${weeklyTeamItems}** | **$${weeklyTeamPremium.toLocaleString()}** |
 
-Team: ${comparisonData.team_items_delta >= 0 ? '+' : ''}${comparisonData.team_items_delta} items (${comparisonData.team_items_pct_change >= 0 ? '+' : ''}${comparisonData.team_items_pct_change.toFixed(1)}%) WoW` : ''}
+${comparisonData && weeklyTeamItems > 0 ? `**WoW Deltas (This Week vs Last Week):** ${weeklyWowDeltasStr}
+
+Team WoW: ${comparisonData.team_items_delta >= 0 ? '+' : ''}${comparisonData.team_items_delta} items (${comparisonData.team_items_pct_change >= 0 ? '+' : ''}${comparisonData.team_items_pct_change.toFixed(1)}%)` : ''}
 
 ## TDS Activity Data (Quotes & Close Rate)
 | Producer | QHH | Quotes | Sales | Close Rate | Pipeline (Unsold) |

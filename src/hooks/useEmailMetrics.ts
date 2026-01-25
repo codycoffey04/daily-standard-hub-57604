@@ -34,8 +34,19 @@ export function useEmailMetrics(periodStart: Date, periodType: PeriodType = 'wee
   const { toast } = useToast()
   const queryClient = useQueryClient()
 
-  const [rawProductionPaste, setRawProductionPaste] = useState('')
-  const [parseError, setParseError] = useState<string | null>(null)
+  // MTD production paste (for VC pacing)
+  const [rawMtdProductionPaste, setRawMtdProductionPaste] = useState('')
+  const [mtdParseError, setMtdParseError] = useState<string | null>(null)
+
+  // Weekly production paste (for WoW deltas)
+  const [rawWeeklyProductionPaste, setRawWeeklyProductionPaste] = useState('')
+  const [weeklyParseError, setWeeklyParseError] = useState<string | null>(null)
+
+  // Legacy support - alias for backward compatibility
+  const rawProductionPaste = rawMtdProductionPaste
+  const setRawProductionPaste = setRawMtdProductionPaste
+  const parseError = mtdParseError
+  const setParseError = setMtdParseError
 
   const periodStartStr = formatDateForDB(periodStart)
 
@@ -153,56 +164,90 @@ export function useEmailMetrics(periodStart: Date, periodType: PeriodType = 'wee
     enabled: !!periodStartStr && !!periodEndStr
   })
 
-  // Parse raw paste on change
-  const parsedProduction = useMemo<ParsedMetrics | null>(() => {
-    if (!rawProductionPaste.trim()) {
+  // Parse MTD production paste
+  const parsedMtdProduction = useMemo<ParsedMetrics | null>(() => {
+    if (!rawMtdProductionPaste.trim()) {
       return null
     }
 
-    const result = parseAgencyZoomCSV(rawProductionPaste)
+    const result = parseAgencyZoomCSV(rawMtdProductionPaste)
     if (!result.success) {
       return null
     }
 
     return result.data || null
-  }, [rawProductionPaste])
+  }, [rawMtdProductionPaste])
 
-  // Update parse error state separately to avoid infinite loop
+  // Update MTD parse error state separately to avoid infinite loop
   useEffect(() => {
-    if (!rawProductionPaste.trim()) {
-      setParseError(null)
+    if (!rawMtdProductionPaste.trim()) {
+      setMtdParseError(null)
       return
     }
 
-    const result = parseAgencyZoomCSV(rawProductionPaste)
+    const result = parseAgencyZoomCSV(rawMtdProductionPaste)
     if (!result.success) {
-      setParseError(result.error || 'Failed to parse production metrics')
+      setMtdParseError(result.error || 'Failed to parse MTD production metrics')
     } else {
-      setParseError(null)
+      setMtdParseError(null)
     }
-  }, [rawProductionPaste])
+  }, [rawMtdProductionPaste])
+
+  // Parse weekly production paste
+  const parsedWeeklyProduction = useMemo<ParsedMetrics | null>(() => {
+    if (!rawWeeklyProductionPaste.trim()) {
+      return null
+    }
+
+    const result = parseAgencyZoomCSV(rawWeeklyProductionPaste)
+    if (!result.success) {
+      return null
+    }
+
+    return result.data || null
+  }, [rawWeeklyProductionPaste])
+
+  // Update weekly parse error state separately to avoid infinite loop
+  useEffect(() => {
+    if (!rawWeeklyProductionPaste.trim()) {
+      setWeeklyParseError(null)
+      return
+    }
+
+    const result = parseAgencyZoomCSV(rawWeeklyProductionPaste)
+    if (!result.success) {
+      setWeeklyParseError(result.error || 'Failed to parse weekly production metrics')
+    } else {
+      setWeeklyParseError(null)
+    }
+  }, [rawWeeklyProductionPaste])
+
+  // Legacy alias for backward compatibility
+  const parsedProduction = parsedMtdProduction
 
   // Reset raw paste when period changes and we have saved metrics
   useEffect(() => {
     if (metrics) {
-      setRawProductionPaste('')
-      setParseError(null)
+      setRawMtdProductionPaste('')
+      setRawWeeklyProductionPaste('')
+      setMtdParseError(null)
+      setWeeklyParseError(null)
     }
   }, [metrics])
 
   // Save/update mutation
   const saveMutation = useMutation({
     mutationFn: async (options?: { includeTDS?: boolean }) => {
-      // Get production data from either parsed paste or existing metrics
+      // Get MTD production data (for VC pacing) from either parsed paste or existing metrics
       let producerMetrics: Record<string, ProducerProductionMetrics> = {}
       let teamSales = 0
       let teamItems = 0
       let teamPremium = 0
       let teamPolicies = 0
 
-      if (parsedProduction) {
-        // Use newly parsed data
-        for (const [key, pm] of Object.entries(parsedProduction.producers)) {
+      if (parsedMtdProduction) {
+        // Use newly parsed MTD data
+        for (const [key, pm] of Object.entries(parsedMtdProduction.producers)) {
           producerMetrics[key] = {
             sales: pm.sales,
             items: pm.items,
@@ -210,10 +255,10 @@ export function useEmailMetrics(periodStart: Date, periodType: PeriodType = 'wee
             policies: pm.qhh // In AZ CSV, policies = qhh
           }
         }
-        teamSales = parsedProduction.team.sales
-        teamItems = parsedProduction.team.items
-        teamPremium = parsedProduction.team.premium
-        teamPolicies = parsedProduction.team.qhh
+        teamSales = parsedMtdProduction.team.sales
+        teamItems = parsedMtdProduction.team.items
+        teamPremium = parsedMtdProduction.team.premium
+        teamPolicies = parsedMtdProduction.team.qhh
       } else if (metrics?.producer_metrics) {
         // Use existing data
         producerMetrics = metrics.producer_metrics as Record<string, ProducerProductionMetrics>
@@ -221,6 +266,36 @@ export function useEmailMetrics(periodStart: Date, periodType: PeriodType = 'wee
         teamItems = metrics.team_items || 0
         teamPremium = Number(metrics.team_premium) || 0
         teamPolicies = metrics.team_policies || 0
+      }
+
+      // Get weekly production data (for WoW deltas)
+      let weeklyProducerMetrics: Record<string, ProducerProductionMetrics> = {}
+      let weeklyTeamSales = 0
+      let weeklyTeamItems = 0
+      let weeklyTeamPremium = 0
+      let weeklyTeamPolicies = 0
+
+      if (parsedWeeklyProduction) {
+        // Use newly parsed weekly data
+        for (const [key, pm] of Object.entries(parsedWeeklyProduction.producers)) {
+          weeklyProducerMetrics[key] = {
+            sales: pm.sales,
+            items: pm.items,
+            premium: pm.premium,
+            policies: pm.qhh
+          }
+        }
+        weeklyTeamSales = parsedWeeklyProduction.team.sales
+        weeklyTeamItems = parsedWeeklyProduction.team.items
+        weeklyTeamPremium = parsedWeeklyProduction.team.premium
+        weeklyTeamPolicies = parsedWeeklyProduction.team.qhh
+      } else if (metrics?.weekly_producer_metrics) {
+        // Use existing weekly data
+        weeklyProducerMetrics = (metrics.weekly_producer_metrics as Record<string, ProducerProductionMetrics>) || {}
+        weeklyTeamSales = metrics.weekly_team_sales || 0
+        weeklyTeamItems = metrics.weekly_team_items || 0
+        weeklyTeamPremium = Number(metrics.weekly_team_premium) || 0
+        weeklyTeamPolicies = metrics.weekly_team_policies || 0
       }
 
       // Build TDS activity metrics
@@ -242,13 +317,22 @@ export function useEmailMetrics(periodStart: Date, periodType: PeriodType = 'wee
         period_type: periodType,
         period_start: periodStartStr,
         period_end: periodEndStr,
-        raw_production_paste: rawProductionPaste || metrics?.raw_production_paste || null,
+        // MTD production data
+        raw_production_paste: rawMtdProductionPaste || metrics?.raw_production_paste || null,
         producer_metrics: producerMetrics as unknown as Database['public']['Tables']['email_metrics']['Insert']['producer_metrics'],
-        tds_activity_metrics: tdsActivityMetrics as unknown as Database['public']['Tables']['email_metrics']['Insert']['tds_activity_metrics'],
         team_sales: teamSales,
         team_items: teamItems,
         team_premium: teamPremium,
         team_policies: teamPolicies,
+        // Weekly production data
+        raw_weekly_production_paste: rawWeeklyProductionPaste || metrics?.raw_weekly_production_paste || null,
+        weekly_producer_metrics: weeklyProducerMetrics as unknown as Database['public']['Tables']['email_metrics']['Insert']['weekly_producer_metrics'],
+        weekly_team_sales: weeklyTeamSales,
+        weekly_team_items: weeklyTeamItems,
+        weekly_team_premium: weeklyTeamPremium,
+        weekly_team_policies: weeklyTeamPolicies,
+        // TDS activity
+        tds_activity_metrics: tdsActivityMetrics as unknown as Database['public']['Tables']['email_metrics']['Insert']['tds_activity_metrics'],
         team_qhh: teamQhh,
         team_quotes: teamQuotes,
         created_by: user?.id
@@ -314,9 +398,20 @@ export function useEmailMetrics(periodStart: Date, periodType: PeriodType = 'wee
     }
   })
 
-  // Calculate deltas
+  // Calculate WoW deltas using weekly data directly (not MTD minus previous MTD)
   const deltas = useMemo(() => {
-    if (!metrics || !previousMetrics) return null
+    if (!metrics) return null
+
+    // Use weekly data directly for WoW deltas
+    // If previous week's weekly data exists, compare to it
+    // Otherwise just show this week's numbers as the delta
+    const currentWeekItems = metrics.weekly_team_items || 0
+    const currentWeekPremium = Number(metrics.weekly_team_premium) || 0
+    const currentWeekSales = metrics.weekly_team_sales || 0
+
+    const previousWeekItems = previousMetrics?.weekly_team_items || 0
+    const previousWeekPremium = Number(previousMetrics?.weekly_team_premium) || 0
+    const previousWeekSales = previousMetrics?.weekly_team_sales || 0
 
     const calcDelta = (current: number, previous: number) => ({
       delta: current - previous,
@@ -324,10 +419,11 @@ export function useEmailMetrics(periodStart: Date, periodType: PeriodType = 'wee
     })
 
     return {
-      team_items: calcDelta(metrics.team_items || 0, previousMetrics.team_items || 0),
-      team_premium: calcDelta(Number(metrics.team_premium) || 0, Number(previousMetrics.team_premium) || 0),
-      team_sales: calcDelta(metrics.team_sales || 0, previousMetrics.team_sales || 0),
-      team_qhh: calcDelta(metrics.team_qhh || 0, previousMetrics.team_qhh || 0)
+      // Weekly deltas (WoW comparison)
+      team_items: calcDelta(currentWeekItems, previousWeekItems),
+      team_premium: calcDelta(currentWeekPremium, previousWeekPremium),
+      team_sales: calcDelta(currentWeekSales, previousWeekSales),
+      team_qhh: calcDelta(metrics.team_qhh || 0, previousMetrics?.team_qhh || 0)
     }
   }, [metrics, previousMetrics])
 
@@ -335,14 +431,28 @@ export function useEmailMetrics(periodStart: Date, periodType: PeriodType = 'wee
     metrics,
     isLoading,
     error,
+    // MTD production (for VC pacing)
+    rawMtdProductionPaste,
+    setRawMtdProductionPaste,
+    parsedMtdProduction,
+    mtdParseError,
+    // Weekly production (for WoW deltas)
+    rawWeeklyProductionPaste,
+    setRawWeeklyProductionPaste,
+    parsedWeeklyProduction,
+    weeklyParseError,
+    // Legacy aliases for backward compatibility
     rawProductionPaste,
     setRawProductionPaste,
     parsedProduction,
     parseError,
+    // TDS activity
     tdsActivity,
     tdsLoading,
+    // Comparison data
     previousMetrics,
     deltas,
+    // Actions
     saveMetrics: (options?: { includeTDS?: boolean }) => saveMutation.mutate(options),
     isSaving: saveMutation.isPending,
     refetch,

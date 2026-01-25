@@ -6,7 +6,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
-import { AlertCircle, Save, RefreshCw, Upload, FileText, CheckCircle, User } from 'lucide-react'
+import { AlertCircle, Save, RefreshCw, Upload, FileText, CheckCircle, User, BarChart3 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { formatPremium, type LeadSourceMetrics } from '@/utils/metricsParser'
 
@@ -102,7 +102,10 @@ Source names will be automatically mapped (e.g., "Crystal" + "Crystal Brozio" �
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h3 className="text-sm font-medium">AgencyZoom Lead Source Data</h3>
+        <div className="flex items-center gap-2">
+          <BarChart3 className="h-4 w-4 text-purple-500" />
+          <h3 className="text-sm font-medium">MTD Lead Sources</h3>
+        </div>
         {hasExistingData && (
           <span className="text-xs text-green-600 flex items-center gap-1">
             <CheckCircle className="h-3 w-3" />
@@ -110,6 +113,10 @@ Source names will be automatically mapped (e.g., "Crystal" + "Crystal Brozio" �
           </span>
         )}
       </div>
+
+      <p className="text-xs text-muted-foreground">
+        AgencyZoom → Reports → Sales → Group by Lead Source → Filter: January 1 - today → Export CSV
+      </p>
 
       <Tabs defaultValue="csv" className="w-full">
         <TabsList className="grid w-full grid-cols-2">
