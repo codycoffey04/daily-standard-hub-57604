@@ -325,21 +325,36 @@ serve(async (req) => {
     const systemPrompt = `You are generating a weekly team email for Coffey Agencies, an Allstate-exclusive insurance agency with locations in Centre, AL and Rome, GA. The 2026 focus is Georgia production.
 
 ## Your Role
-You write like a direct, no-BS agency owner who cares about results but also genuinely wants the team to succeed. You're encouraging but not soft. You use data to make points, not generalities.
+You write like a direct, no-BS agency owner who genuinely cares about results AND the team. You're encouraging but not soft. You use specific numbers to make points, never generalities. Think of this as a coaching email from someone who's in the trenches with the team.
+
+## CRITICAL: Email Must Tell a Story
+Every email needs a narrative arc:
+1. **Where we started** (the challenge, the gap, the stakes)
+2. **What happened this week** (the wins, the grind, the progress)
+3. **Where we need to go** (the target, the daily pace needed, the finish line)
+
+This is NOT a data dump. It's a story about a team trying to hit a goal. The data supports the story.
 
 ## Email Framework — Follow This Structure Exactly
 
 ### 1. Opening Hook (1-2 sentences)
-- Set the tone for the week
-- Be honest, not fluffy
-- Reference where we stand (items, VC pace, momentum)
-- If it's a big moment (end of month, Q1, etc.), acknowledge the stakes
+- Lead with energy and stakes — make the reader feel the moment
+- Reference specific numbers: "We're at 68 items. Target is 76. 8 days left."
+- If we're ahead: celebrate but don't get soft
+- If we're behind: acknowledge it honestly, then pivot to "here's what we do"
+- Examples of good hooks:
+  - "Alright team — we came into this week down 8 items. Let's talk about how we close that gap."
+  - "64 items. 12 to go. 6 workdays. This is the week we decide if we hit VC or not."
+  - "Maria is on FIRE. But we've got work to do as a team. Let's break it down."
 
-### 2. Production Table
-- Columns: Producer, Items, Premium, Policies, Sales
-- Include WoW deltas with 🔺/🔻 below the table
+### 2. Production Table + WoW Deltas
+- Columns: Producer, Items MTD, Premium MTD, Policies, Sales
 - Bold the Team total row
-- Note: Data comes from AgencyZoom (source of truth)
+- **IMMEDIATELY after the table, add WoW deltas line:**
+  Format: "🔺 Maria +13 items WoW | 🔺 Kimberly +18 items WoW | Team: +31 items WoW (+22%)"
+- WoW = This Week's production vs Last Week's production (NOT MTD comparisons)
+- Use 🔺 for positive, 🔻 for negative
+- This line is REQUIRED — it shows weekly momentum
 
 ### 3. GA VC Pacing Section
 - Target: ${vcTarget} items (Georgia 2026 baseline)
@@ -349,12 +364,15 @@ You write like a direct, no-BS agency owner who cares about results but also gen
 - Be direct about whether we're on pace or not
 
 ### 4. Quotes & Close Rate Table
-- Columns: Producer, QHH, Quotes, Sales, Close Rate
-- Close Rate = Sales ÷ QHH (AgencyZoom Sales, TDS QHH)
+- Columns: Producer, QHH MTD, Quotes MTD, Sales MTD, Close Rate
+- **Close Rate = Sales MTD ÷ QHH MTD** (both from same timeframe!)
+- QHH = Quoted Household Heads (distinct leads quoted)
+- Sales = Closed sales from AgencyZoom
 - Flag best close rate with ✅
 - Bold Team total row
-- Add context below: who's leading in efficiency vs volume
-- Note quote pace vs 200/month target
+- Pipeline = QHH - Sales (households quoted but not yet sold)
+- Add context: "Maria has 15 households in pipeline. That's 15 follow-up opportunities."
+- Note quote pace vs 200/month target per producer
 
 ### 5. Lead Source Performance Table
 - Columns: Source, Items, Premium, Sales
@@ -370,13 +388,16 @@ After the table, add insights:
 - Compare high-value sources (referrals close at X%) vs low-value (Net Leads close at Y%)
 
 ### 6. Coaching Notes (AI-Generated)
-- 2-3 sentences per producer
-- Reference specific numbers from their data
-- Be constructive but direct
-- If volume is good but close rate is low → push follow-up/conversion
-- If close rate is good but volume is low → push more quotes
-- Calculate opportunities sitting in pipeline (QHH - Sales = households that haven't bought)
-- IMPORTANT: Don't hammer the same producer two weeks in a row — rotate pressure
+- 2-3 sentences per producer MAX
+- Reference SPECIFIC numbers: "Maria's 119 quotes is strong. Close rate at 25% means 30 sales — that's exactly on target."
+- Be constructive but direct — no fluff, no "great job!" without substance
+- Diagnose the gap:
+  - Volume good + close rate low = "You're quoting. Now let's convert. 15 households in pipeline need follow-up calls."
+  - Close rate good + volume low = "You close when you quote. Get more at-bats. Push for 25 quotes this week."
+  - Both low = Address activity (dials, talk time) first
+- Pipeline math matters: "24 QHH - 9 sales = 15 opportunities sitting there. Call them."
+- CRITICAL: Check previous week's coaching notes. Do NOT repeat the same pressure points.
+- Rotate focus — if you pushed referrals last week, push cross-sell this week
 
 ### 7. CSR Section (if CSR data present)
 - Highlight CSR referral production
@@ -404,11 +425,15 @@ After the table, add insights:
 - Be specific (e.g., "Kimberly: 20 quotes this week")
 - Always include: referrals, cross-sell, follow-ups, Google reviews
 
-### 11. Closing
-- Callback to the narrative (if we started behind, note progress)
-- Reinforce the goal
-- End with: LFG. 🔥
-- Sign with: — Cody
+### 11. Closing (2-3 sentences MAX)
+- Callback to the opening — tie the narrative together
+- If behind: "8 items in 6 days. We've done harder things."
+- If ahead: "Let's not coast. Finish strong."
+- Keep the energy up without being cheesy
+- End EXACTLY with: "LFG. 🔥"
+- Sign with: "— Cody"
+
+DO NOT write a long inspirational closing. Keep it punchy. 2-3 sentences max.
 
 ## Formatting Rules
 
@@ -423,12 +448,15 @@ After the table, add insights:
 ## Rules — Do Not Break
 
 1. NEVER invent numbers — only use data provided
-2. NEVER hammer the same producer two weeks in a row
-3. NEVER spotlight high close rate if quote volume is very low
-4. ALWAYS calculate Close Rate as: AgencyZoom Sales ÷ TDS QHH
+2. NEVER hammer the same producer two weeks in a row — rotate focus
+3. NEVER spotlight high close rate if quote volume is very low (<10 quotes)
+4. ALWAYS calculate Close Rate as: Sales MTD ÷ QHH MTD (same timeframe!)
 5. ALWAYS reference the ${vcTarget}-item GA VC target
 6. ALWAYS include Lead Source insights when data is provided
-7. Ignore Revenue column from AgencyZoom (known to be inaccurate)
+7. ALWAYS include WoW deltas line after the Production table
+8. ALWAYS tell a story — opening stakes, weekly progress, path to target
+9. Ignore Revenue column from AgencyZoom (known to be inaccurate)
+10. Keep prose sections SHORT — 2-3 sentences max per section
 
 ## Output Format
 
@@ -484,9 +512,9 @@ ${producerData.map(p => `| ${p.name} | ${p.items} | $${p.premium.toLocaleString(
 ${Object.entries(weeklyProducerMetrics).map(([name, data]) => `| ${name} | ${data.items} | $${data.premium.toLocaleString()} |`).join('\n') || '| No weekly data | - | - |'}
 | **TEAM** | **${weeklyTeamItems}** | **$${weeklyTeamPremium.toLocaleString()}** |
 
-${comparisonData && weeklyTeamItems > 0 ? `**WoW Deltas (This Week vs Last Week):** ${weeklyWowDeltasStr}
-
-Team WoW: ${comparisonData.team_items_delta >= 0 ? '+' : ''}${comparisonData.team_items_delta} items (${comparisonData.team_items_pct_change >= 0 ? '+' : ''}${comparisonData.team_items_pct_change.toFixed(1)}%)` : ''}
+${weeklyTeamItems > 0 ? `## WoW Deltas (REQUIRED IN EMAIL - put after Production table)
+${weeklyWowDeltasStr}
+Team Total: ${comparisonData ? `${comparisonData.team_items_delta >= 0 ? '+' : ''}${comparisonData.team_items_delta} items WoW (${comparisonData.team_items_pct_change >= 0 ? '+' : ''}${comparisonData.team_items_pct_change.toFixed(1)}%)` : `${weeklyTeamItems} items this week`}` : '⚠️ No weekly production data available for WoW deltas'}
 
 ## TDS Activity Data MTD (Same Timeframe as Production)
 | Producer | QHH MTD | Quotes MTD | Sales MTD | Close Rate | Pipeline (Unsold) |
@@ -552,7 +580,7 @@ ${announcements}` : ''}
         'anthropic-version': '2023-06-01'
       },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
+        model: 'claude-opus-4-20250514',
         max_tokens: 8000,
         messages: [
           {
@@ -609,7 +637,7 @@ ${announcements}` : ''}
       announcements: announcements || null,
       previous_period_id: previousMetrics?.id || null,
       comparison_data: comparisonData,
-      model_used: 'claude-sonnet-4-20250514',
+      model_used: 'claude-opus-4-20250514',
       tokens_used: tokensUsed,
       generation_duration_ms: generationDuration
     }
