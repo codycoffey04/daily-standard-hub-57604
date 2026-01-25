@@ -52,6 +52,20 @@
 - Don't confuse pace projection with % of target — they're different metrics
 - See commit `e0803fa` for the fix
 
+### Workday Calculation (Mon-Fri Only)
+```sql
+-- Total workdays in month
+SELECT COUNT(*) FROM generate_series(month_start, month_end, '1 day') d
+WHERE EXTRACT(DOW FROM d) NOT IN (0, 6);
+
+-- Elapsed workdays (up to today)
+SELECT COUNT(*) FROM generate_series(month_start, CURRENT_DATE, '1 day') d
+WHERE EXTRACT(DOW FROM d) NOT IN (0, 6);
+```
+- DOW 0 = Sunday, DOW 6 = Saturday
+- ❌ Don't use `EXTRACT(DAY FROM date)` or hardcoded 20 workdays
+- See commit `b8c193b` for the fix
+
 ### WoW Deltas
 - **Need separate data uploads**: MTD production AND Weekly production
 - WoW = This week's production vs last week's production
@@ -264,3 +278,23 @@ When completing a session, add entry below:
 - Check Claude API capabilities before building complex extraction pipelines
 - Always verify database constraints before inserting values
 - Use Opus for both coaching episodes and email generation (flagship quality standard)
+
+### 2026-01-25 — Producer Dashboard Feature
+**What was done:**
+- Built producer-facing dashboard with motivational metrics (social comparison, loss aversion, streak protection)
+- Components: ScorecardCard, TeamStandingsCard, PaceCard, StreakCard
+- RPC function `get_producer_dashboard` returning JSON with scorecard, team standings, pace, VC countdown, streaks
+- Bug fixes: workday calculation, framework streak logic, close rate column
+
+**What was learned:**
+- **Workday calculation requires actual business day math** — don't use `EXTRACT(DAY FROM date)` or hardcoded constants
+- Use `generate_series` with `EXTRACT(DOW) NOT IN (0, 6)` for Mon-Fri only
+- **Framework Streak = consecutive TOP OR BOTTOM days** (both = "in framework", not just TOP)
+- Close rate color thresholds should be relative to agency average (~25%), not arbitrary cutoffs
+- ≥30% = excellent (green), ≥22% = good (default), ≥15% = needs attention (yellow), <15% = critical (red)
+- `entry_status` view has `framework_status` values: 'Top', 'Bottom', 'Outside' (capitalized)
+
+**What to do differently:**
+- Always verify placeholder implementations before assuming they work
+- Test dashboard with real producer data, not just dev seed data
+- Consider UI psychology: producer share % needs prominence to drive competition
