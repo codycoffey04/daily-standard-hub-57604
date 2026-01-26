@@ -53,6 +53,8 @@ export interface ProducerDashboardStreaks {
   framework_streak: number
   recent_items_3d: number
   avg_items_per_day: number
+  is_hot: boolean
+  velocity_vs_avg: number
 }
 
 export interface ProducerDashboardData {
@@ -144,6 +146,14 @@ function parseProducerDashboardData(raw: unknown): ProducerDashboardData | null 
       framework_streak: toNum(streaks.framework_streak),
       recent_items_3d: toNum(streaks.recent_items_3d),
       avg_items_per_day: toNum(streaks.avg_items_per_day),
+      // Calculate is_hot: 6+ items in last 3 days AND above monthly average pace
+      is_hot: toNum(streaks.recent_items_3d) >= 6 &&
+              toNum(streaks.avg_items_per_day) > 0 &&
+              (toNum(streaks.recent_items_3d) / 3) > toNum(streaks.avg_items_per_day),
+      // Calculate velocity_vs_avg: how many times faster than usual
+      velocity_vs_avg: toNum(streaks.avg_items_per_day) > 0
+        ? Math.round((toNum(streaks.recent_items_3d) / 3 / toNum(streaks.avg_items_per_day)) * 10) / 10
+        : 0,
     },
   }
 }

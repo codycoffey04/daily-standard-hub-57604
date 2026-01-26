@@ -14,12 +14,9 @@ import { ProducerSourceMatrixQuotesReport } from '@/components/reports/ProducerS
 import { SourceROICalculatorReport } from '@/components/reports/SourceROICalculatorReport'
 import { SalesByProducerReport } from '@/components/reports/SalesByProducerReport'
 import { ProducerTrendsReport } from '@/components/reports/ProducerTrendsReport'
-import { ReviewSummaryReport } from '@/components/reports/ReviewSummaryReport'
-import CommonWeakPointsReport from '@/components/reports/CommonWeakPointsReport'
 import MonthlySummaryReport from '@/components/reports/MonthlySummaryReport'
 import { ExecutionFunnelReport } from '@/components/reports/ExecutionFunnelReport'
 import YTDPerformanceReport from '@/components/reports/YTDPerformanceReport'
-import { CoachingEffectivenessReport } from '@/components/reports/CoachingEffectivenessReport'
 import { ZipCodePerformanceReport } from '@/components/reports/ZipCodePerformanceReport'
 import { WeeklyProducerSummaryReport } from '@/components/reports/WeeklyProducerSummaryReport'
 import { reportCategories, getReportById } from '@/config/reportConfig'
@@ -80,18 +77,12 @@ const ReportContent: React.FC<ReportContentProps> = ({
       return <SalesByProducerReport selectedYear={selectedYear} selectedMonth={selectedMonth} onExportReady={onExportReady} />
     case 'producer-trends':
       return <ProducerTrendsReport selectedYear={selectedYear} selectedMonth={selectedMonth} onExportReady={onExportReady} />
-    case 'review-summary':
-      return <ReviewSummaryReport selectedYear={selectedYear} selectedMonth={selectedMonth} onExportReady={onExportReady} />
-    case 'common-weak-points':
-      return <CommonWeakPointsReport selectedYear={selectedYear} selectedMonth={selectedMonth} onExportReady={onExportReady} />
     case 'conversion-funnel':
       return <ExecutionFunnelReport selectedYear={selectedYear} selectedMonth={selectedMonth} onExportReady={onExportReady} />
     case 'ytd-performance':
       return <YTDPerformanceReport selectedYear={selectedYear} onExportReady={onExportReady} />
     case 'zip-code-performance':
       return <ZipCodePerformanceReport selectedYear={selectedYear} selectedMonth={selectedMonth} onExportReady={onExportReady} />
-    case 'coaching-effectiveness':
-      return <CoachingEffectivenessReport selectedYear={selectedYear} selectedMonth={selectedMonth} onExportReady={onExportReady} />
     case 'weekly-producer-summary':
       return <WeeklyProducerSummaryReport selectedYear={selectedYear} selectedMonth={selectedMonth} onExportReady={onExportReady} />
     default:

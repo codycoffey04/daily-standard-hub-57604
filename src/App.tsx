@@ -18,9 +18,8 @@ import TeamPage from "./pages/TeamPage";
 import SourcesPage from "./pages/SourcesPage";
 import SummariesPage from "./pages/SummariesPage";
 import ImporterPage from "./pages/ImporterPage";
-import { AccountabilityReviewsPage } from "./pages/AccountabilityReviewsPage";
 import SalesServicePage from "./pages/SalesServicePage";
-import { AdminReviewsPage } from "./pages/AdminReviewsPage";
+import { PatternInsightsPage } from "./pages/PatternInsightsPage";
 import CoachingPage from "./pages/CoachingPage";
 import EmailUpdatesPage from "./pages/EmailUpdatesPage";
 import NotFound from "./pages/NotFound";
@@ -113,24 +112,14 @@ const App = () => (
                   }
                 />
                 <Route
-                  path="/accountability" 
-                  element={
-                    <ProtectedRoute>
-                      <AppLayout>
-                        <AccountabilityReviewsPage />
-                      </AppLayout>
-                    </ProtectedRoute>
-                  } 
-                />
-                <Route 
-                  path="/admin/reviews" 
+                  path="/insights"
                   element={
                     <ProtectedRoute requiresOwnerManager>
                       <AppLayout>
-                        <AdminReviewsPage />
+                        <PatternInsightsPage />
                       </AppLayout>
                     </ProtectedRoute>
-                  } 
+                  }
                 />
                 <Route 
                   path="/sources" 

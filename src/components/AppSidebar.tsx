@@ -9,7 +9,7 @@ import {
   BarChart,
   Upload,
   ClipboardCheck,
-  Database,
+  Brain,
   Menu,
   X,
   Home,
@@ -68,15 +68,9 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({ collapsed, onToggle }) =
       allowedRoles: ['owner', 'manager']
     },
     {
-      href: '/accountability', 
-      label: 'Accountability', 
-      icon: ClipboardCheck,
-      allowedRoles: ['owner', 'manager', 'reviewer']
-    },
-    { 
-      href: '/admin/reviews', 
-      label: 'Admin Reviews', 
-      icon: Database,
+      href: '/insights',
+      label: 'Pattern Insights',
+      icon: Brain,
       allowedRoles: ['owner', 'manager']
     },
     { 

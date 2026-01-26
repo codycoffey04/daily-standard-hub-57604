@@ -4,6 +4,7 @@ import { ScorecardCard } from './ScorecardCard'
 import { TeamStandingsCard } from './TeamStandingsCard'
 import { PaceCard } from './PaceCard'
 import { StreakCard } from './StreakCard'
+import { AlertsCard } from '@/components/patterns/AlertsCard'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Card, CardContent } from '@/components/ui/card'
 import { AlertCircle } from 'lucide-react'
@@ -107,6 +108,9 @@ export const ProducerDashboard: React.FC<ProducerDashboardProps> = ({ producerId
           </p>
         </div>
       )}
+
+      {/* Pattern Alerts - only renders if patterns exist */}
+      <AlertsCard producerId={producerId} />
 
       {/* Scorecard */}
       <ScorecardCard scorecard={data.scorecard} />

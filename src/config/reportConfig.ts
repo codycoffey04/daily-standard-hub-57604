@@ -1,14 +1,11 @@
 import {
   BarChart3,
   TrendingUp,
-  Users,
   Target,
   Database,
   PieChart,
   Calculator,
   UserCheck,
-  ClipboardList,
-  Award,
   MessageSquare,
   MapPin,
   Calendar
@@ -184,36 +181,6 @@ export const reportCategories: ReportCategory[] = [
       }
     ]
   },
-  {
-    id: 'accountability-insights',
-    title: 'Accountability Insights',
-    reports: [
-      {
-        id: 'review-summary',
-        title: 'Review Summary',
-        icon: ClipboardList,
-        description: 'Summary of accountability reviews',
-        component: 'ReviewSummaryReport',
-        category: 'accountability-insights'
-      },
-      {
-        id: 'common-weak-points',
-        title: 'Common Weak Points',
-        icon: MessageSquare,
-        description: 'Most frequent areas for improvement',
-        component: 'CommonWeakPointsReport',
-        category: 'accountability-insights'
-      },
-      {
-        id: 'coaching-effectiveness',
-        title: 'Coaching Effectiveness',
-        icon: Award,
-        description: 'Measure coaching impact and improvement',
-        component: 'CoachingEffectivenessReport',
-        category: 'accountability-insights'
-      }
-    ]
-  }
 ]
 
 export const getReportById = (id: string): ReportConfig | undefined => {

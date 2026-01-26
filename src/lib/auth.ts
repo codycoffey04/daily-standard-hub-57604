@@ -50,17 +50,14 @@ export const isReviewer = (profile: Profile | null): boolean => {
   return profile?.role === 'reviewer'
 }
 
-export const canAccessAccountabilityReviews = (profile: Profile | null): boolean => {
-  return profile?.role === 'reviewer' || profile?.role === 'manager' || profile?.role === 'owner'
-}
-
 export const getRedirectPath = (profile: Profile | null): string => {
   if (!profile) return '/login'
-  
+
   if (isOwnerManager(profile)) {
     return '/team'
   } else if (isReviewer(profile)) {
-    return '/accountability'
+    // Reviewers no longer have dedicated accountability page - redirect to producer view
+    return '/producer'
   } else if (profile.role === 'sales_service') {
     return '/sales-service'
   } else {
