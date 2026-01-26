@@ -595,6 +595,50 @@ export type Database = {
           },
         ]
       }
+      detected_patterns: {
+        Row: {
+          auto_resolved: boolean | null
+          context: Json
+          created_at: string | null
+          detected_at: string
+          id: string
+          pattern_type: string
+          producer_id: string
+          resolved_at: string | null
+          severity: string
+        }
+        Insert: {
+          auto_resolved?: boolean | null
+          context?: Json
+          created_at?: string | null
+          detected_at?: string
+          id?: string
+          pattern_type: string
+          producer_id: string
+          resolved_at?: string | null
+          severity: string
+        }
+        Update: {
+          auto_resolved?: boolean | null
+          context?: Json
+          created_at?: string | null
+          detected_at?: string
+          id?: string
+          pattern_type?: string
+          producer_id?: string
+          resolved_at?: string | null
+          severity?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "detected_patterns_producer_id_fkey"
+            columns: ["producer_id"]
+            isOneToOne: false
+            referencedRelation: "producers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       email_lead_source_metrics: {
         Row: {
           attributed_to: string | null
@@ -1556,6 +1600,18 @@ export type Database = {
         }[]
       }
       elapsed_working_days_in_month: { Args: { d: string }; Returns: number }
+      get_all_active_patterns: {
+        Args: never
+        Returns: {
+          context: Json
+          detected_at: string
+          id: string
+          pattern_type: string
+          producer_id: string
+          producer_name: string
+          severity: string
+        }[]
+      }
       get_coaching_effectiveness_metrics: {
         Args: { p_days_back?: number }
         Returns: Json
@@ -1644,6 +1700,16 @@ export type Database = {
           qhh: number
         }[]
       }
+      get_failing_zips_v2: {
+        Args: { p_lookback_days?: number }
+        Returns: {
+          producer_id: string
+          producer_name: string
+          quotes: number
+          sales: number
+          zip_code: string
+        }[]
+      }
       get_focus_week_number: {
         Args: { cycle_start_date?: string; target_date: string }
         Returns: number
@@ -1706,6 +1772,17 @@ export type Database = {
         Args: never
         Returns: Database["public"]["Enums"]["app_role"][]
       }
+      get_outside_streaks: {
+        Args: { p_lookback_days?: number }
+        Returns: {
+          avg_metrics: Json
+          producer_id: string
+          producer_name: string
+          streak_days: number
+          streak_end: string
+          streak_start: string
+        }[]
+      }
       get_producer_baseline: {
         Args: { p_days_back?: number; p_producer_id: string }
         Returns: Json
@@ -1734,6 +1811,10 @@ export type Database = {
       }
       get_producer_current: {
         Args: { p_days_back?: number; p_producer_id: string }
+        Returns: Json
+      }
+      get_producer_dashboard: {
+        Args: { p_date?: string; p_producer_id: string }
         Returns: Json
       }
       get_producer_execution_leaderboard: {
@@ -1768,6 +1849,16 @@ export type Database = {
           total_premium: number
           total_qhh: number
           total_shh: number
+        }[]
+      }
+      get_producer_patterns: {
+        Args: { p_producer_id: string }
+        Returns: {
+          context: Json
+          detected_at: string
+          id: string
+          pattern_type: string
+          severity: string
         }[]
       }
       get_producer_progress: { Args: { p_days_back?: number }; Returns: Json }
@@ -1830,6 +1921,18 @@ export type Database = {
               zip_code: string
             }[]
           }
+      get_source_failure_streaks: {
+        Args: { p_lookback_days?: number }
+        Returns: {
+          last_item_date: string
+          producer_id: string
+          producer_name: string
+          source_id: string
+          source_name: string
+          streak_days: number
+          total_qhh: number
+        }[]
+      }
       get_source_roi:
         | {
             Args: {
@@ -1878,6 +1981,17 @@ export type Database = {
           policies_sold: number
           qhh: number
           ym: string
+        }[]
+      }
+      get_zero_item_streaks: {
+        Args: { p_lookback_days?: number }
+        Returns: {
+          producer_id: string
+          producer_name: string
+          streak_days: number
+          streak_end: string
+          streak_start: string
+          total_qhh_during_streak: number
         }[]
       }
       get_zip_performance: {
@@ -1933,6 +2047,10 @@ export type Database = {
       refresh_rollups_for_key: {
         Args: { p_entry_date: string; p_producer_id: string }
         Returns: undefined
+      }
+      resolve_pattern: {
+        Args: { p_auto?: boolean; p_pattern_id: string }
+        Returns: boolean
       }
       rpc_get_execution_benchmarks_by_source: {
         Args: {

@@ -99,7 +99,7 @@ export function useProducerPatterns(producerId: string | null | undefined) {
     queryFn: async (): Promise<DetectedPattern[]> => {
       if (!producerId) return []
 
-      const { data, error } = await (supabase.rpc as any)('get_producer_patterns', {
+      const { data, error } = await supabase.rpc('get_producer_patterns', {
         p_producer_id: producerId,
       })
 
@@ -108,7 +108,7 @@ export function useProducerPatterns(producerId: string | null | undefined) {
         throw error
       }
 
-      return (data || []) as unknown as DetectedPattern[]
+      return (data || []) as DetectedPattern[]
     },
     enabled: !!producerId,
     staleTime: 60000, // 1 minute
@@ -123,14 +123,14 @@ export function useAllActivePatterns() {
   return useQuery({
     queryKey: ['all-active-patterns'],
     queryFn: async (): Promise<DetectedPatternWithProducer[]> => {
-      const { data, error } = await (supabase.rpc as any)('get_all_active_patterns')
+      const { data, error } = await supabase.rpc('get_all_active_patterns')
 
       if (error) {
         console.error('Error fetching all patterns:', error)
         throw error
       }
 
-      return (data || []) as unknown as DetectedPatternWithProducer[]
+      return (data || []) as DetectedPatternWithProducer[]
     },
     staleTime: 60000, // 1 minute
     refetchOnWindowFocus: true,

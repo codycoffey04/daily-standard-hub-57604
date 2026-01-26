@@ -164,7 +164,7 @@ export function useProducerDashboard(producerId: string | null | undefined) {
     queryFn: async (): Promise<ProducerDashboardData | null> => {
       if (!producerId) return null
 
-      const { data, error } = await (supabase.rpc as any)('get_producer_dashboard', {
+      const { data, error } = await supabase.rpc('get_producer_dashboard', {
         p_producer_id: producerId,
       })
 

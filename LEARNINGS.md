@@ -1,7 +1,7 @@
 # LEARNINGS.md - The Daily Standard (TDS)
 
 > Institutional memory that compounds. Check before starting any task. Update after every session.
-> Last updated: January 25, 2026 (audited)
+> Last updated: January 26, 2026
 
 ---
 
@@ -103,10 +103,15 @@ WHERE EXTRACT(DOW FROM d) NOT IN (0, 6);
 
 ### Schema Change Workflow
 1. Run SQL migration in Supabase SQL Editor
-2. Tell Lovable: "Schema updated, regenerate types"
-3. Verify types regenerated in `src/integrations/supabase/types.ts`
-4. THEN prompt for frontend changes
+2. **Regenerate types immediately**:
+   ```bash
+   npx supabase gen types typescript --project-id trzeeacscqjklxnyvmnb --schema public > src/integrations/supabase/types.ts
+   ```
+3. Verify new tables/RPCs appear in types.ts
+4. THEN prompt Lovable for frontend changes
 - Skipping type regeneration causes cascading TypeScript errors
+- **Lovable's dev build is lenient** — errors only surface in production build
+- If Lovable adds `as any` casts, types are missing — regenerate first
 
 ### RLS & Security
 - **Never** store roles in `profiles.role` — use separate `user_roles` table
@@ -298,3 +303,43 @@ When completing a session, add entry below:
 - Always verify placeholder implementations before assuming they work
 - Test dashboard with real producer data, not just dev seed data
 - Consider UI psychology: producer share % needs prominence to drive competition
+
+### 2026-01-26 — AI Pattern Detection System
+**What was done:**
+- Replaced Crystal's manual accountability review workflow with automated AI pattern detection
+- Created `detected_patterns` table with 4 pattern types: low_conversion, source_failing, outside_streak, zero_item_streak
+- Built `detect-patterns` Edge Function for nightly batch processing
+- Added PatternInsightsPage for managers, AlertsCard for producer dashboard
+- Removed ~4,000 lines of dead code from manual review system
+- Scheduled pg_cron job for 11:30 PM CT daily
+- Upgraded Supabase MCP from read-only postgres driver to official `@supabase/mcp-server-supabase` with write access
+
+**What was learned:**
+- **RLS policies must use correct table relationships** — `producers` table doesn't have `user_id`, link is through `profiles.producer_id`
+- **`@modelcontextprotocol/server-postgres` is read-only** — use `@supabase/mcp-server-supabase` for write operations
+- **Supabase access tokens vs service role keys**: Access token (sbp_*) = Management API for MCP; Service role key (JWT) = for Edge Functions
+- Edge functions need service role key in Authorization header for pg_cron HTTP calls
+- Pattern detection runs 11:30 PM CT = 5:30 AM UTC (cron: `30 5 * * *`)
+
+**What to do differently:**
+- Always verify table schema before writing RLS policies (`\d tablename` or check information_schema)
+- Test RLS policies with actual user roles, not just service role
+- For automated workflows, prefer Edge Functions + pg_cron over client-side scheduled tasks
+
+### 2026-01-26 — Supabase Type Regeneration After RPCs
+**What was done:**
+- Added zip_failing pattern detection (new pattern type, RPC function, UI)
+- Fixed migration history mismatch (37+ orphaned migrations marked as reverted)
+- Regenerated types.ts after Lovable reported 11 build errors
+
+**What was learned:**
+- **Always regenerate types.ts after adding database objects** — Lovable's dev build doesn't enforce strict types
+- 7 new RPC functions were missing from types.ts: get_failing_zips_v2, get_producer_patterns, get_all_active_patterns, etc.
+- Lovable added `(supabase.rpc as any)` workarounds to fix build — proper fix is regenerating types
+- Migration files must use YYYYMMDDHHMMSS format (not YYYYMMDD_name.sql) for Supabase CLI
+- `supabase migration repair --status reverted <version>` cleans up orphaned remote migrations
+
+**What to do differently:**
+- After ANY database change: `npx supabase gen types typescript --project-id trzeeacscqjklxnyvmnb > src/integrations/supabase/types.ts`
+- Always verify types.ts includes new RPCs before committing
+- Run `npx tsc --noEmit` locally to catch errors before Lovable production build
