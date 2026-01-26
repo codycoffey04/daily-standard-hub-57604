@@ -27,7 +27,7 @@ export async function extractTextFromPdf(file: File): Promise<string> {
 
     // Extract text items and join them
     const pageText = textContent.items
-      .map((item: { str?: string }) => item.str || '')
+      .map((item) => ('str' in item ? item.str : '') || '')
       .join(' ')
 
     console.log(`[PDF Extractor] Page ${pageNum}: ${pageText.length} chars`)

@@ -38,7 +38,7 @@ export function useEmailLeadSources(emailMetricsId: string | undefined) {
         .maybeSingle()
 
       if (error) throw error
-      return data?.config_data as { mappings: SourceMapping[] } | null
+      return (data?.config_data as unknown) as { mappings: SourceMapping[] } | null
     }
   })
 
