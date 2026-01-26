@@ -70,25 +70,17 @@ export const useConversionFunnelData = (dateRange: { from: Date; to: Date }) => 
         throw previousError
       }
 
-      // Parse current funnel stages
-      const currentStages = (currentFunnel || []).map((r: any) => ({
-        stage_name: String(r.stage_name),
-        stage_value: Number(r.stage_value) || 0
-      }))
+      // Parse current funnel data (RPC returns single row with qhh, items_sold, policies_sold)
+      const currentRow = currentFunnel?.[0] || {}
+      const currentQHH = Number(currentRow.qhh) || 0
+      const currentItems = Number(currentRow.items_sold) || 0
+      const currentSales = Number(currentRow.policies_sold) || 0
 
-      const currentQHH = currentStages.find(s => s.stage_name === 'QHH')?.stage_value || 0
-      const currentItems = currentStages.find(s => s.stage_name === 'Items Sold')?.stage_value || 0
-      const currentSales = currentStages.find(s => s.stage_name === 'Sales')?.stage_value || 0
-
-      // Parse previous funnel stages
-      const previousStages = (previousFunnel || []).map((r: any) => ({
-        stage_name: String(r.stage_name),
-        stage_value: Number(r.stage_value) || 0
-      }))
-
-      const previousQHH = previousStages.find(s => s.stage_name === 'QHH')?.stage_value || 0
-      const previousItems = previousStages.find(s => s.stage_name === 'Items Sold')?.stage_value || 0
-      const previousSales = previousStages.find(s => s.stage_name === 'Sales')?.stage_value || 0
+      // Parse previous funnel data
+      const previousRow = previousFunnel?.[0] || {}
+      const previousQHH = Number(previousRow.qhh) || 0
+      const previousItems = Number(previousRow.items_sold) || 0
+      const previousSales = Number(previousRow.policies_sold) || 0
 
       // Calculate conversion rates
       const currentQhhToItems = currentQHH > 0 ? (currentItems / currentQHH) * 100 : 0
