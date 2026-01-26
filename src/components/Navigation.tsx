@@ -14,7 +14,7 @@ import {
   ClipboardCheck,
   Database
 } from 'lucide-react'
-import { isOwnerManager, canAccessAccountabilityReviews } from '@/lib/auth'
+import { isOwnerManager } from '@/lib/auth'
 
 export const Navigation: React.FC = () => {
   const { profile, signOut } = useAuth()

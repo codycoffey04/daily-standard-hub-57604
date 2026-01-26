@@ -104,16 +104,17 @@ serve(async (req) => {
     if (lcError) {
       console.error('Error fetching low conversion entries:', lcError)
     } else if (lowConversionEntries) {
-      for (const entry of lowConversionEntries as LowConversionEntry[]) {
+      for (const entry of lowConversionEntries) {
+        const typedEntry = entry as any
         patternsToInsert.push({
-          producer_id: entry.producer_id,
+          producer_id: typedEntry.producer_id,
           pattern_type: 'low_conversion',
           severity: 'warning',
           context: {
-            entry_date: entry.entry_date,
-            qhh_total: entry.qhh_total,
-            items_total: entry.items_total,
-            message: `${entry.qhh_total} QHH quoted but 0 items sold on ${entry.entry_date}`
+            entry_date: typedEntry.entry_date,
+            qhh_total: typedEntry.qhh_total,
+            items_total: typedEntry.items_total,
+            message: `${typedEntry.qhh_total} QHH quoted but 0 items sold on ${typedEntry.entry_date}`
           }
         })
       }

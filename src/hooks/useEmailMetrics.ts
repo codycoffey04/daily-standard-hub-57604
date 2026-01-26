@@ -269,7 +269,7 @@ export function useEmailMetrics(periodStart: Date, periodType: PeriodType = 'wee
         teamPolicies = parsedMtdProduction.team.qhh
       } else if (metrics?.producer_metrics) {
         // Use existing data
-        producerMetrics = metrics.producer_metrics as Record<string, ProducerProductionMetrics>
+        producerMetrics = metrics.producer_metrics as unknown as Record<string, ProducerProductionMetrics>
         teamSales = metrics.team_sales || 0
         teamItems = metrics.team_items || 0
         teamPremium = Number(metrics.team_premium) || 0
@@ -299,7 +299,7 @@ export function useEmailMetrics(periodStart: Date, periodType: PeriodType = 'wee
         weeklyTeamPolicies = parsedWeeklyProduction.team.qhh
       } else if (metrics?.weekly_producer_metrics) {
         // Use existing weekly data
-        weeklyProducerMetrics = (metrics.weekly_producer_metrics as Record<string, ProducerProductionMetrics>) || {}
+        weeklyProducerMetrics = (metrics.weekly_producer_metrics as unknown as Record<string, ProducerProductionMetrics>) || {}
         weeklyTeamSales = metrics.weekly_team_sales || 0
         weeklyTeamItems = metrics.weekly_team_items || 0
         weeklyTeamPremium = Number(metrics.weekly_team_premium) || 0
@@ -312,7 +312,7 @@ export function useEmailMetrics(periodStart: Date, periodType: PeriodType = 'wee
       let teamQuotes = metrics?.team_quotes || 0
 
       if (options?.includeTDS && tdsActivity) {
-        tdsActivityMetrics = tdsActivity
+        tdsActivityMetrics = tdsActivity as unknown as typeof tdsActivityMetrics
         teamQhh = 0
         teamQuotes = 0
         for (const activity of Object.values(tdsActivity)) {

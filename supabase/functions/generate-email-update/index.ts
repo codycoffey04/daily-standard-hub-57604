@@ -261,7 +261,7 @@ serve(async (req) => {
     const elapsedWorkdays = getWorkdaysBetween(monthStart, periodEndDate)
     const remainingWorkdays = totalWorkdays - elapsedWorkdays
 
-    const vcTarget = vcTargets?.[vcTargets?.focus_state as keyof VCTargets] || 76
+    const vcTarget = Number(vcTargets?.[vcTargets?.focus_state as keyof VCTargets]) || 76
     // % of Target = Current Items ÷ Target (e.g., 68/76 = 89.5%)
     const pctOfTarget = vcTarget > 0 ? (metrics.team_items / vcTarget) * 100 : 0
     // Projected Finish = (Current Items ÷ Days Elapsed) × Total Workdays
