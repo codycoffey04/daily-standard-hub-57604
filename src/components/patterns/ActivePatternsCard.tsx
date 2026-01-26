@@ -1,7 +1,7 @@
 import React from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { AlertTriangle, TrendingDown, Target, AlertCircle, Flame } from 'lucide-react'
+import { AlertTriangle, TrendingDown, Target, AlertCircle, Flame, MapPin } from 'lucide-react'
 import {
   useAllActivePatterns,
   PATTERN_CONFIG,
@@ -28,6 +28,8 @@ const PatternIcon: React.FC<{ patternType: DetectedPatternWithProducer['pattern_
       return <AlertCircle className="h-4 w-4" />
     case 'zero_item_streak':
       return <Flame className="h-4 w-4" />
+    case 'zip_failing':
+      return <MapPin className="h-4 w-4" />
     default:
       return <AlertTriangle className="h-4 w-4" />
   }

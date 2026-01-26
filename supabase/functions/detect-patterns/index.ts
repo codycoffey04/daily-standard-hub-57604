@@ -47,9 +47,17 @@ interface LowConversionEntry {
   items_total: number
 }
 
+interface FailingZip {
+  producer_id: string
+  producer_name: string
+  zip_code: string
+  quotes: number
+  sales: number
+}
+
 interface DetectedPattern {
   producer_id: string
-  pattern_type: 'low_conversion' | 'source_failing' | 'outside_streak' | 'zero_item_streak'
+  pattern_type: 'low_conversion' | 'source_failing' | 'outside_streak' | 'zero_item_streak' | 'zip_failing'
   severity: 'critical' | 'warning' | 'info'
   context: Record<string, unknown>
 }
@@ -207,7 +215,34 @@ serve(async (req) => {
     }
 
     // ==================
-    // 5. DEDUPE: Check for existing active patterns
+    // 5. ZIP FAILING: 8+ quotes with 0 sales in rolling 30 days
+    // ==================
+    console.log('Checking failing ZIPs...')
+
+    const { data: failingZips, error: fzError } = await supabase
+      .rpc('get_failing_zips_v2', { p_lookback_days: 30 })
+
+    if (fzError) {
+      console.error('Error fetching failing ZIPs:', fzError)
+    } else if (failingZips) {
+      for (const zip of failingZips as FailingZip[]) {
+        patternsToInsert.push({
+          producer_id: zip.producer_id,
+          pattern_type: 'zip_failing',
+          severity: 'warning',
+          context: {
+            zip_code: zip.zip_code,
+            quotes: zip.quotes,
+            sales: zip.sales,
+            message: `ZIP ${zip.zip_code}: ${zip.quotes} quotes, 0 sales — consider avoiding this area`
+          }
+        })
+      }
+      console.log(`Found ${failingZips.length} failing ZIPs`)
+    }
+
+    // ==================
+    // 6. DEDUPE: Check for existing active patterns
     // ==================
     console.log('Deduplicating against existing patterns...')
 
@@ -230,6 +265,9 @@ serve(async (req) => {
         if (p.pattern_type === 'low_conversion') {
           return `${p.producer_id}:${p.pattern_type}:${ctx.entry_date}`
         }
+        if (p.pattern_type === 'zip_failing') {
+          return `${p.producer_id}:${p.pattern_type}:${ctx.zip_code}`
+        }
         // For streaks, use streak_end date to identify the same streak
         return `${p.producer_id}:${p.pattern_type}:${ctx.streak_end || ctx.entry_date}`
       })
@@ -242,6 +280,8 @@ serve(async (req) => {
         key = `${p.producer_id}:${p.pattern_type}:${ctx.source_id}`
       } else if (p.pattern_type === 'low_conversion') {
         key = `${p.producer_id}:${p.pattern_type}:${ctx.entry_date}`
+      } else if (p.pattern_type === 'zip_failing') {
+        key = `${p.producer_id}:${p.pattern_type}:${ctx.zip_code}`
       } else {
         key = `${p.producer_id}:${p.pattern_type}:${ctx.streak_end || ctx.entry_date}`
       }
@@ -251,7 +291,7 @@ serve(async (req) => {
     console.log(`${patternsToInsert.length} total patterns, ${newPatterns.length} are new`)
 
     // ==================
-    // 6. INSERT NEW PATTERNS
+    // 7. INSERT NEW PATTERNS
     // ==================
     if (newPatterns.length > 0) {
       const { error: insertError } = await supabase
@@ -267,7 +307,7 @@ serve(async (req) => {
     }
 
     // ==================
-    // 7. AUTO-RESOLVE OLD PATTERNS (7+ days old)
+    // 8. AUTO-RESOLVE OLD PATTERNS (7+ days old)
     // ==================
     console.log('Auto-resolving old patterns...')
 

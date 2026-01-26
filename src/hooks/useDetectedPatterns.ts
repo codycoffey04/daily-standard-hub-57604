@@ -3,7 +3,7 @@ import { supabase } from '@/integrations/supabase/client'
 
 export interface DetectedPattern {
   id: string
-  pattern_type: 'low_conversion' | 'source_failing' | 'outside_streak' | 'zero_item_streak'
+  pattern_type: 'low_conversion' | 'source_failing' | 'outside_streak' | 'zero_item_streak' | 'zip_failing'
   severity: 'critical' | 'warning' | 'info'
   detected_at: string
   context: {
@@ -25,6 +25,10 @@ export interface DetectedPattern {
       avg_qhh: number
       avg_items: number
     }
+    // zip_failing context fields
+    zip_code?: string
+    quotes?: number
+    sales?: number
   }
 }
 
@@ -57,6 +61,11 @@ export const PATTERN_CONFIG: Record<
     label: 'Zero Items',
     icon: '🔴',
     description: 'Consecutive days with no items sold',
+  },
+  zip_failing: {
+    label: 'Failing ZIP Code',
+    icon: '📍',
+    description: 'ZIP code with high quotes but no sales',
   },
 }
 
