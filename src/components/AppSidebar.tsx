@@ -39,6 +39,12 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({ collapsed, onToggle }) =
       allowedRoles: ['producer']
     },
     {
+      href: '/team',
+      label: 'Team',
+      icon: Users,
+      allowedRoles: ['owner', 'manager']
+    },
+    {
       href: '/csr',
       label: 'CSR Dashboard',
       icon: Award,
@@ -49,12 +55,6 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({ collapsed, onToggle }) =
       label: 'Sales Service',
       icon: Home,
       allowedRoles: ['sales_service']
-    },
-    {
-      href: '/team',
-      label: 'Team',
-      icon: Users,
-      allowedRoles: ['owner', 'manager']
     },
     {
       href: '/summaries',
