@@ -13,8 +13,8 @@ export type ActivityType =
 
 // All 7 activity types - all manually logged
 export const ACTIVITY_TYPES: { value: ActivityType; label: string; points: number }[] = [
-  { value: 'referral_closed', label: 'Referral Closed', points: 15 },
-  { value: 'referral_quoted', label: 'Referral Quoted', points: 5 },
+  { value: 'referral_closed', label: 'Referral / X-Sale Closed', points: 15 },
+  { value: 'referral_quoted', label: 'Referral / X-Sale Quoted', points: 5 },
   { value: 'google_review', label: 'Google Review', points: 10 },
   { value: 'retention_save', label: 'Retention Save', points: 10 },
   { value: 'new_customer_referral', label: 'New Customer Referral', points: 10 },
@@ -27,8 +27,8 @@ export type ManualActivityType = ActivityType;
 export const MANUAL_ACTIVITY_TYPES = ACTIVITY_TYPES;
 
 export const ALL_ACTIVITY_LABELS: Record<string, string> = {
-  referral_closed: 'Referral Closed',
-  referral_quoted: 'Referral Quoted',
+  referral_closed: 'Referral / X-Sale Closed',
+  referral_quoted: 'Referral / X-Sale Quoted',
   google_review: 'Google Review',
   retention_save: 'Retention Save',
   new_customer_referral: 'New Customer Referral',

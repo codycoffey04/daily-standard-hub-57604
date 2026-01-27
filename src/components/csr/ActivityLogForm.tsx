@@ -94,12 +94,14 @@ export const ActivityLogForm = ({ csrProfileId, onSuccess }: ActivityLogFormProp
       setShowSuccess(true);
       setTimeout(() => setShowSuccess(false), 2000);
 
-      // Reset form
+      // Reset form with explicit options to clear all state
       form.reset({
         activity_type: undefined,
         verification_id: '',
         reference_note: '',
         activity_date: new Date()
+      }, {
+        keepDefaultValues: false
       });
 
       onSuccess?.();
@@ -146,6 +148,11 @@ export const ActivityLogForm = ({ csrProfileId, onSuccess }: ActivityLogFormProp
                       ))}
                     </SelectContent>
                   </Select>
+                  {(field.value === 'referral_closed' || field.value === 'referral_quoted') && (
+                    <p className="text-xs text-muted-foreground mt-1">
+                      For existing customers adding a line. If customer has NO active policies, use Win-Back instead.
+                    </p>
+                  )}
                   <FormMessage />
                 </FormItem>
               )}
