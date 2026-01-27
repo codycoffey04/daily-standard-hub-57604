@@ -113,6 +113,12 @@ WHERE EXTRACT(DOW FROM d) NOT IN (0, 6);
 - **Lovable's dev build is lenient** — errors only surface in production build
 - If Lovable adds `as any` casts, types are missing — regenerate first
 
+### Supabase Project IDs
+- **TDS App**: `trzeeacscqjklxnyvmnb`
+- **NFv4**: `olnawnospfhsvfvbmlkm`
+- Always use correct project ID — wrong ID returns "Your account does not have the necessary privileges" error
+- Run `mcp__supabase__list_projects` if unsure which project ID to use
+
 ### RLS & Security
 - **Never** store roles in `profiles.role` — use separate `user_roles` table
 - All aggregate functions on RLS-enabled tables need `SECURITY DEFINER` + `SET search_path = public`
