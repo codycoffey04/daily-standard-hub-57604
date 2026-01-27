@@ -32,21 +32,27 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({ collapsed, onToggle }) =
   const isActive = (path: string) => location.pathname === path
 
   const navigationItems = [
-    { 
-      href: '/producer', 
-      label: 'My Dashboard', 
+    {
+      href: '/producer',
+      label: 'My Dashboard',
       icon: Home,
       allowedRoles: ['producer']
     },
-    { 
+    {
+      href: '/csr',
+      label: 'CSR Dashboard',
+      icon: Award,
+      allowedRoles: ['csr', 'owner', 'manager']
+    },
+    {
       href: '/sales-service',
       label: 'Sales Service',
       icon: Home,
       allowedRoles: ['sales_service']
     },
-    { 
+    {
       href: '/team',
-      label: 'Team', 
+      label: 'Team',
       icon: Users,
       allowedRoles: ['owner', 'manager']
     },
@@ -75,20 +81,14 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({ collapsed, onToggle }) =
       allowedRoles: ['owner', 'manager']
     },
     {
-      href: '/csr',
-      label: 'CSR Dashboard',
-      icon: Award,
-      allowedRoles: ['csr', 'owner', 'manager']
-    },
-    {
-      href: '/sources', 
-      label: 'Sources', 
+      href: '/sources',
+      label: 'Sources',
       icon: Settings,
       allowedRoles: ['owner', 'manager']
     },
-    { 
-      href: '/importer', 
-      label: 'Importer', 
+    {
+      href: '/importer',
+      label: 'Importer',
       icon: Upload,
       allowedRoles: ['owner', 'manager']
     }
