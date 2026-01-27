@@ -6,6 +6,7 @@ export type RoleName =
   | 'producer'
   | 'reviewer'
   | 'sales_service'
+  | 'csr'
 
 let cachedRoles: Set<RoleName> | null = null
 let lastFetchedAt: number | null = null

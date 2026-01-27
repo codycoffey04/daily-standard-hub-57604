@@ -467,6 +467,104 @@ export type Database = {
           },
         ]
       }
+      csr_activities: {
+        Row: {
+          activity_date: string
+          activity_type: string
+          created_at: string | null
+          created_by: string | null
+          csr_profile_id: string
+          customer_name: string | null
+          id: string
+          notes: string | null
+          points: number
+          quoted_household_id: string | null
+          source: string
+        }
+        Insert: {
+          activity_date: string
+          activity_type: string
+          created_at?: string | null
+          created_by?: string | null
+          csr_profile_id: string
+          customer_name?: string | null
+          id?: string
+          notes?: string | null
+          points: number
+          quoted_household_id?: string | null
+          source: string
+        }
+        Update: {
+          activity_date?: string
+          activity_type?: string
+          created_at?: string | null
+          created_by?: string | null
+          csr_profile_id?: string
+          customer_name?: string | null
+          id?: string
+          notes?: string | null
+          points?: number
+          quoted_household_id?: string | null
+          source?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "csr_activities_csr_profile_id_fkey"
+            columns: ["csr_profile_id"]
+            isOneToOne: false
+            referencedRelation: "csr_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "csr_activities_quoted_household_id_fkey"
+            columns: ["quoted_household_id"]
+            isOneToOne: false
+            referencedRelation: "quoted_households"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      csr_profiles: {
+        Row: {
+          active: boolean | null
+          created_at: string | null
+          display_name: string
+          email: string
+          id: string
+          source_id: string | null
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          active?: boolean | null
+          created_at?: string | null
+          display_name: string
+          email: string
+          id?: string
+          source_id?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          active?: boolean | null
+          created_at?: string | null
+          display_name?: string
+          email?: string
+          id?: string
+          source_id?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "csr_profiles_source_id_fkey"
+            columns: ["source_id"]
+            isOneToOne: true
+            referencedRelation: "sources"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       daily_entries: {
         Row: {
           created_at: string
@@ -1648,6 +1746,40 @@ export type Database = {
               value: number
             }[]
           }
+      get_csr_leaderboard: {
+        Args: { p_year?: number }
+        Returns: {
+          csr_name: string
+          csr_profile_id: string
+          mtd_points: number
+          rank: number
+          wtd_points: number
+          ytd_points: number
+        }[]
+      }
+      get_csr_points_summary: {
+        Args: { p_csr_profile_id?: string; p_period?: string }
+        Returns: {
+          activity_count: number
+          csr_name: string
+          csr_profile_id: string
+          google_review_pts: number
+          new_customer_referral_pts: number
+          referral_closed_pts: number
+          referral_quoted_pts: number
+          retention_save_pts: number
+          total_points: number
+        }[]
+      }
+      get_current_csr_profile: {
+        Args: never
+        Returns: {
+          csr_profile_id: string
+          display_name: string
+          email: string
+          source_id: string
+        }[]
+      }
       get_execution_benchmarks_by_source: {
         Args: {
           from_date: string
@@ -1688,18 +1820,35 @@ export type Database = {
           qhh: number
         }[]
       }
-      get_execution_funnel: {
-        Args: { from_date: string; to_date: string }
-        Returns: {
-          dials: number
-          households_sold: number
-          items_sold: number
-          lines_quoted: number
-          policies_sold: number
-          premium_total: number
-          qhh: number
-        }[]
-      }
+      get_execution_funnel:
+        | {
+            Args: { from_date: string; to_date: string }
+            Returns: {
+              dials: number
+              households_sold: number
+              items_sold: number
+              lines_quoted: number
+              policies_sold: number
+              premium_total: number
+              qhh: number
+            }[]
+          }
+        | {
+            Args: {
+              from_date: string
+              producer_filter?: string
+              source_filter?: string
+              to_date: string
+            }
+            Returns: {
+              dials: number
+              households_sold: number
+              items_sold: number
+              policies_sold: number
+              premium_total: number
+              qhh: number
+            }[]
+          }
       get_failing_zips_v2: {
         Args: { p_lookback_days?: number }
         Returns: {
@@ -2115,7 +2264,13 @@ export type Database = {
       working_days_in_month: { Args: { d: string }; Returns: number }
     }
     Enums: {
-      app_role: "owner" | "manager" | "producer" | "reviewer" | "sales_service"
+      app_role:
+        | "owner"
+        | "manager"
+        | "producer"
+        | "reviewer"
+        | "sales_service"
+        | "csr"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -2243,7 +2398,14 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["owner", "manager", "producer", "reviewer", "sales_service"],
+      app_role: [
+        "owner",
+        "manager",
+        "producer",
+        "reviewer",
+        "sales_service",
+        "csr",
+      ],
     },
   },
 } as const

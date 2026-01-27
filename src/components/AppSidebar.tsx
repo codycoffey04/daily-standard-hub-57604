@@ -14,7 +14,8 @@ import {
   X,
   Home,
   BookOpen,
-  Mail
+  Mail,
+  Award
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { ensureRolesLoaded, fetchMyRoles } from '@/lib/roles'
@@ -73,7 +74,13 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({ collapsed, onToggle }) =
       icon: Brain,
       allowedRoles: ['owner', 'manager']
     },
-    { 
+    {
+      href: '/csr',
+      label: 'CSR Dashboard',
+      icon: Award,
+      allowedRoles: ['csr', 'owner', 'manager']
+    },
+    {
       href: '/sources', 
       label: 'Sources', 
       icon: Settings,

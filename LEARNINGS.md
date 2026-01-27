@@ -349,3 +349,87 @@ When completing a session, add entry below:
 - After ANY database change: `npx supabase gen types typescript --project-id trzeeacscqjklxnyvmnb > src/integrations/supabase/types.ts`
 - Always verify types.ts includes new RPCs before committing
 - Run `npx tsc --noEmit` locally to catch errors before Lovable production build
+
+### 2026-01-27 — CSR Dashboard Research Context
+**What was done:**
+- Created comprehensive markdown file for GPT Deep Research at `~/Desktop/CoffeyAgencies/AgencyOps/tds-csr-research-context.md`
+- Documented full TDS database schema, user roles, producer tracking features
+- Extracted CSR incentive program from Excel (5 activity types, point values, bonus pool structure)
+- Identified existing CSR-adjacent data in TDS (lead sources, email_lead_source_metrics.is_csr_source)
+
+**What was learned:**
+- **CSR names are already lead sources in TDS**: Crystal, Kathy, Lexi exist in `sources` table
+- **Partial CSR tracking exists**: `email_lead_source_metrics` has `is_csr_source` boolean and `attributed_to` field
+- **Auto-calculation possible for referrals**: Quotes/sales with CSR lead_source_id can auto-calculate "Referral Closed/Quoted" points
+- **Manual entry required for**: Google Reviews, Retention Saves (no TDS integration)
+- **CSR bonus tiers in config**: `coaching_framework_config` has `email_csr_tiers` (0-4=$0, 5-9=$50, 10-14=$100, 15+=$150)
+- **`sales_service` role exists but limited**: Only grants `/sales-service` page access, not CSR-specific features
+
+**Key questions identified for research:**
+- Should CSRs have daily targets or event-driven tracking?
+- What's the ROI of building vs. continuing with Excel?
+- How to handle Crystal's dual role (manager + CSR)?
+
+**What to do differently:**
+- When exploring new feature areas, document existing partial implementations first
+- CSR data scattered across multiple tables — consolidation would help if building CSR features
+
+### 2026-01-27 — CSR Dashboard Implementation Planning
+**What was done:**
+- Read comprehensive research doc (`/docs/framework-research-csr.md`) — 82k tokens of industry research
+- Explored TDS auth/role system, database schema, and UI patterns
+- Created detailed implementation plan at `/docs/csr-dashboard-implementation-plan.md`
+- Identified 3-sprint roadmap: Core Dashboard → Activity Logging → Gamification
+
+**What was learned:**
+- **`app_role` SQL enum is out of sync with TypeScript** — TypeScript has `sales_service` but SQL enum doesn't
+- **CSR source mapping already configured**: `coaching_framework_config.email_source_mappings` has Crystal/Kathy/Aleeah with `is_csr: true`
+- **`email_lead_source_metrics.points` column exists** — but not calculated, just stores AgencyZoom raw value
+- **Goal-Gradient Effect**: Progress bars toward goals increase motivation as users approach milestones
+- **Overjustification Effect risk**: Adding too many extrinsic rewards can reduce intrinsic motivation
+- **CSR activities are sporadic**: Unlike producers with daily metrics, CSRs may go weeks without earning points
+- **Leaderboard design matters**: With only 3 CSRs, trailing person may give up — need encouragement messaging
+- **Industry benchmark**: Top agencies get 250-300 referrals/year vs 12-15 average — huge opportunity
+
+**Architecture decisions:**
+- New `csr_profiles` table (separate from `producers`) — CSRs have different metrics
+- New `csr_activities` table for all tracked activities (auto + manual)
+- Auto-tracking via database trigger on `quoted_households` when lead_source is CSR
+- Manual entry for: Google Reviews, Retention Saves, New Customer Referrals
+- Crystal gets dual roles: `manager` + `csr` in `user_roles` table
+
+**What to do differently:**
+- Always check SQL enum values vs TypeScript types — they can drift
+- When building gamification, balance extrinsic rewards with intrinsic motivation
+- For small teams (3 CSRs), emphasize personal progress over pure competition
+
+### 2026-01-27 — CSR Dashboard Sprint 1 & 2 Implementation
+**What was done:**
+- Built complete CSR Dashboard with Sprint 1 (core UI) and Sprint 2 (activity logging)
+- Database: `csr_profiles`, `csr_activities` tables, 3 RPCs, RLS policies
+- Frontend: 6 components (`PeriodSelector`, `GoalProgressBar`, `PointsSummaryCard`, `CSRLeaderboard`, `ActivityLogForm`, `ActivityHistoryTable`)
+- Hooks: `useCSRPoints`, `useCSRLeaderboard`, `useCSRActivities`
+- Backfilled 11 activities from Jan 2026 QHH data + manual Excel reconciliation
+
+**Key build decisions:**
+- **source_id FK vs fuzzy matching**: User caught plan issue — original plan used LIKE matching on names ("Crystal%"). Fixed to use exact FK: `csr_profiles.source_id → sources.id`. Much more reliable for auto-tracking.
+- **7 activity types (expanded from original 5)**:
+  - Auto-tracked (from QHH): `referral_closed` (15 pts), `referral_quoted` (5 pts)
+  - Manual entry: `google_review` (10), `retention_save` (10), `new_customer_referral` (10), `winback_closed` (10), `winback_quoted` (3)
+- **Goal targets based on actual data, not theory**: 10 weekly / 40 monthly / 480 yearly — derived from team's real performance patterns, not arbitrary round numbers
+- **Backfill 2026 only**: No 2025 data — cleaner start, avoids data quality issues from pre-system tracking
+
+**Self-review caught 3 bugs:**
+1. **Unused variable** (`canLogActivity` in CSRDashboardPage) — declared but never used
+2. **Undefined boolean issue** (`isManager` could be `undefined` instead of `false`) — added `|| false` fallback
+3. **State timing on points display** — success message briefly showed wrong points after form reset. Fixed with `lastEarnedPoints` state to preserve value during animation
+
+**Database migration lessons:**
+- PostgreSQL enum values can't be used in same transaction as `ALTER TYPE ADD VALUE` — split into separate migration
+- `ON CONFLICT` requires explicit UNIQUE constraint — added `CONSTRAINT csr_activities_qhh_type UNIQUE (quoted_household_id, activity_type)`
+- `coaching_framework_config.config_type` has CHECK constraint — had to ALTER to add 'csr_points_config'
+
+**What to do differently:**
+- **Always do a "fresh eyes" code review after completing a feature** — caught 3 bugs that would have hit production
+- **When planning database features, verify constraint requirements upfront** — ON CONFLICT, CHECK constraints, enum timing
+- **Use exact FK relationships for auto-tracking, never fuzzy string matching** — user feedback improved the design significantly

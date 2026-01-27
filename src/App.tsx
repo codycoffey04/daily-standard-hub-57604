@@ -22,6 +22,7 @@ import SalesServicePage from "./pages/SalesServicePage";
 import { PatternInsightsPage } from "./pages/PatternInsightsPage";
 import CoachingPage from "./pages/CoachingPage";
 import EmailUpdatesPage from "./pages/EmailUpdatesPage";
+import CSRDashboardPage from "./pages/CSRDashboardPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient({
@@ -131,17 +132,27 @@ const App = () => (
                     </ProtectedRoute>
                   } 
                 />
-                <Route 
-                  path="/importer" 
+                <Route
+                  path="/importer"
                   element={
                     <ProtectedRoute requiresOwnerManager>
                       <AppLayout>
                         <ImporterPage />
                       </AppLayout>
                     </ProtectedRoute>
-                  } 
+                  }
                 />
-                <Route 
+                <Route
+                  path="/csr"
+                  element={
+                    <ProtectedRoute requiresRoles={['csr', 'owner', 'manager']}>
+                      <AppLayout>
+                        <CSRDashboardPage />
+                      </AppLayout>
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
                   path="/" 
                   element={
                     <ProtectedRoute>
