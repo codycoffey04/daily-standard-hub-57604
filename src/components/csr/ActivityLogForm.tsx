@@ -29,10 +29,12 @@ import {
   PopoverTrigger
 } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
-import { useCreateCSRActivity, MANUAL_ACTIVITY_TYPES, ManualActivityType } from '@/hooks/useCSRActivities';
+import { useCreateCSRActivity, ACTIVITY_TYPES, ActivityType } from '@/hooks/useCSRActivities';
 
 const formSchema = z.object({
   activity_type: z.enum([
+    'referral_closed',
+    'referral_quoted',
     'google_review',
     'retention_save',
     'new_customer_referral',
@@ -74,13 +76,13 @@ export const ActivityLogForm = ({ csrProfileId, onSuccess }: ActivityLogFormProp
   });
 
   const selectedType = form.watch('activity_type');
-  const selectedPoints = MANUAL_ACTIVITY_TYPES.find(t => t.value === selectedType)?.points || 0;
+  const selectedPoints = ACTIVITY_TYPES.find(t => t.value === selectedType)?.points || 0;
 
   const onSubmit = async (values: FormValues) => {
     try {
       await createActivity.mutateAsync({
         csr_profile_id: csrProfileId,
-        activity_type: values.activity_type as ManualActivityType,
+        activity_type: values.activity_type as ActivityType,
         points: selectedPoints,
         activity_date: format(values.activity_date, 'yyyy-MM-dd'),
         verification_id: values.verification_id || '',
@@ -128,7 +130,7 @@ export const ActivityLogForm = ({ csrProfileId, onSuccess }: ActivityLogFormProp
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      {MANUAL_ACTIVITY_TYPES.map((type) => (
+                      {ACTIVITY_TYPES.map((type) => (
                         <SelectItem
                           key={type.value}
                           value={type.value}

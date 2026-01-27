@@ -29,7 +29,6 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger
 } from '@/components/ui/alert-dialog';
-import { Badge } from '@/components/ui/badge';
 import { useCSRActivities, useDeleteCSRActivity, ALL_ACTIVITY_LABELS } from '@/hooks/useCSRActivities';
 
 interface ActivityHistoryTableProps {
@@ -114,13 +113,8 @@ export const ActivityHistoryTable = ({ csrProfileId, isManager = false }: Activi
                   key={activity.id}
                   className="border rounded-lg p-4 space-y-2"
                 >
-                  <div className="flex items-center justify-between">
-                    <span className="font-medium">
-                      {ALL_ACTIVITY_LABELS[activity.activity_type] || activity.activity_type}
-                    </span>
-                    <Badge variant={activity.source === 'auto' ? 'secondary' : 'outline'}>
-                      {activity.source}
-                    </Badge>
+                  <div className="font-medium">
+                    {ALL_ACTIVITY_LABELS[activity.activity_type] || activity.activity_type}
                   </div>
                   <div className="text-sm text-muted-foreground">
                     {format(new Date(activity.activity_date), 'MMM d, yyyy')}
@@ -140,7 +134,7 @@ export const ActivityHistoryTable = ({ csrProfileId, isManager = false }: Activi
                     <span className="font-semibold text-primary">
                       +{activity.points} pts
                     </span>
-                    {isManager && activity.source === 'manual' && (
+                    {isManager && (
                       <AlertDialog>
                         <AlertDialogTrigger asChild>
                           <Button variant="ghost" size="sm" className="text-destructive">
@@ -181,7 +175,6 @@ export const ActivityHistoryTable = ({ csrProfileId, isManager = false }: Activi
                     {isManager && <TableHead>CSR</TableHead>}
                     <TableHead>Reference</TableHead>
                     <TableHead className="text-right">Points</TableHead>
-                    <TableHead>Source</TableHead>
                     {isManager && <TableHead className="w-[50px]"></TableHead>}
                   </TableRow>
                 </TableHeader>
@@ -209,15 +202,9 @@ export const ActivityHistoryTable = ({ csrProfileId, isManager = false }: Activi
                       <TableCell className="text-right font-semibold text-primary">
                         +{activity.points}
                       </TableCell>
-                      <TableCell>
-                        <Badge variant={activity.source === 'auto' ? 'secondary' : 'outline'}>
-                          {activity.source}
-                        </Badge>
-                      </TableCell>
                       {isManager && (
                         <TableCell>
-                          {activity.source === 'manual' && (
-                            <AlertDialog>
+                          <AlertDialog>
                               <AlertDialogTrigger asChild>
                                 <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive">
                                   <Trash2 className="h-4 w-4" />
@@ -240,8 +227,7 @@ export const ActivityHistoryTable = ({ csrProfileId, isManager = false }: Activi
                                   </AlertDialogAction>
                                 </AlertDialogFooter>
                               </AlertDialogContent>
-                            </AlertDialog>
-                          )}
+                          </AlertDialog>
                         </TableCell>
                       )}
                     </TableRow>

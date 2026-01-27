@@ -478,8 +478,6 @@ export type Database = {
           id: string
           notes: string | null
           points: number
-          quoted_household_id: string | null
-          source: string
         }
         Insert: {
           activity_date: string
@@ -491,8 +489,6 @@ export type Database = {
           id?: string
           notes?: string | null
           points: number
-          quoted_household_id?: string | null
-          source: string
         }
         Update: {
           activity_date?: string
@@ -504,8 +500,6 @@ export type Database = {
           id?: string
           notes?: string | null
           points?: number
-          quoted_household_id?: string | null
-          source?: string
         }
         Relationships: [
           {
@@ -513,13 +507,6 @@ export type Database = {
             columns: ["csr_profile_id"]
             isOneToOne: false
             referencedRelation: "csr_profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "csr_activities_quoted_household_id_fkey"
-            columns: ["quoted_household_id"]
-            isOneToOne: false
-            referencedRelation: "quoted_households"
             referencedColumns: ["id"]
           },
         ]
@@ -531,7 +518,6 @@ export type Database = {
           display_name: string
           email: string
           id: string
-          source_id: string | null
           updated_at: string | null
           user_id: string | null
         }
@@ -541,7 +527,6 @@ export type Database = {
           display_name: string
           email: string
           id?: string
-          source_id?: string | null
           updated_at?: string | null
           user_id?: string | null
         }
@@ -551,19 +536,10 @@ export type Database = {
           display_name?: string
           email?: string
           id?: string
-          source_id?: string | null
           updated_at?: string | null
           user_id?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "csr_profiles_source_id_fkey"
-            columns: ["source_id"]
-            isOneToOne: true
-            referencedRelation: "sources"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       daily_entries: {
         Row: {

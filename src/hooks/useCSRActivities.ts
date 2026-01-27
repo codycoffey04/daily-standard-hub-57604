@@ -2,20 +2,29 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
-export type ManualActivityType =
+export type ActivityType =
+  | 'referral_closed'
+  | 'referral_quoted'
   | 'google_review'
   | 'retention_save'
   | 'new_customer_referral'
   | 'winback_closed'
   | 'winback_quoted';
 
-export const MANUAL_ACTIVITY_TYPES: { value: ManualActivityType; label: string; points: number }[] = [
+// All 7 activity types - all manually logged
+export const ACTIVITY_TYPES: { value: ActivityType; label: string; points: number }[] = [
+  { value: 'referral_closed', label: 'Referral Closed', points: 15 },
+  { value: 'referral_quoted', label: 'Referral Quoted', points: 5 },
   { value: 'google_review', label: 'Google Review', points: 10 },
   { value: 'retention_save', label: 'Retention Save', points: 10 },
   { value: 'new_customer_referral', label: 'New Customer Referral', points: 10 },
   { value: 'winback_closed', label: 'Win-Back Closed', points: 10 },
   { value: 'winback_quoted', label: 'Win-Back Quoted', points: 3 }
 ];
+
+// Legacy export for backwards compatibility
+export type ManualActivityType = ActivityType;
+export const MANUAL_ACTIVITY_TYPES = ACTIVITY_TYPES;
 
 export const ALL_ACTIVITY_LABELS: Record<string, string> = {
   referral_closed: 'Referral Closed',
@@ -35,7 +44,6 @@ interface CSRActivity {
   activity_date: string;
   verification_id: string | null;
   notes: string | null;
-  source: 'auto' | 'manual';
   created_at: string;
   csr_name?: string;
 }
@@ -72,7 +80,6 @@ export const useCSRActivities = (params: GetActivitiesParams = {}) => {
           activity_date,
           verification_id,
           notes,
-          source,
           created_at,
           csr_profiles!inner(display_name)
         `, { count: 'exact' })
@@ -106,7 +113,6 @@ export const useCSRActivities = (params: GetActivitiesParams = {}) => {
         activity_date: row.activity_date,
         verification_id: row.verification_id,
         notes: row.notes,
-        source: row.source,
         created_at: row.created_at,
         csr_name: row.csr_profiles?.display_name
       }));
@@ -135,7 +141,6 @@ export const useCreateCSRActivity = () => {
           activity_date: input.activity_date,
           verification_id: input.verification_id || null,
           notes: input.notes || null,
-          source: 'manual',
           created_by: user?.id
         })
         .select()

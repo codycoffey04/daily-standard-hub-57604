@@ -116,8 +116,7 @@ export const useCurrentCSRProfile = () => {
       return {
         csr_profile_id: profile.csr_profile_id,
         display_name: profile.display_name,
-        email: profile.email,
-        source_id: profile.source_id
+        email: profile.email
       };
     },
     staleTime: 60000,
