@@ -125,8 +125,11 @@ export const ActivityHistoryTable = ({ csrProfileId, isManager = false }: Activi
                   <div className="text-sm text-muted-foreground">
                     {format(new Date(activity.activity_date), 'MMM d, yyyy')}
                   </div>
-                  {activity.customer_name && (
-                    <div className="text-sm">{activity.customer_name}</div>
+                  {activity.verification_id && (
+                    <div className="text-sm">#{activity.verification_id}</div>
+                  )}
+                  {activity.notes && (
+                    <div className="text-xs text-muted-foreground">{activity.notes}</div>
                   )}
                   {isManager && activity.csr_name && (
                     <div className="text-sm text-muted-foreground">
@@ -176,7 +179,7 @@ export const ActivityHistoryTable = ({ csrProfileId, isManager = false }: Activi
                     <TableHead>Date</TableHead>
                     <TableHead>Type</TableHead>
                     {isManager && <TableHead>CSR</TableHead>}
-                    <TableHead>Customer</TableHead>
+                    <TableHead>Reference</TableHead>
                     <TableHead className="text-right">Points</TableHead>
                     <TableHead>Source</TableHead>
                     {isManager && <TableHead className="w-[50px]"></TableHead>}
@@ -194,7 +197,15 @@ export const ActivityHistoryTable = ({ csrProfileId, isManager = false }: Activi
                       {isManager && (
                         <TableCell>{activity.csr_name || '-'}</TableCell>
                       )}
-                      <TableCell>{activity.customer_name || '-'}</TableCell>
+                      <TableCell>
+                        {activity.verification_id && (
+                          <div className="text-sm">#{activity.verification_id}</div>
+                        )}
+                        {activity.notes && (
+                          <div className="text-xs text-muted-foreground">{activity.notes}</div>
+                        )}
+                        {!activity.verification_id && !activity.notes && '-'}
+                      </TableCell>
                       <TableCell className="text-right font-semibold text-primary">
                         +{activity.points}
                       </TableCell>

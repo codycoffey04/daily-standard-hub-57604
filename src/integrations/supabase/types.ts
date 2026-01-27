@@ -474,7 +474,7 @@ export type Database = {
           created_at: string | null
           created_by: string | null
           csr_profile_id: string
-          customer_name: string | null
+          verification_id: string | null
           id: string
           notes: string | null
           points: number
@@ -487,7 +487,7 @@ export type Database = {
           created_at?: string | null
           created_by?: string | null
           csr_profile_id: string
-          customer_name?: string | null
+          verification_id?: string | null
           id?: string
           notes?: string | null
           points: number
@@ -500,7 +500,7 @@ export type Database = {
           created_at?: string | null
           created_by?: string | null
           csr_profile_id?: string
-          customer_name?: string | null
+          verification_id?: string | null
           id?: string
           notes?: string | null
           points?: number

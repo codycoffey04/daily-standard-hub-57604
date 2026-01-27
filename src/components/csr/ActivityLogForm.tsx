@@ -7,7 +7,6 @@ import { CalendarIcon, Check, Loader2 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 import { Calendar } from '@/components/ui/calendar';
 import {
   Form,
@@ -40,10 +39,17 @@ const formSchema = z.object({
     'winback_closed',
     'winback_quoted'
   ] as const),
-  customer_name: z.string().min(1, 'Customer name is required'),
-  activity_date: z.date(),
-  notes: z.string().optional()
-});
+  verification_id: z.string().optional(),
+  reference_note: z.string().optional(),
+  activity_date: z.date()
+}).refine(
+  (data) => (data.verification_id && data.verification_id.trim() !== '') ||
+            (data.reference_note && data.reference_note.trim() !== ''),
+  {
+    message: 'Either Policy/Quote # or Reference Note is required',
+    path: ['verification_id']
+  }
+);
 
 type FormValues = z.infer<typeof formSchema>;
 
@@ -61,9 +67,9 @@ export const ActivityLogForm = ({ csrProfileId, onSuccess }: ActivityLogFormProp
     resolver: zodResolver(formSchema),
     defaultValues: {
       activity_type: undefined,
-      customer_name: '',
-      activity_date: new Date(),
-      notes: ''
+      verification_id: '',
+      reference_note: '',
+      activity_date: new Date()
     }
   });
 
@@ -77,8 +83,8 @@ export const ActivityLogForm = ({ csrProfileId, onSuccess }: ActivityLogFormProp
         activity_type: values.activity_type as ManualActivityType,
         points: selectedPoints,
         activity_date: format(values.activity_date, 'yyyy-MM-dd'),
-        customer_name: values.customer_name,
-        notes: values.notes
+        verification_id: values.verification_id || '',
+        notes: values.reference_note || ''
       });
 
       // Show success animation with the points just earned
@@ -89,9 +95,9 @@ export const ActivityLogForm = ({ csrProfileId, onSuccess }: ActivityLogFormProp
       // Reset form
       form.reset({
         activity_type: undefined,
-        customer_name: '',
-        activity_date: new Date(),
-        notes: ''
+        verification_id: '',
+        reference_note: '',
+        activity_date: new Date()
       });
 
       onSuccess?.();
@@ -143,20 +149,45 @@ export const ActivityLogForm = ({ csrProfileId, onSuccess }: ActivityLogFormProp
               )}
             />
 
-            {/* Customer Name - Large input */}
+            {/* Policy/Quote # - Large input */}
             <FormField
               control={form.control}
-              name="customer_name"
+              name="verification_id"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Customer Name</FormLabel>
+                  <FormLabel>Policy # or Quote #</FormLabel>
                   <FormControl>
                     <Input
                       {...field}
-                      placeholder="Enter customer name"
+                      placeholder="Enter policy or quote number"
                       className="h-12 text-base"
                     />
                   </FormControl>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Enter policy number for closed business, quote number for pending
+                  </p>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            {/* Reference Note - Large input */}
+            <FormField
+              control={form.control}
+              name="reference_note"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Reference Note</FormLabel>
+                  <FormControl>
+                    <Input
+                      {...field}
+                      placeholder="Producer name, date, or internal reference"
+                      className="h-12 text-base"
+                    />
+                  </FormControl>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Producer name, date, or internal reference only. No customer names or contact info.
+                  </p>
                   <FormMessage />
                 </FormItem>
               )}
@@ -194,25 +225,6 @@ export const ActivityLogForm = ({ csrProfileId, onSuccess }: ActivityLogFormProp
                       />
                     </PopoverContent>
                   </Popover>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            {/* Notes - Optional */}
-            <FormField
-              control={form.control}
-              name="notes"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Notes (optional)</FormLabel>
-                  <FormControl>
-                    <Textarea
-                      {...field}
-                      placeholder="Add any relevant notes..."
-                      className="min-h-[80px] text-base resize-none"
-                    />
-                  </FormControl>
                   <FormMessage />
                 </FormItem>
               )}

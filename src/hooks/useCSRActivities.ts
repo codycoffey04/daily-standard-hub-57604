@@ -33,7 +33,7 @@ interface CSRActivity {
   activity_type: string;
   points: number;
   activity_date: string;
-  customer_name: string | null;
+  verification_id: string | null;
   notes: string | null;
   source: 'auto' | 'manual';
   created_at: string;
@@ -45,7 +45,7 @@ interface CreateActivityInput {
   activity_type: ManualActivityType;
   points: number;
   activity_date: string;
-  customer_name: string;
+  verification_id: string;
   notes?: string;
 }
 
@@ -70,7 +70,7 @@ export const useCSRActivities = (params: GetActivitiesParams = {}) => {
           activity_type,
           points,
           activity_date,
-          customer_name,
+          verification_id,
           notes,
           source,
           created_at,
@@ -104,7 +104,7 @@ export const useCSRActivities = (params: GetActivitiesParams = {}) => {
         activity_type: row.activity_type,
         points: row.points,
         activity_date: row.activity_date,
-        customer_name: row.customer_name,
+        verification_id: row.verification_id,
         notes: row.notes,
         source: row.source,
         created_at: row.created_at,
@@ -133,7 +133,7 @@ export const useCreateCSRActivity = () => {
           activity_type: input.activity_type,
           points: input.points,
           activity_date: input.activity_date,
-          customer_name: input.customer_name,
+          verification_id: input.verification_id || null,
           notes: input.notes || null,
           source: 'manual',
           created_by: user?.id
