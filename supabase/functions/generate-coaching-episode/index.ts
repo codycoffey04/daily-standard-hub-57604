@@ -362,7 +362,7 @@ IMPORTANT: Return ONLY the JSON object, no additional text or markdown code bloc
         'anthropic-version': '2023-06-01'
       },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
+        model: 'claude-opus-4-20250514',
         max_tokens: 8000,
         messages: [
           {
@@ -429,7 +429,7 @@ IMPORTANT: Return ONLY the JSON object, no additional text or markdown code bloc
       items: producerMetrics.items,
       premium: producerMetrics.premium,
       close_rate: producerMetrics.close_rate,
-      model_used: 'claude-sonnet-4-20250514',
+      model_used: 'claude-opus-4-20250514',
       tokens_used: tokensUsed,
       generation_duration_ms: generationDuration,
       status: 'published'

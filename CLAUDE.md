@@ -1,285 +1,490 @@
-# CLAUDE.md - The Daily Standard (TDS) Project
+# CLAUDE.md - The Daily Standard (TDS)
 
-## Project Overview
-
-**The Daily Standard (TDS)** is a sales performance tracking system for Cody's insurance agency. It replaces manual JotForm + Google Sheets workflows with automated real-time performance tracking and accountability management.
-
-### Purpose
-Implement the "Daily Standard Framework" - a performance-based lead access system where producers must achieve specific daily metrics to maintain lead access levels. The system drives accountability, enables data-driven decisions, and optimizes ROI across lead sources and territories.
-
-### Who It Serves
-- **Producers**: Maria Rocha-Guzman, Kimberly Fletcher, Rick Payne (active)
-- **Accountability Manager**: Crystal Brozio (reviews producer performance)
-- **Admin/Owner**: Cody (oversight, reporting, ROI analysis)
-- **Support Staff**: Aleeah Stone, Stacey Freeman
+> Last updated: January 26, 2026
+> Repository: daily-standard-hub-57604
 
 ---
 
-## The Daily Standard Framework (CRITICAL BUSINESS LOGIC)
+## What This Is
 
-### Performance Tiers & Lead Access
+TDS is a sales performance tracking system for Coffey Agencies (Allstate insurance). Producers enter daily metrics, the system calculates framework status in real-time, and lead access is determined automatically. Managers get dashboards, reports, AI-powered coaching tools, and automated weekly emails.
 
-| Status | Criteria | Lead Access |
-|--------|----------|-------------|
-| **TOP** | Met 2/4 metrics WITH at least 1 impact metric | All leads (live transfers, call-ins, web) |
-| **BOTTOM** | Met 2/4 metrics but ONLY effort metrics | Web leads only |
-| **OUTSIDE** | Did not meet 2/4 metrics | Lead Manager only |
-
-### Daily Metric Thresholds
-1. **100+ outbound dials** (effort)
-2. **180+ minutes talk time** (effort)
-3. **4+ quoted households** (IMPACT)
-4. **2+ items sold** (IMPACT)
-
-### Framework Status Calculation
-```javascript
-const calculateFrameworkStatus = (metrics) => {
-  const checks = {
-    dials: metrics.dials >= 100,
-    talkTime: metrics.talkTime >= 180,
-    quotedHH: metrics.quotedHH >= 4,
-    itemsSold: metrics.itemsSold >= 2
-  };
-  
-  const metCount = Object.values(checks).filter(v => v).length;
-  const hasImpactMetric = checks.quotedHH || checks.itemsSold;
-  
-  if (metCount >= 2 && hasImpactMetric) return 'TOP';
-  if (metCount >= 2) return 'BOTTOM';
-  return 'OUTSIDE';
-};
-```
-
-**Key Rule**: Impact metrics (Quoted HH, Items Sold) are required to reach TOP status. Two effort-only metrics = BOTTOM.
+### Users
+- **Producers**: Maria Rocha-Guzman, Kimberly Fletcher, Rick Payne
+- **Service Manager**: Crystal Brozio
+- **Owner**: Cody Coffey
+- **Support Staff**: Aleeah Stone, Stacey Freeman
 
 ---
 
 ## Tech Stack
 
-| Component | Technology |
-|-----------|------------|
-| **Frontend** | Lovable (React-based) |
-| **Database** | Supabase PostgreSQL with Row Level Security |
-| **Auth** | Supabase Auth |
-| **Data Migration** | Node.js + PapaParse |
-| **Source Data** | JotForm CSVs (legacy) |
-| **Sales Validation** | Agency Zoom integration |
-| **Code Analysis** | Cursor AI, Claude Code |
+| Layer | Technology |
+|-------|------------|
+| Frontend | React 18.3 + TypeScript + Vite 5.4 |
+| UI | shadcn/ui (Radix) + Tailwind CSS 3.4 |
+| State | React Query (TanStack) + React Context |
+| Database | Supabase PostgreSQL with RLS |
+| Auth | Supabase Auth with role-based access |
+| Charts | Recharts |
+| Forms | React Hook Form + Zod |
+| AI | Claude API — claude-sonnet-4-20250514 (coaching), claude-opus-4-20250514 (emails) |
+| PDF | Claude native PDF support (no OCR) |
 
 ---
 
-## Key Files & Structure
+## The Framework (Core Business Logic)
 
-### Data Transformation
-| File | Purpose |
-|------|---------|
-| `jotform-transformation-scripts.js` | Transforms raw JotForm CSV data into clean format for Supabase |
-| `supabase-import-scripts.sql` | SQL scripts for database schema and data import |
-| `run-migration-script.sh` | Shell script to automate the full migration process |
+### Daily Metric Thresholds
 
-### Source Data (Legacy)
-| File | Purpose |
-|------|---------|
-| `the_daily_standard_jotform.csv` | Producer daily activity submissions (dials, talk time, quotes, sales) |
-| `crystal_to_cody_jotform.csv` | Manager reviews and coaching notes |
+| Metric | Target | Type |
+|--------|--------|------|
+| Outbound Dials | 100+ | Effort |
+| Talk Time | 180+ min | Effort |
+| QHH (Quoted Households) | 4+ | **IMPACT** |
+| Items Sold | 2+ | **IMPACT** |
 
-### Documentation
-| File | Purpose |
-|------|---------|
-| `daily_standard_framework_final.docx` | Official business rules for the framework |
-| `lovable-detailed-plan.md` | Full development plan with database schema, UI specs, workflows |
+### Framework Status
 
-### Screenshots (Reference)
-| File | Shows |
-|------|-------|
-| `form_responses.png` | Raw JotForm data structure |
-| `lead_sources_az.png` | Agency Zoom lead source report |
-| `nb_producer_az.png` | Agency Zoom producer sales data |
-| `report_options_az.png` | Available Agency Zoom reports |
-| `totalquotes_*.png` | Monthly quote analysis views |
+| Status | Criteria | Lead Access |
+|--------|----------|-------------|
+| **TOP** | ≥2 metrics met AND ≥1 impact metric | All leads (live transfers, call-ins, web) |
+| **BOTTOM** | ≥2 metrics met but ONLY effort metrics | Web leads only |
+| **OUTSIDE** | <2 metrics met | Lead Manager only |
+
+**Key Rule**: You need at least one impact metric (QHH or Items) to reach TOP. Two effort-only = BOTTOM.
 
 ---
 
-## Database Schema (Core Tables)
+## Routes & Pages
 
-```sql
--- User/Producer profiles
-profiles (id, full_name, role, email, phone, active)
+| Route | Page | Access | Purpose |
+|-------|------|--------|---------|
+| `/login` | LoginPage | Public | Auth |
+| `/producer` | HomePage | All authenticated | Daily entry form + status |
+| `/team` | TeamPage | Owner/Manager | Team overview, leaderboard, monthly totals |
+| `/coaching` | CoachingPage | Owner/Manager | Upload transcripts, generate AI episodes |
+| `/email-updates` | EmailUpdatesPage | Owner/Manager | AI-generated weekly/monthly team emails |
+| `/summaries` | SummariesPage | Owner/Manager | 20+ report types |
+| `/insights` | PatternInsightsPage | Owner/Manager | AI-detected patterns + alerts |
+| `/sources` | SourcesPage | Owner/Manager | Lead source + cost admin |
+| `/importer` | ImporterPage | Owner/Manager | CSV import |
+| `/sales-service` | SalesServicePage | sales_service role | Lead management |
 
--- Daily activity entries
-daily_activities (id, producer_id, activity_date, outbound_dials, 
-                  talk_time_minutes, quoted_households, items_sold,
-                  framework_status, lead_access, notes)
+---
 
--- Individual quote details
-quotes (id, activity_id, customer_name, phone, lead_source, 
-        products_quoted, status, premium, notes)
+## Database Schema
 
--- Lead source master list with costs
-lead_sources (id, name, type, monthly_cost, is_active)
+### Core Tables
 
--- Manager review records
-manager_reviews (id, activity_id, reviewer_id, call_reviewed,
-                 sales_process_gaps, coaching_notes, follow_up_required)
+| Table | Purpose |
+|-------|---------|
+| `profiles` | User accounts with roles |
+| `producers` | Producer master list |
+| `daily_entries` | Daily metrics: dials, talk_minutes, qhh_total, items_total, sales_total, framework_status |
+| `daily_entry_sources` | Metrics broken down by lead source per entry |
+| `quoted_households` | Individual QHH records with zip, premium, product_lines, lead_source_id |
+| `sales_from_old_quotes` | Sales from quotes older than same-day |
+| `sources` | Lead source master list |
+| `source_costs` | Monthly cost per source for ROI |
+| `detected_patterns` | AI-detected performance patterns (auto-generated nightly) |
 
--- Monthly ROI metrics
-monthly_metrics (id, lead_source_id, month, total_leads, total_quotes,
-                 total_sales, total_revenue, cost)
+### Coaching Tables
+
+| Table | Purpose |
+|-------|---------|
+| `coaching_transcripts` | Uploaded call PDFs |
+| `coaching_episodes` | AI-generated coaching episodes |
+| `coaching_scores` | 8-step scorecard per transcript |
+| `coaching_metrics` | Weekly AgencyZoom metrics (sales, items, premium) |
+| `coaching_framework_config` | Scorecard criteria, cross-sell triggers, 8-week rotation, producer profiles |
+
+### Email Tables
+
+| Table | Purpose |
+|-------|---------|
+| `email_metrics` | Weekly/monthly data snapshots (MTD producer metrics, weekly metrics, TDS activity) |
+| `email_lead_source_metrics` | Lead source performance data by period |
+| `email_updates` | Generated emails with HTML/markdown content, subject lines, comparison data |
+
+### Key Views
+
+| View | Purpose |
+|------|---------|
+| `entry_status` | Real-time framework status calculation |
+| `yesterday_status` | Previous day performance |
+| `premium_by_entry` | Premium totals per entry |
+
+### Auth Tables
+
+| Table | Purpose |
+|-------|---------|
+| `user_roles` | RBAC junction table |
+
+---
+
+## Key Database Functions (RPC)
+
+| Function | Purpose |
+|----------|---------|
+| `calculate_framework_status` | Returns TOP/BOTTOM/OUTSIDE |
+| `mtd_producer_metrics` | Month-to-date producer summary with VC pace |
+| `get_producer_execution_leaderboard` | Ranked metrics with benchmarks |
+| `get_execution_funnel` | Full funnel: dials→QHH→sold |
+| `get_source_roi` | ROI calculation per lead source |
+| `get_ytd_performance` | Year-to-date by month |
+| `get_zip_performance` | Quotes/sales by ZIP |
+| `get_common_weak_points` | Frequent review gaps |
+| `get_coaching_effectiveness_metrics` | Coaching impact stats |
+| `get_producer_trends_v3` | Daily producer data with sales |
+| `get_weekly_coaching_trend` | Week-over-week coaching data |
+| `get_my_roles` / `has_my_role` | RBAC helpers |
+
+---
+
+## File Structure
+
+```
+src/
+├── pages/
+│   ├── HomePage.tsx              # Producer daily entry
+│   ├── TeamPage.tsx              # Team dashboard
+│   ├── CoachingPage.tsx          # AI coaching
+│   ├── EmailUpdatesPage.tsx      # AI-powered weekly emails
+│   ├── SummariesPage.tsx         # Reports
+│   ├── PatternInsightsPage.tsx      # AI pattern detection
+│   ├── SourcesPage.tsx
+│   ├── ImporterPage.tsx
+│   ├── SalesServicePage.tsx
+│   ├── LoginPage.tsx
+│   ├── Index.tsx                 # Root redirect
+│   └── NotFound.tsx              # 404 page
+├── components/
+│   ├── DailyEntryForm.tsx        # Daily entry form
+│   ├── QuotedHouseholdForm.tsx   # QHH entry modal
+│   ├── SaleFromOldQuoteForm.tsx  # Old quote sale modal
+│   ├── YesterdayStatusBanner.tsx # Previous day status
+│   ├── Leaderboard.tsx           # Team leaderboard
+│   ├── MonthlyTotalsCard.tsx     # Monthly summary card
+│   ├── PacingCard.tsx            # VC pacing display
+│   ├── QHHDetailsCard.tsx        # QHH breakdown
+│   ├── patterns/
+│   │   ├── ActivePatternsCard.tsx    # Manager view of all patterns
+│   │   └── AlertsCard.tsx            # Producer view of own patterns
+│   ├── ErrorBoundary.tsx         # Global error boundary
+│   ├── ThemeToggle.tsx           # Dark/light mode
+│   ├── coaching/
+│   │   ├── TranscriptUploader.tsx
+│   │   ├── EpisodeGenerator.tsx
+│   │   ├── EpisodeViewer.tsx
+│   │   ├── ScoreBreakdown.tsx
+│   │   ├── WeekSelector.tsx
+│   │   ├── MetricsInput.tsx
+│   │   ├── MetricsPreview.tsx
+│   │   └── ProducerTranscriptPanel.tsx
+│   ├── email-updates/
+│   │   ├── PeriodSelector.tsx
+│   │   ├── MetricsSummaryCard.tsx
+│   │   ├── ProductionMetricsInput.tsx
+│   │   ├── LeadSourceMetricsInput.tsx
+│   │   ├── TDSActivityPreview.tsx
+│   │   ├── EmailGenerator.tsx
+│   │   ├── EmailPreview.tsx
+│   │   └── EmailArchive.tsx
+│   ├── charts/
+│   │   ├── FrameworkTrendChart.tsx
+│   │   ├── ActivityMetricsChart.tsx
+│   │   ├── SalesPerformanceChart.tsx
+│   │   ├── QHHTrendChart.tsx
+│   │   ├── CloseRateChart.tsx
+│   │   ├── SummaryBarChart.tsx
+│   │   ├── ProducerSourceMatrix.tsx
+│   │   ├── ProducerSourceMatrixQHHChart.tsx
+│   │   └── ProducerSourceMatrixQuotesChart.tsx
+│   ├── insights/
+│   │   ├── ConversionFunnelCard.tsx
+│   │   └── ProducerPerformanceCard.tsx
+│   ├── reports/
+│   │   ├── ReportSidebar.tsx
+│   │   ├── ProducerTrendsDateFilter.tsx
+│   │   ├── MonthlySummaryReport.tsx
+│   │   ├── ExecutionFunnelReport.tsx
+│   │   ├── ConversionFunnelReport.tsx
+│   │   ├── ItemsByProducerReport.tsx
+│   │   ├── ItemsBySourceReport.tsx
+│   │   ├── QHHByProducerReport.tsx
+│   │   ├── ProducerTrendsReport.tsx
+│   │   ├── ProducerSourceMatrixReport.tsx
+│   │   ├── ProducerSourceMatrixQHHReport.tsx
+│   │   └── ProducerSourceMatrixQuotesReport.tsx
+│   └── ui/                       # shadcn/ui components
+├── hooks/
+│   ├── useAnalyticsData.ts
+│   ├── useSummariesData.ts
+│   ├── useExecutionFunnel.ts
+│   ├── useExecutionEfficiency.ts
+│   ├── useProducerExecutionLeaderboard.ts
+│   ├── useConversionFunnel.ts
+│   ├── useMonthlySummary.ts
+│   ├── useProducerTrends.ts
+│   ├── useProducersForSelection.ts
+│   ├── useQHHDetails.ts
+│   ├── useZipPerformance.ts
+│   ├── useSources.ts
+│   ├── useSourcesForSelection.ts
+│   ├── useSourceCosts.ts
+│   ├── useDetectedPatterns.ts
+│   ├── useCoachingTranscripts.ts
+│   ├── useCoachingMetrics.ts
+│   ├── useEpisodeGeneration.ts
+│   ├── useWeeklyProducerSummary.ts
+│   ├── useEmailMetrics.ts
+│   ├── useEmailGeneration.ts
+│   ├── useEmailLeadSources.ts
+│   └── use-toast.ts
+├── lib/
+│   ├── auth.ts                   # Auth helpers
+│   ├── constants.ts              # Product lines, etc.
+│   ├── roles.ts                  # Role caching + RPC helpers
+│   ├── timezone.ts               # Timezone utilities
+│   └── utils.ts                  # General utilities (cn, etc.)
+├── utils/
+│   ├── pdfExtractor.ts           # PDF text extraction (legacy)
+│   └── metricsParser.ts          # AgencyZoom CSV parsing
+├── contexts/
+│   └── AuthContext.tsx           # Auth state provider
+└── integrations/
+    └── supabase/
+        ├── client.ts             # Supabase client
+        └── types.ts              # Generated DB types
+
+supabase/
+└── functions/
+    ├── generate-coaching-episode/
+    │   └── index.ts              # claude-sonnet-4-20250514
+    ├── generate-email-update/
+    │   └── index.ts              # claude-opus-4-20250514
+    └── detect-patterns/
+        └── index.ts              # Nightly pattern detection (pg_cron @ 11:30 PM CT)
 ```
 
 ---
 
-## Development Workflow
+## Reports (20+ in reportConfig.ts)
 
-### Running Data Migration
-```bash
-# 1. Install dependencies
-npm install papaparse @supabase/supabase-js
+**Performance Metrics:**
+- Monthly Summary, Execution Funnel Dashboard, YTD Performance, ZIP Code Performance
 
-# 2. Run transformation
-node jotform-transformation-scripts.js
+**Lead Source Analysis:**
+- QHH by Source, Quotes by Source, Items by Source, Source ROI Calculator
 
-# 3. Import to Supabase
-# - Use Supabase Dashboard CSV import, OR
-# - Run supabase-import-scripts.sql in SQL Editor
-```
+**Producer Analytics:**
+- Weekly Producer Summary, QHH by Producer, Quotes by Producer
+- Producer × Source Matrix (QHH/Quotes), Items by Producer, Sales by Producer, Producer Trends
 
-### Framework Status Updates
-- Calculate in real-time as metrics are entered
-- Update lead_access field based on status
-- Show visual feedback (green/yellow/red) for tier
-
-### Data Validation Rules
-- Outbound dials: ≥ 0
-- Talk time: ≥ 0 minutes
-- Quoted households: ≥ 0
-- Items sold: ≥ 0, cannot exceed quoted households
-- Activity date: Required, valid date
-- Producer name: Required
+**Accountability Insights:**
+- Review Summary, Common Weak Points, Coaching Effectiveness
 
 ---
 
-## MCP Servers & Integrations
+## AI Sales Coaching
 
-| Integration | Purpose |
-|-------------|---------|
-| **JotForm MCP** | Access to form submissions (connected) |
-| **Agency Zoom** | Sales data validation, policy details |
-| **Supabase** | Database operations |
-| **Google Drive** | Document storage for reports |
+### Data Flow
+```
+TDS Activity (QHH, Quotes)
+        +
+AgencyZoom CSV (Sales, Items, Premium)
+        +
+Total Recall PDFs (call transcripts)
+        ↓
+Edge Function (generate-coaching-episode)
+        ↓
+Claude Sonnet 4 API (claude-sonnet-4-20250514)
+        ↓
+8-Step Scorecard + Coaching Episode (markdown)
+        ↓
+NotebookLM → MP3
+```
+
+### 8-Step Sales Scorecard (0-2 scale, max 16)
+
+| Step | What to Look For |
+|------|------------------|
+| 1. Opening | Rapport, introduction |
+| 2. Discovery | Needs assessment |
+| 3. Quoting | Presenting options |
+| 4. Ask for Sale | Closing attempt |
+| 5. Closing | Overcoming objections |
+| 6. Follow-up | Next steps |
+| 7. Multi-line | Cross-sell/bundle |
+| 8. Referral Ask | Asked for referrals |
+
+### 8-Week Focus Rotation (starts Jan 6, 2026)
+1. Discovery & Needs Assessment
+2. Bundling & Multi-Line
+3. Asking for the Sale
+4. Referral Generation
+5. Objection Handling
+6. Quote Volume & Activity
+7. Cross-Sell Triggers
+8. Value Before Price
+
+### Cross-Sell Triggers Detected
+- **Vehicle/Powersports**: boat, motorcycle, ATV, RV, new car, teen driver
+- **Home/Property**: new house, renting, rental property, vacation home
+- **Life Events**: married, baby, pregnant, retired
+- **Coverage Gaps**: umbrella, life insurance, lapsed, canceled
+
+---
+
+## AI Email Generation
+
+### Data Flow
+```
+AgencyZoom CSV (MTD Production + Weekly Production + Lead Sources)
+        +
+TDS Activity (QHH MTD, Quotes MTD per producer)
+        ↓
+Edge Function (generate-email-update)
+        ↓
+Claude Opus 4 API (claude-opus-4-20250514)
+        ↓
+Outlook-ready HTML + Markdown
+```
+
+### Email Sections (11 total)
+1. Opening Hook
+2. Production Table (with WoW deltas)
+3. GA VC Pacing (76-item target)
+4. Quotes & Close Rate Table
+5. Lead Source Performance
+6. Coaching Notes (rotates pressure weekly)
+7. CSR Section (incentive tiers)
+8. Life Insurance Update
+9. Announcements
+10. Week Focus (6-8 bullets)
+11. Closing (LFG. 🔥)
+
+### Key Formulas
+- **Close Rate**: Sales MTD ÷ QHH MTD
+- **Pipeline**: QHH MTD - Sales MTD
+- **VC Pace**: (Current Items ÷ Days Elapsed) × Workdays in Month
+
+### Data Source Hierarchy
+| Data Type | Source | Priority |
+|-----------|--------|----------|
+| Production (Items, Premium, Sales) | AgencyZoom CSV | **Source of truth** |
+| Lead Sources | AgencyZoom CSV | **Source of truth** |
+| Activity (QHH, Quotes) | TDS | Secondary |
+
+**Critical Rule:** AgencyZoom wins if conflicts exist with TDS data.
+
+---
+
+## AI Pattern Detection
+
+Automated system that replaces manual accountability reviews. Runs nightly at 11:30 PM CT via pg_cron.
+
+### Pattern Types
+
+| Type | Severity | Trigger |
+|------|----------|---------|
+| `low_conversion` | critical | ≥8 QHH + 0 items in day |
+| `source_failing` | warning | Same source 0 items for 3+ consecutive days |
+| `outside_streak` | critical | 3+ consecutive OUTSIDE framework days |
+| `zero_item_streak` | warning | 3+ consecutive 0-item days |
+
+### Data Flow
+```
+pg_cron (11:30 PM CT / 5:30 AM UTC)
+        ↓
+Edge Function (detect-patterns)
+        ↓
+RPC functions scan daily_entries
+        ↓
+Insert to detected_patterns table
+        ↓
+Auto-resolve stale patterns (>7 days)
+```
+
+### Key RPC Functions
+| Function | Purpose |
+|----------|---------|
+| `get_producer_patterns(uuid)` | Active patterns for one producer |
+| `get_all_active_patterns()` | All team patterns (managers) |
+| `get_source_failure_streaks(days)` | Sources with 0 items 3+ days |
+| `get_outside_streaks(days)` | OUTSIDE framework streaks |
+| `get_zero_item_streaks(days)` | Zero-item day streaks |
+| `resolve_pattern(uuid, bool)` | Mark pattern resolved |
+
+### UI Components
+- **Managers**: PatternInsightsPage (`/insights`) with ActivePatternsCard
+- **Producers**: AlertsCard on producer dashboard (only shows if patterns exist)
+
+---
+
+## Auth & Roles
+
+**Roles**: `owner` | `manager` | `producer` | `reviewer` | `sales_service`
+
+**Role Routing:**
+- Owner/Manager → `/team`
+- Reviewer → `/accountability`
+- Sales Service → `/sales-service`
+- Producer → `/producer`
+
+**RLS**: Row-level security via `profiles.role` + RPC functions `get_my_roles()`, `has_my_role()`
+
+---
+
+## Product Lines
+
+```
+Standard Auto, Home, Landlords, Renters, Motorcycle,
+Manufactured Home, Boat, Umbrella, Condominium, Motor Club
+```
+
+---
+
+## External Integrations
+
+| System | Usage |
+|--------|-------|
+| Claude API | Coaching (claude-sonnet-4-20250514), Emails (claude-opus-4-20250514) |
+| Supabase Storage | PDF storage (`coaching-transcripts` bucket) |
+| AgencyZoom | Sales/items/premium data (CSV upload) |
+| NotebookLM | Audio generation from coaching markdown |
+
+---
+
+## Secrets Required
+
+In Supabase secrets:
+- `ANTHROPIC_API_KEY` — for coaching and email generation
 
 ---
 
 ## Conventions
 
-### Naming Patterns
+### Naming
 - **Framework status**: `TOP`, `BOTTOM`, `OUTSIDE` (uppercase)
-- **Lead access**: Full descriptive strings ("All Leads...", "Web Leads Only", etc.)
 - **Database columns**: snake_case
 - **JS variables**: camelCase
 - **Date format**: ISO (YYYY-MM-DD)
-- **Phone format**: 10 digits, cleaned of non-numeric
 
-### Color Coding
-- **Green (#10B981)**: TOP / Good / Met threshold
+### Colors
+- **Green (#10B981)**: TOP / Good
 - **Yellow (#F59E0B)**: BOTTOM / Warning
-- **Red (#EF4444)**: OUTSIDE / Critical / Below threshold
+- **Red (#EF4444)**: OUTSIDE / Critical
 - **Blue (#3B82F6)**: Informational
-
-### Lead Sources (Standardized Names)
-- Net Lead (paid, $10k/mo)
-- Digital Marketing (paid, $2k/mo)
-- Direct Mail (paid)
-- CLICK AD (paid)
-- Live Transfer (paid)
-- Call-In - Existing (organic)
-- Call-In - NEW (organic)
-- Walk-In (organic)
-- Customer Referral (organic)
-- Lead Manager (organic)
-- Cross-Sale (organic)
-- DM Rome, DM Centre (direct mail variants)
-
----
-
-## Current State
-
-### What's Working
-- JotForm data transformation scripts
-- Framework status calculation logic
-- Database schema design
-- CSV migration pipeline
-- Manager review data structure
-
-### In Progress
-- TDS app in Lovable (production use)
-- Role-based access control
-- Coaching effectiveness dashboards
-- Real-time framework status updates
-
-### Known Issues / Considerations
-- Framework compliance doesn't always correlate with actual sales (Kimberly example)
-- Data discrepancies between TDS and Agency Zoom require validation
-- Brandy Wilkins terminated Dec 2024 - historical data remains
-- Geographic performance varies (359xx area codes strong, Atlanta metro weak)
 
 ---
 
 ## Context for Claude
 
-### Key Business Insights
-1. **Impact metrics matter most** - Sales (items sold) and quotes (households) drive TOP status
-2. **Net Lead is the primary paid source** - $10k/mo, needs ROI monitoring
-3. **Producer territory affinity** - Different producers perform better in different regions
-4. **Friday emails** - Weekly performance summaries sent to team with metrics + motivation
-
-### When Helping Cody
 - Focus on actionable, data-driven insights
-- Reference specific producer names and their patterns
+- Reference specific producer names and patterns
 - Consider ROI implications of lead source decisions
-- Maintain data integrity between systems
 - Think about framework compliance vs actual results nuance
-
-### Common Tasks
-- Analyzing producer performance by lead source
-- Calculating ROI metrics for lead sources
-- Building reports for Friday emails
-- Debugging data discrepancies
-- Creating dashboard visualizations
-- Optimizing territory assignments
-
-### Data Sources to Cross-Reference
-- TDS daily submissions → framework compliance
-- Agency Zoom → actual sales/policies
-- Lead source costs → ROI calculations
-- Geographic data (zip codes) → territory optimization
-
----
-
-## Quick Reference Commands
-
-```javascript
-// Calculate framework status
-calculateFrameworkStatus({ dials: 120, talkTime: 200, quotedHH: 5, itemsSold: 3 })
-// Returns: 'TOP'
-
-// Determine lead access
-determineLeadAccess('TOP') // 'All Leads (Live transfers, Call-ins, Web)'
-determineLeadAccess('BOTTOM') // 'Web Leads Only'
-determineLeadAccess('OUTSIDE') // 'Lead Manager Only'
-```
-
-```sql
--- Check framework distribution
-SELECT framework_status, COUNT(*) FROM daily_activities GROUP BY framework_status;
-
--- Producer performance summary
-SELECT p.full_name, AVG(da.quoted_households), AVG(da.items_sold)
-FROM daily_activities da JOIN profiles p ON p.id = da.producer_id
-GROUP BY p.full_name;
-
--- Lead source ROI
-SELECT lead_source, COUNT(*) quotes, 
-       COUNT(CASE WHEN status = 'Sold' THEN 1 END) sales
-FROM quotes GROUP BY lead_source;
-```
+- Keep responses tight, outcome-driven, no fluff
+- See LEARNINGS.md for mistakes to avoid and patterns that work
