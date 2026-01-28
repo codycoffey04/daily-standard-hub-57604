@@ -1,8 +1,11 @@
 import * as pdfjsLib from 'pdfjs-dist'
 import { PDFDocument } from 'pdf-lib'
 
-// Configure worker for pdfjs
-pdfjsLib.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`
+// Use Vite-compatible import.meta.url pattern for worker (same as pdfExtractor.ts)
+pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
+  'pdfjs-dist/build/pdf.worker.min.mjs',
+  import.meta.url
+).toString()
 
 export interface CompressionResult {
   file: File
@@ -43,35 +46,48 @@ export async function compressPdf(
     const page = await sourcePdf.getPage(pageNum)
     const viewport = page.getViewport({ scale: scaleFactor })
 
+    console.log(`[Compress] Page ${pageNum}/${numPages}: viewport ${Math.round(viewport.width)}x${Math.round(viewport.height)}`)
+
     // Render to canvas
     const canvas = document.createElement('canvas')
-    canvas.width = viewport.width
-    canvas.height = viewport.height
+    canvas.width = Math.floor(viewport.width)
+    canvas.height = Math.floor(viewport.height)
     const context = canvas.getContext('2d')
 
     if (!context) {
       throw new Error('Could not get canvas 2D context')
     }
 
+    // Render the page
     await page.render({
       canvasContext: context,
       viewport: viewport
     }).promise
 
+    // Verify canvas has content by checking a sample of pixels
+    const imageData = context.getImageData(0, 0, Math.min(100, canvas.width), Math.min(100, canvas.height))
+    const hasContent = imageData.data.some((val, i) => i % 4 !== 3 && val !== 0) // Check non-alpha channels
+
+    if (!hasContent) {
+      console.warn(`[Compress] Page ${pageNum} appears blank after render`)
+    }
+
     // Convert canvas to JPEG blob
     const jpegBlob = await new Promise<Blob>((resolve, reject) => {
       canvas.toBlob(
         (blob) => {
-          if (blob) {
+          if (blob && blob.size > 0) {
             resolve(blob)
           } else {
-            reject(new Error('Failed to convert canvas to JPEG blob'))
+            reject(new Error(`Failed to convert page ${pageNum} to JPEG blob (blob is ${blob ? 'empty' : 'null'})`))
           }
         },
         'image/jpeg',
         jpegQuality
       )
     })
+
+    console.log(`[Compress] Page ${pageNum} JPEG: ${(jpegBlob.size / 1024).toFixed(1)} KB`)
 
     // Embed in new PDF
     const jpegData = await jpegBlob.arrayBuffer()
@@ -98,6 +114,16 @@ export async function compressPdf(
   const reductionPercent = Math.round((1 - compressedSize / originalSize) * 100)
 
   console.log(`[Compress] Complete: ${(originalSize / 1024 / 1024).toFixed(1)}MB → ${(compressedSize / 1024 / 1024).toFixed(1)}MB (${reductionPercent}% reduction)`)
+
+  // Validate output - if compression resulted in a tiny/empty file, something went wrong
+  if (compressedSize < 1000) {
+    throw new Error(`Compression failed: output file is only ${compressedSize} bytes (expected several MB)`)
+  }
+
+  // If "reduction" is > 95%, something is likely wrong (we expect ~70%)
+  if (reductionPercent > 95) {
+    throw new Error(`Compression suspicious: ${reductionPercent}% reduction suggests rendering failed`)
+  }
 
   return {
     file: compressedFile,
