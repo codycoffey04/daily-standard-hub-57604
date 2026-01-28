@@ -8,12 +8,18 @@ import type { Database } from '@/integrations/supabase/types'
 
 type CoachingMetrics = Database['public']['Tables']['coaching_metrics']['Row']
 type CoachingMetricsInsert = Database['public']['Tables']['coaching_metrics']['Insert']
+type CoachingType = 'sales' | 'service'
 
 function formatDateForDB(date: Date): string {
   return date.toISOString().split('T')[0]
 }
 
-export function useCoachingMetrics(weekStart: Date) {
+/**
+ * Hook for managing coaching metrics.
+ * Note: Metrics are only relevant for sales coaching mode.
+ * For service coaching, this hook returns isSkipped: true and empty data.
+ */
+export function useCoachingMetrics(weekStart: Date, coachingType: CoachingType = 'sales') {
   const { user } = useAuth()
   const { toast } = useToast()
   const queryClient = useQueryClient()
@@ -26,23 +32,31 @@ export function useCoachingMetrics(weekStart: Date) {
   weekEnd.setDate(weekStart.getDate() + 6)
   const weekEndStr = formatDateForDB(weekEnd)
 
-  // Fetch existing metrics for this week
+  // Service mode doesn't use metrics - CSRs don't have production data
+  const isSkipped = coachingType === 'service'
+
+  // Fetch existing metrics for this week (only for sales mode)
   const {
     data: metrics,
     isLoading,
     error
   } = useQuery({
-    queryKey: ['coaching-metrics', weekStartStr],
+    queryKey: ['coaching-metrics', weekStartStr, coachingType],
     queryFn: async () => {
+      // Service mode doesn't need metrics
+      if (isSkipped) return null
+
       const { data, error } = await supabase
         .from('coaching_metrics')
         .select('*')
         .eq('week_start', weekStartStr)
+        .eq('coaching_type', 'sales')
         .maybeSingle()
 
       if (error) throw error
       return data as CoachingMetrics | null
-    }
+    },
+    enabled: !isSkipped
   })
 
   // Parse raw paste on change
@@ -70,9 +84,13 @@ export function useCoachingMetrics(weekStart: Date) {
     }
   }, [metrics])
 
-  // Save/update mutation
+  // Save/update mutation (only for sales mode)
   const saveMutation = useMutation({
     mutationFn: async () => {
+      if (isSkipped) {
+        throw new Error('Metrics are not applicable for service coaching')
+      }
+
       if (!parsedMetrics) {
         throw new Error('No valid metrics to save')
       }
@@ -80,6 +98,7 @@ export function useCoachingMetrics(weekStart: Date) {
       const metricsData: CoachingMetricsInsert = {
         week_start: weekStartStr,
         week_end: weekEndStr,
+        coaching_type: 'sales',
         raw_paste: rawPaste,
         producer_metrics: parsedMetrics.producers as unknown as Database['public']['Tables']['coaching_metrics']['Insert']['producer_metrics'],
         team_qhh: parsedMetrics.team.qhh,
@@ -114,7 +133,7 @@ export function useCoachingMetrics(weekStart: Date) {
         description: `Weekly metrics for ${weekStartStr} saved successfully.`
       })
       setRawPaste('')
-      queryClient.invalidateQueries({ queryKey: ['coaching-metrics', weekStartStr] })
+      queryClient.invalidateQueries({ queryKey: ['coaching-metrics', weekStartStr, coachingType] })
     },
     onError: (error: Error) => {
       toast({
@@ -127,13 +146,16 @@ export function useCoachingMetrics(weekStart: Date) {
 
   return {
     metrics,
-    isLoading,
-    error,
+    isLoading: isSkipped ? false : isLoading,
+    error: isSkipped ? null : error,
     rawPaste,
     setRawPaste,
     parsedMetrics,
     parseError,
     saveMetrics: () => saveMutation.mutate(),
-    isSaving: saveMutation.isPending
+    isSaving: saveMutation.isPending,
+    // New fields for dual-mode support
+    isSkipped,
+    coachingType
   }
 }

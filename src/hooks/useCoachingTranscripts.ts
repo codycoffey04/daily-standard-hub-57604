@@ -8,6 +8,13 @@ import type { Database } from '@/integrations/supabase/types'
 
 type CoachingTranscript = Database['public']['Tables']['coaching_transcripts']['Row']
 type Producer = Database['public']['Tables']['producers']['Row']
+type CoachingType = 'sales' | 'service'
+
+// Generic team member interface for both producers and CSRs
+interface TeamMember {
+  id: string
+  display_name: string
+}
 
 function formatDateForDB(date: Date): string {
   return date.toISOString().split('T')[0]
@@ -17,42 +24,55 @@ function generateId(): string {
   return `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
 }
 
-export function useCoachingTranscripts(weekStart: Date) {
+export function useCoachingTranscripts(weekStart: Date, coachingType: CoachingType = 'sales') {
   const { user } = useAuth()
   const { toast } = useToast()
   const queryClient = useQueryClient()
 
   const weekStartStr = formatDateForDB(weekStart)
 
-  // Track local file state per producer
-  const [filesByProducer, setFilesByProducer] = useState<Record<string, UploadedFile[]>>({})
+  // Track local file state per team member (producer or CSR)
+  const [filesByMember, setFilesByMember] = useState<Record<string, UploadedFile[]>>({})
 
-  // Fetch producers
-  const { data: producers = [] } = useQuery({
-    queryKey: ['producers-active'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('producers')
-        .select('*')
-        .eq('active', true)
-        .order('display_name')
+  // Fetch team members based on coaching type
+  const { data: teamMembers = [] } = useQuery({
+    queryKey: ['team-members', coachingType],
+    queryFn: async (): Promise<TeamMember[]> => {
+      if (coachingType === 'sales') {
+        const { data, error } = await supabase
+          .from('producers')
+          .select('id, display_name')
+          .eq('active', true)
+          .order('display_name')
 
-      if (error) throw error
-      return data as Producer[]
+        if (error) throw error
+        return data as TeamMember[]
+      } else {
+        // Service mode - fetch CSR profiles
+        const { data, error } = await supabase
+          .from('csr_profiles')
+          .select('id, display_name')
+          .eq('active', true)
+          .order('display_name')
+
+        if (error) throw error
+        return data as TeamMember[]
+      }
     }
   })
 
-  // Fetch existing transcripts for this week
+  // Fetch existing transcripts for this week and coaching type
   const {
     data: existingTranscripts = [],
     isLoading: isLoadingTranscripts
   } = useQuery({
-    queryKey: ['coaching-transcripts', weekStartStr],
+    queryKey: ['coaching-transcripts', weekStartStr, coachingType],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('coaching_transcripts')
         .select('*')
         .eq('week_start', weekStartStr)
+        .eq('coaching_type', coachingType)
 
       if (error) throw error
       return data as CoachingTranscript[]
@@ -61,15 +81,18 @@ export function useCoachingTranscripts(weekStart: Date) {
 
   // Initialize file state from existing transcripts when they load
   useEffect(() => {
-    if (existingTranscripts.length > 0 && producers.length > 0) {
+    if (existingTranscripts.length > 0 && teamMembers.length > 0) {
       const initialState: Record<string, UploadedFile[]> = {}
 
-      producers.forEach(producer => {
-        const producerTranscripts = existingTranscripts.filter(
-          t => t.producer_id === producer.id
+      teamMembers.forEach(member => {
+        // Filter transcripts based on coaching type
+        const memberTranscripts = existingTranscripts.filter(t =>
+          coachingType === 'sales'
+            ? t.producer_id === member.id
+            : (t as any).csr_profile_id === member.id
         )
 
-        initialState[producer.id] = producerTranscripts.map(t => ({
+        initialState[member.id] = memberTranscripts.map(t => ({
           id: t.id,
           file: new File([], t.file_name, { type: 'application/pdf' }),
           status: 'completed' as const,
@@ -80,36 +103,37 @@ export function useCoachingTranscripts(weekStart: Date) {
         }))
       })
 
-      setFilesByProducer(initialState)
+      setFilesByMember(initialState)
     }
-  }, [existingTranscripts, producers])
+  }, [existingTranscripts, teamMembers, coachingType])
 
-  // Reset state when week changes
+  // Reset state when week or coaching type changes
   useEffect(() => {
-    setFilesByProducer({})
-  }, [weekStartStr])
+    setFilesByMember({})
+  }, [weekStartStr, coachingType])
 
   // Upload file to storage and create transcript record
   const uploadFile = useCallback(async (
-    producerId: string,
+    memberId: string,
     file: File,
     localId: string
   ): Promise<void> => {
-    const storagePath = `${producerId}/${weekStartStr}/${file.name}`
+    // Storage path includes coaching type to prevent collisions
+    const storagePath = `${coachingType}/${memberId}/${weekStartStr}/${file.name}`
 
     // Update status to uploading
-    setFilesByProducer(prev => ({
+    setFilesByMember(prev => ({
       ...prev,
-      [producerId]: (prev[producerId] || []).map(f =>
+      [memberId]: (prev[memberId] || []).map(f =>
         f.id === localId ? { ...f, status: 'uploading' as const, progress: 10 } : f
       )
     }))
 
     try {
       // Step 1: Upload to storage (no client-side extraction - Claude reads PDFs directly)
-      setFilesByProducer(prev => ({
+      setFilesByMember(prev => ({
         ...prev,
-        [producerId]: (prev[producerId] || []).map(f =>
+        [memberId]: (prev[memberId] || []).map(f =>
           f.id === localId ? { ...f, progress: 30 } : f
         )
       }))
@@ -121,26 +145,37 @@ export function useCoachingTranscripts(weekStart: Date) {
       if (uploadError) throw uploadError
 
       // Update progress
-      setFilesByProducer(prev => ({
+      setFilesByMember(prev => ({
         ...prev,
-        [producerId]: (prev[producerId] || []).map(f =>
+        [memberId]: (prev[memberId] || []).map(f =>
           f.id === localId ? { ...f, progress: 70 } : f
         )
       }))
 
       // Step 2: Create transcript record (extraction happens server-side via Claude)
+      // Set the appropriate ID field based on coaching type
+      const insertData: Record<string, any> = {
+        week_start: weekStartStr,
+        coaching_type: coachingType,
+        file_name: file.name,
+        file_path: storagePath,
+        file_size: file.size,
+        extracted_text: null, // Not used - Claude reads PDFs directly
+        extraction_status: 'completed', // Mark as completed - Claude reads PDFs directly during generation
+        uploaded_by: user?.id
+      }
+
+      if (coachingType === 'sales') {
+        insertData.producer_id = memberId
+        insertData.csr_profile_id = null
+      } else {
+        insertData.producer_id = null
+        insertData.csr_profile_id = memberId
+      }
+
       const { data: transcript, error: insertError } = await supabase
         .from('coaching_transcripts')
-        .insert({
-          producer_id: producerId,
-          week_start: weekStartStr,
-          file_name: file.name,
-          file_path: storagePath,
-          file_size: file.size,
-          extracted_text: null, // Not used - Claude reads PDFs directly
-          extraction_status: 'completed', // Mark as completed - Claude reads PDFs directly during generation
-          uploaded_by: user?.id
-        })
+        .insert(insertData)
         .select()
         .single()
 
@@ -152,9 +187,9 @@ export function useCoachingTranscripts(weekStart: Date) {
       console.log(`[useCoachingTranscripts] Upload successful, transcript id: ${transcript.id}`)
 
       // Update to completed
-      setFilesByProducer(prev => ({
+      setFilesByMember(prev => ({
         ...prev,
-        [producerId]: (prev[producerId] || []).map(f =>
+        [memberId]: (prev[memberId] || []).map(f =>
           f.id === localId
             ? {
                 ...f,
@@ -168,13 +203,13 @@ export function useCoachingTranscripts(weekStart: Date) {
         )
       }))
 
-      queryClient.invalidateQueries({ queryKey: ['coaching-transcripts', weekStartStr] })
+      queryClient.invalidateQueries({ queryKey: ['coaching-transcripts', weekStartStr, coachingType] })
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Upload failed'
 
-      setFilesByProducer(prev => ({
+      setFilesByMember(prev => ({
         ...prev,
-        [producerId]: (prev[producerId] || []).map(f =>
+        [memberId]: (prev[memberId] || []).map(f =>
           f.id === localId
             ? { ...f, status: 'error' as const, error: errorMessage }
             : f
@@ -187,10 +222,10 @@ export function useCoachingTranscripts(weekStart: Date) {
         variant: 'destructive'
       })
     }
-  }, [weekStartStr, user?.id, queryClient, toast])
+  }, [weekStartStr, coachingType, user?.id, queryClient, toast])
 
-  // Handle files selected for a producer
-  const handleFilesSelected = useCallback((producerId: string, files: File[]) => {
+  // Handle files selected for a team member
+  const handleFilesSelected = useCallback((memberId: string, files: File[]) => {
     const newFiles: UploadedFile[] = files.map(file => ({
       id: generateId(),
       file,
@@ -198,20 +233,20 @@ export function useCoachingTranscripts(weekStart: Date) {
       progress: 0
     }))
 
-    setFilesByProducer(prev => ({
+    setFilesByMember(prev => ({
       ...prev,
-      [producerId]: [...(prev[producerId] || []), ...newFiles]
+      [memberId]: [...(prev[memberId] || []), ...newFiles]
     }))
 
     // Start uploading each file
     newFiles.forEach(f => {
-      uploadFile(producerId, f.file, f.id)
+      uploadFile(memberId, f.file, f.id)
     })
   }, [uploadFile])
 
   // Remove file (and delete from storage/DB if already uploaded)
-  const handleRemoveFile = useCallback(async (producerId: string, fileId: string) => {
-    const files = filesByProducer[producerId] || []
+  const handleRemoveFile = useCallback(async (memberId: string, fileId: string) => {
+    const files = filesByMember[memberId] || []
     const file = files.find(f => f.id === fileId)
 
     if (file?.storagePath) {
@@ -226,35 +261,40 @@ export function useCoachingTranscripts(weekStart: Date) {
         .delete()
         .eq('id', fileId)
 
-      queryClient.invalidateQueries({ queryKey: ['coaching-transcripts', weekStartStr] })
+      queryClient.invalidateQueries({ queryKey: ['coaching-transcripts', weekStartStr, coachingType] })
     }
 
-    setFilesByProducer(prev => ({
+    setFilesByMember(prev => ({
       ...prev,
-      [producerId]: (prev[producerId] || []).filter(f => f.id !== fileId)
+      [memberId]: (prev[memberId] || []).filter(f => f.id !== fileId)
     }))
-  }, [filesByProducer, weekStartStr, queryClient])
+  }, [filesByMember, weekStartStr, coachingType, queryClient])
 
-  // Check if all producers have 3 completed transcripts
-  const allTranscriptsReady = producers.every(producer => {
-    const files = filesByProducer[producer.id] || []
+  // Check if all team members have 3 completed transcripts
+  const allTranscriptsReady = teamMembers.every(member => {
+    const files = filesByMember[member.id] || []
     const completedCount = files.filter(f => f.status === 'completed').length
     return completedCount >= 3
   })
 
-  // Get ready status per producer
-  const getProducerReadyStatus = (producerId: string): boolean => {
-    const files = filesByProducer[producerId] || []
+  // Get ready status per team member
+  const getMemberReadyStatus = (memberId: string): boolean => {
+    const files = filesByMember[memberId] || []
     return files.filter(f => f.status === 'completed').length >= 3
   }
 
   return {
-    producers,
-    filesByProducer,
+    // Backwards compatibility: expose as both 'producers' and 'teamMembers'
+    producers: teamMembers,
+    teamMembers,
+    filesByProducer: filesByMember, // Backwards compatibility
+    filesByMember,
     isLoadingTranscripts,
     handleFilesSelected,
     handleRemoveFile,
     allTranscriptsReady,
-    getProducerReadyStatus
+    getProducerReadyStatus: getMemberReadyStatus, // Backwards compatibility
+    getMemberReadyStatus,
+    coachingType
   }
 }

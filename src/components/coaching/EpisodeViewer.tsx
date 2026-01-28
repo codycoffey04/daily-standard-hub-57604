@@ -11,21 +11,31 @@ import type { Database } from '@/integrations/supabase/types'
 
 type CoachingEpisode = Database['public']['Tables']['coaching_episodes']['Row']
 type CoachingScore = Database['public']['Tables']['coaching_scores']['Row']
-type Producer = Database['public']['Tables']['producers']['Row']
+type CoachingType = 'sales' | 'service'
+
+// Generic team member interface
+interface TeamMember {
+  id: string
+  display_name: string
+}
 
 interface EpisodeViewerProps {
-  producer: Producer
+  producer: TeamMember
   episode: CoachingEpisode | null
   scores: CoachingScore[]
+  coachingType?: CoachingType
 }
 
 export const EpisodeViewer: React.FC<EpisodeViewerProps> = ({
   producer,
   episode,
-  scores
+  scores,
+  coachingType = 'sales'
 }) => {
   const { toast } = useToast()
   const [viewMode, setViewMode] = useState<'preview' | 'markdown'>('preview')
+
+  const memberLabel = coachingType === 'service' ? 'CSR' : 'producer'
 
   if (!episode) {
     return (
@@ -74,6 +84,9 @@ export const EpisodeViewer: React.FC<EpisodeViewerProps> = ({
   }
 
   const getNotebookLMPrompt = () => {
+    if (coachingType === 'service') {
+      return `This is a personalized weekly coaching session for a customer service representative named ${producer.display_name} at an insurance agency. The hosts should sound like supportive but direct team leads — encouraging but real. Focus on specific call examples and transcript quotes. Make it feel like a genuine coaching conversation about handling customers well, not a corporate training module. Keep the energy warm and appreciative. Acknowledge that service work is hard and that this person is valued.`
+    }
     return `This is a personalized weekly sales coaching session for an insurance producer named ${producer.display_name}. The hosts should sound like supportive but direct sales coaches — encouraging but not soft. Focus on the specific call examples. Make it feel like a real coaching conversation, not a corporate training video. Keep the energy up.`
   }
 
@@ -100,6 +113,9 @@ export const EpisodeViewer: React.FC<EpisodeViewerProps> = ({
       currency: 'USD'
     }).format(premium)
   }
+
+  // Check if metrics are available (only for sales mode)
+  const hasMetrics = coachingType === 'sales' && (episode.qhh || episode.quotes || episode.sales)
 
   return (
     <Card>
@@ -130,33 +146,35 @@ export const EpisodeViewer: React.FC<EpisodeViewerProps> = ({
       </CardHeader>
 
       <CardContent className="space-y-6">
-        {/* Metrics Summary */}
-        <div className="grid grid-cols-6 gap-4 p-4 bg-muted/50 rounded-lg">
-          <div className="text-center">
-            <p className="text-sm text-muted-foreground">QHH</p>
-            <p className="text-lg font-bold">{episode.qhh}</p>
+        {/* Metrics Summary - Only for Sales Mode */}
+        {hasMetrics && (
+          <div className="grid grid-cols-6 gap-4 p-4 bg-muted/50 rounded-lg">
+            <div className="text-center">
+              <p className="text-sm text-muted-foreground">QHH</p>
+              <p className="text-lg font-bold">{episode.qhh}</p>
+            </div>
+            <div className="text-center">
+              <p className="text-sm text-muted-foreground">Quotes</p>
+              <p className="text-lg font-bold">{episode.quotes}</p>
+            </div>
+            <div className="text-center">
+              <p className="text-sm text-muted-foreground">Sales</p>
+              <p className="text-lg font-bold">{episode.sales}</p>
+            </div>
+            <div className="text-center">
+              <p className="text-sm text-muted-foreground">Items</p>
+              <p className="text-lg font-bold">{episode.items}</p>
+            </div>
+            <div className="text-center">
+              <p className="text-sm text-muted-foreground">Premium</p>
+              <p className="text-lg font-bold">{formatPremium(episode.premium)}</p>
+            </div>
+            <div className="text-center">
+              <p className="text-sm text-muted-foreground">Close %</p>
+              <p className="text-lg font-bold">{episode.close_rate}%</p>
+            </div>
           </div>
-          <div className="text-center">
-            <p className="text-sm text-muted-foreground">Quotes</p>
-            <p className="text-lg font-bold">{episode.quotes}</p>
-          </div>
-          <div className="text-center">
-            <p className="text-sm text-muted-foreground">Sales</p>
-            <p className="text-lg font-bold">{episode.sales}</p>
-          </div>
-          <div className="text-center">
-            <p className="text-sm text-muted-foreground">Items</p>
-            <p className="text-lg font-bold">{episode.items}</p>
-          </div>
-          <div className="text-center">
-            <p className="text-sm text-muted-foreground">Premium</p>
-            <p className="text-lg font-bold">{formatPremium(episode.premium)}</p>
-          </div>
-          <div className="text-center">
-            <p className="text-sm text-muted-foreground">Close %</p>
-            <p className="text-lg font-bold">{episode.close_rate}%</p>
-          </div>
-        </div>
+        )}
 
         {/* Episode Content */}
         <Tabs defaultValue="episode" className="w-full">
@@ -186,7 +204,7 @@ export const EpisodeViewer: React.FC<EpisodeViewerProps> = ({
           </TabsContent>
 
           <TabsContent value="scores" className="mt-4">
-            <ScoreBreakdown scores={scores} />
+            <ScoreBreakdown scores={scores} coachingType={coachingType} />
           </TabsContent>
 
           <TabsContent value="notebooklm" className="mt-4">

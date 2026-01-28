@@ -12,6 +12,7 @@ interface ProducerTranscriptPanelProps {
   onRemoveFile: (id: string) => void
   isReady: boolean
   disabled?: boolean
+  memberLabel?: string // 'Producer' or 'CSR' - defaults to 'Producer'
 }
 
 export const ProducerTranscriptPanel: React.FC<ProducerTranscriptPanelProps> = ({
@@ -21,7 +22,8 @@ export const ProducerTranscriptPanel: React.FC<ProducerTranscriptPanelProps> = (
   onFilesSelected,
   onRemoveFile,
   isReady,
-  disabled = false
+  disabled = false,
+  memberLabel = 'Producer'
 }) => {
   const completedCount = uploadedFiles.filter(f => f.status === 'completed').length
   const requiredCount = 3
@@ -48,7 +50,7 @@ export const ProducerTranscriptPanel: React.FC<ProducerTranscriptPanelProps> = (
           </div>
         </div>
         <CardDescription>
-          Upload 3 call transcripts from Total Recall for this week
+          Upload 3 call transcripts from Total Recall for this {memberLabel.toLowerCase()}
         </CardDescription>
       </CardHeader>
       <CardContent>

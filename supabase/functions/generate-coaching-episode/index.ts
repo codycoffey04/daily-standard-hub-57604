@@ -6,9 +6,13 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
+type CoachingType = 'sales' | 'service'
+
 interface RequestBody {
-  producerId: string
+  producerId?: string
+  csrProfileId?: string
   weekStart: string
+  coachingType?: CoachingType
 }
 
 interface TranscriptData {
@@ -39,7 +43,7 @@ interface FocusWeek {
   challenge: string
 }
 
-interface ScoreResult {
+interface SalesScoreResult {
   transcript_id: string
   step_1_opening: number
   step_2_discovery: number
@@ -56,10 +60,51 @@ interface ScoreResult {
   improvement_areas: Array<{ category: string; quote: string; suggestion: string }>
 }
 
+interface CSRScoreResult {
+  transcript_id: string
+  call_type: string
+  step_1_greeting: number
+  step_2_listening_empathy: number
+  step_3_problem_id: number
+  step_4_resolution: number
+  step_5_cross_sell: number
+  step_6_referral_ask_csr: number | string // Can be "N/A"
+  step_7_retention: number | string // Can be "N/A"
+  google_review_ask: boolean
+  overall_score: number
+  max_possible_score: number
+  call_outcome: string
+  cross_sell_triggers_detected: Array<{ trigger: string; context: string; pursued: boolean }>
+  life_insurance_opportunity: boolean
+  life_insurance_context: string | null
+  strengths: Array<{ category: string; quote: string }>
+  improvement_areas: Array<{ category: string; quote: string; suggestion: string }>
+}
+
 interface ClaudeResponse {
-  scores: ScoreResult[]
+  scores: (SalesScoreResult | CSRScoreResult)[]
   episode_markdown: string
   summary: string
+}
+
+interface TeamMember {
+  id: string
+  display_name: string
+  role?: string
+}
+
+interface CSRProfile {
+  name: string
+  display_name: string
+  role: string
+  location: string
+  strengths: string[]
+  growth_areas: string[]
+  coaching_notes: string
+  special_tracking: {
+    life_insurance_tracking?: boolean
+    life_triggers?: string[]
+  } | null
 }
 
 serve(async (req) => {
@@ -72,11 +117,21 @@ serve(async (req) => {
     const startTime = Date.now()
 
     // Get request body
-    const { producerId, weekStart }: RequestBody = await req.json()
+    const body: RequestBody = await req.json()
+    const { producerId, csrProfileId, weekStart, coachingType = 'sales' } = body
 
-    if (!producerId || !weekStart) {
-      throw new Error('Missing required fields: producerId and weekStart')
+    // Validate: must have either producerId or csrProfileId based on coachingType
+    if (coachingType === 'sales' && !producerId) {
+      throw new Error('Missing required field: producerId for sales coaching')
     }
+    if (coachingType === 'service' && !csrProfileId) {
+      throw new Error('Missing required field: csrProfileId for service coaching')
+    }
+    if (!weekStart) {
+      throw new Error('Missing required field: weekStart')
+    }
+
+    const memberId = coachingType === 'sales' ? producerId! : csrProfileId!
 
     // Initialize Supabase client
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!
@@ -95,34 +150,79 @@ serve(async (req) => {
     weekEndDate.setDate(weekStartDate.getDate() + 6)
     const weekEnd = weekEndDate.toISOString().split('T')[0]
 
-    // Fetch producer info
-    const { data: producer, error: producerError } = await supabase
-      .from('producers')
-      .select('*')
-      .eq('id', producerId)
-      .single()
+    // Fetch team member info based on coaching type
+    let teamMember: TeamMember
+    let csrProfileData: CSRProfile | null = null
 
-    if (producerError || !producer) {
-      throw new Error(`Producer not found: ${producerId}`)
+    if (coachingType === 'sales') {
+      const { data: producer, error: producerError } = await supabase
+        .from('producers')
+        .select('*')
+        .eq('id', memberId)
+        .single()
+
+      if (producerError || !producer) {
+        throw new Error(`Producer not found: ${memberId}`)
+      }
+      teamMember = { id: producer.id, display_name: producer.display_name }
+    } else {
+      // Service mode - fetch from csr_profiles
+      const { data: csrProfile, error: csrError } = await supabase
+        .from('csr_profiles')
+        .select('*')
+        .eq('id', memberId)
+        .single()
+
+      if (csrError || !csrProfile) {
+        throw new Error(`CSR Profile not found: ${memberId}`)
+      }
+      teamMember = {
+        id: csrProfile.id,
+        display_name: csrProfile.display_name,
+        role: csrProfile.role
+      }
+
+      // Also fetch CSR profile config for coaching context
+      const { data: configs } = await supabase
+        .from('coaching_framework_config')
+        .select('config_data')
+        .eq('config_type', 'csr_profiles')
+        .eq('active', true)
+        .single()
+
+      if (configs?.config_data) {
+        const csrProfiles = (configs.config_data as { csrs: CSRProfile[] }).csrs
+        csrProfileData = csrProfiles.find(
+          p => p.display_name.toLowerCase() === csrProfile.display_name.toLowerCase()
+        ) || null
+      }
     }
 
-    // Fetch transcripts for this producer/week
-    const { data: transcripts, error: transcriptsError } = await supabase
+    // Fetch transcripts for this member/week
+    const transcriptQuery = supabase
       .from('coaching_transcripts')
       .select('*')
-      .eq('producer_id', producerId)
       .eq('week_start', weekStart)
+      .eq('coaching_type', coachingType)
+
+    if (coachingType === 'sales') {
+      transcriptQuery.eq('producer_id', memberId)
+    } else {
+      transcriptQuery.eq('csr_profile_id', memberId)
+    }
+
+    const { data: transcripts, error: transcriptsError } = await transcriptQuery
 
     if (transcriptsError) {
       throw new Error(`Failed to fetch transcripts: ${transcriptsError.message}`)
     }
 
     if (!transcripts || transcripts.length === 0) {
-      throw new Error('No transcripts found for this producer/week')
+      throw new Error(`No transcripts found for this ${coachingType === 'sales' ? 'producer' : 'CSR'}/week`)
     }
 
     // Download PDFs from Supabase Storage and convert to base64
-    console.log(`Processing ${transcripts.length} transcripts for ${producer.display_name}`)
+    console.log(`Processing ${transcripts.length} transcripts for ${teamMember.display_name} (${coachingType} mode)`)
 
     const pdfDocuments: Array<{ transcript: TranscriptData; base64: string }> = []
 
@@ -157,73 +257,75 @@ serve(async (req) => {
 
     console.log(`Successfully downloaded ${pdfDocuments.length}/${transcripts.length} PDFs`)
 
-    // Fetch AgencyZoom metrics for this week (Sales, Items, Premium)
-    const { data: metricsData, error: metricsError } = await supabase
-      .from('coaching_metrics')
-      .select('*')
-      .eq('week_start', weekStart)
-      .single()
+    // Metrics handling - only for sales mode
+    let producerMetrics: ProducerMetrics | null = null
 
-    if (metricsError || !metricsData) {
-      throw new Error('Metrics not found for this week')
-    }
+    if (coachingType === 'sales') {
+      // Fetch AgencyZoom metrics for this week (Sales, Items, Premium)
+      const { data: metricsData, error: metricsError } = await supabase
+        .from('coaching_metrics')
+        .select('*')
+        .eq('week_start', weekStart)
+        .eq('coaching_type', 'sales')
+        .single()
 
-    const producerKey = producer.display_name.toLowerCase()
-    const azMetrics = (metricsData.producer_metrics as Record<string, ProducerMetrics>)[producerKey]
+      if (metricsError || !metricsData) {
+        throw new Error('Metrics not found for this week')
+      }
 
-    if (!azMetrics) {
-      throw new Error(`Metrics not found for producer: ${producer.display_name}`)
-    }
+      const producerKey = teamMember.display_name.toLowerCase()
+      const azMetrics = (metricsData.producer_metrics as Record<string, ProducerMetrics>)[producerKey]
 
-    // Fetch TDS activity data (QHH, Quotes from daily_entries + quoted_households)
-    console.log(`Fetching TDS activity data for ${weekStart} to ${weekEnd}`)
+      if (!azMetrics) {
+        throw new Error(`Metrics not found for producer: ${teamMember.display_name}`)
+      }
 
-    // Get daily_entry IDs for this producer/week
-    const { data: entries, error: entriesErr } = await supabase
-      .from('daily_entries')
-      .select('id')
-      .eq('producer_id', producerId)
-      .gte('entry_date', weekStart)
-      .lte('entry_date', weekEnd)
+      // Fetch TDS activity data (QHH, Quotes from daily_entries + quoted_households)
+      console.log(`Fetching TDS activity data for ${weekStart} to ${weekEnd}`)
 
-    let tdsQhh = 0
-    let tdsQuotes = 0
+      const { data: entries, error: entriesErr } = await supabase
+        .from('daily_entries')
+        .select('id')
+        .eq('producer_id', memberId)
+        .gte('entry_date', weekStart)
+        .lte('entry_date', weekEnd)
 
-    if (!entriesErr && entries && entries.length > 0) {
-      const entryIds = entries.map(e => e.id)
+      let tdsQhh = 0
+      let tdsQuotes = 0
 
-      // Get quoted_households for those entries
-      const { data: qhRows, error: qhErr } = await supabase
-        .from('quoted_households')
-        .select('lead_id, lines_quoted')
-        .in('daily_entry_id', entryIds)
+      if (!entriesErr && entries && entries.length > 0) {
+        const entryIds = entries.map(e => e.id)
 
-      if (!qhErr && qhRows) {
-        // QHH = distinct lead_id count
-        const uniqueLeads = new Set<string>()
-        for (const row of qhRows) {
-          if (row.lead_id) {
-            uniqueLeads.add(row.lead_id)
+        const { data: qhRows, error: qhErr } = await supabase
+          .from('quoted_households')
+          .select('lead_id, lines_quoted')
+          .in('daily_entry_id', entryIds)
+
+        if (!qhErr && qhRows) {
+          const uniqueLeads = new Set<string>()
+          for (const row of qhRows) {
+            if (row.lead_id) {
+              uniqueLeads.add(row.lead_id)
+            }
+            tdsQuotes += row.lines_quoted || 0
           }
-          tdsQuotes += row.lines_quoted || 0
+          tdsQhh = uniqueLeads.size
         }
-        tdsQhh = uniqueLeads.size
+      }
+
+      console.log(`TDS activity: QHH=${tdsQhh}, Quotes=${tdsQuotes}`)
+
+      producerMetrics = {
+        qhh: tdsQhh > 0 ? tdsQhh : azMetrics.qhh,
+        quotes: tdsQuotes > 0 ? tdsQuotes : azMetrics.quotes,
+        sales: azMetrics.sales,
+        items: azMetrics.items,
+        premium: azMetrics.premium,
+        close_rate: tdsQhh > 0 ? (azMetrics.sales / tdsQhh) * 100 : azMetrics.close_rate
       }
     }
 
-    console.log(`TDS activity: QHH=${tdsQhh}, Quotes=${tdsQuotes}`)
-
-    // Merge: TDS for QHH/Quotes, AgencyZoom for Sales/Items/Premium
-    const producerMetrics: ProducerMetrics = {
-      qhh: tdsQhh > 0 ? tdsQhh : azMetrics.qhh,
-      quotes: tdsQuotes > 0 ? tdsQuotes : azMetrics.quotes,
-      sales: azMetrics.sales,
-      items: azMetrics.items,
-      premium: azMetrics.premium,
-      close_rate: tdsQhh > 0 ? (azMetrics.sales / tdsQhh) * 100 : azMetrics.close_rate
-    }
-
-    // Fetch coaching framework configs
+    // Fetch coaching framework configs based on coaching type
     const { data: configs, error: configsError } = await supabase
       .from('coaching_framework_config')
       .select('*')
@@ -233,25 +335,42 @@ serve(async (req) => {
       throw new Error(`Failed to fetch configs: ${configsError.message}`)
     }
 
-    const scorecardConfig = configs.find(c => c.config_type === 'scorecard')?.config_data
-    const crossSellConfig = configs.find(c => c.config_type === 'cross_sell_triggers')?.config_data
-    const focusRotationConfig = configs.find(c => c.config_type === 'focus_rotation')?.config_data
-    const producerProfilesConfig = configs.find(c => c.config_type === 'producer_profiles')?.config_data
+    // Get config type prefix based on coaching type
+    const configPrefix = coachingType === 'service' ? 'csr_' : ''
 
-    // Calculate focus week number
+    const scorecardConfig = configs.find(c => c.config_type === `${configPrefix}scorecard`)?.config_data
+    const crossSellConfig = configs.find(c => c.config_type === `${configPrefix}cross_sell_triggers`)?.config_data
+    const focusRotationConfig = configs.find(c => c.config_type === `${configPrefix}focus_rotation`)?.config_data
+    const profilesConfig = configs.find(c => c.config_type === `${configPrefix}${coachingType === 'sales' ? 'producer_profiles' : 'profiles'}`)?.config_data
+
+    // Calculate focus week number based on coaching type
     const cycleStart = new Date('2026-01-06')
     const msPerWeek = 7 * 24 * 60 * 60 * 1000
     const weeksSinceStart = Math.floor((weekStartDate.getTime() - cycleStart.getTime()) / msPerWeek)
-    const focusWeekNumber = ((weeksSinceStart % 8) + 8) % 8 + 1
+
+    // Sales = 8-week cycle, Service = 6-week cycle
+    const cycleLength = coachingType === 'service' ? 6 : 8
+    const focusWeekNumber = ((weeksSinceStart % cycleLength) + cycleLength) % cycleLength + 1
 
     const focusWeek = (focusRotationConfig as { weeks: FocusWeek[] })?.weeks?.find(
       w => w.week === focusWeekNumber
     )
 
-    // Get producer profile
-    const producerProfile = (producerProfilesConfig as { producers: Array<{ display_name: string; strengths: string[]; growth_areas: string[]; monthly_target_items: number }> })?.producers?.find(
-      p => p.display_name.toLowerCase() === producerKey
-    )
+    // Get member profile
+    let memberProfile: { strengths?: string[]; growth_areas?: string[]; monthly_target_items?: number; coaching_notes?: string } | null = null
+
+    if (coachingType === 'sales') {
+      const producerProfiles = (profilesConfig as { producers: Array<{ display_name: string; strengths: string[]; growth_areas: string[]; monthly_target_items: number }> })?.producers
+      memberProfile = producerProfiles?.find(
+        p => p.display_name.toLowerCase() === teamMember.display_name.toLowerCase()
+      ) || null
+    } else if (csrProfileData) {
+      memberProfile = {
+        strengths: csrProfileData.strengths,
+        growth_areas: csrProfileData.growth_areas,
+        coaching_notes: csrProfileData.coaching_notes
+      }
+    }
 
     // Build document content blocks for Claude (native PDF support)
     const documentBlocks = pdfDocuments.map((doc, i) => ({
@@ -268,8 +387,13 @@ serve(async (req) => {
       `Transcript ${i + 1}: ${doc.transcript.file_name} (Date: ${doc.transcript.call_date || 'Unknown'}, Duration: ${doc.transcript.call_duration_seconds ? Math.floor(doc.transcript.call_duration_seconds / 60) + ' min' : 'Unknown'})`
     ).join('\n')
 
-    // Build Claude prompt
-    const systemPrompt = `You are an expert sales coach for Coffey Agencies, an Allstate-exclusive insurance agency.
+    // Build Claude prompt based on coaching type
+    let systemPrompt: string
+    let userPrompt: string
+
+    if (coachingType === 'sales') {
+      // === SALES MODE PROMPTS ===
+      systemPrompt = `You are an expert sales coach for Coffey Agencies, an Allstate-exclusive insurance agency.
 You analyze call transcripts and generate personalized coaching episodes.
 
 Your coaching style:
@@ -280,16 +404,16 @@ Your coaching style:
 - Tie everything to business outcomes (items, premium, commission)
 
 Agency context:
-- Monthly target: ${producerProfile?.monthly_target_items || 76} items
+- Monthly target: ${memberProfile?.monthly_target_items || 76} items
 - Referrals close at 25% vs Net Leads at 8%
 - Bundling increases retention and premium
 
-Producer profile for ${producer.display_name}:
-- Known strengths: ${producerProfile?.strengths?.join(', ') || 'Not specified'}
-- Growth areas: ${producerProfile?.growth_areas?.join(', ') || 'Not specified'}`
+Producer profile for ${teamMember.display_name}:
+- Known strengths: ${memberProfile?.strengths?.join(', ') || 'Not specified'}
+- Growth areas: ${memberProfile?.growth_areas?.join(', ') || 'Not specified'}`
 
-    const userPrompt = `## Task
-Analyze the attached PDF call transcripts and generate a coaching episode for ${producer.display_name}.
+      userPrompt = `## Task
+Analyze the attached PDF call transcripts and generate a coaching episode for ${teamMember.display_name}.
 
 The PDF documents attached above are call recordings from Total Recall. Each PDF contains a transcript with timestamps, speaker labels (Agent/Customer), and the full conversation.
 
@@ -302,12 +426,12 @@ Focus question: "${focusWeek?.focus_question || 'How can we improve?'}"
 Challenge: "${focusWeek?.challenge || 'Apply one new technique this week'}"
 
 ## Weekly Metrics
-- QHH: ${producerMetrics.qhh} (from TDS activity)
-- Quotes: ${producerMetrics.quotes} (lines quoted from TDS)
-- Sales: ${producerMetrics.sales} (from AgencyZoom)
-- Items: ${producerMetrics.items} (from AgencyZoom)
-- Premium: $${producerMetrics.premium.toFixed(2)} (from AgencyZoom)
-- Close Rate: ${producerMetrics.close_rate.toFixed(1)}%
+- QHH: ${producerMetrics!.qhh} (from TDS activity)
+- Quotes: ${producerMetrics!.quotes} (lines quoted from TDS)
+- Sales: ${producerMetrics!.sales} (from AgencyZoom)
+- Items: ${producerMetrics!.items} (from AgencyZoom)
+- Premium: $${producerMetrics!.premium.toFixed(2)} (from AgencyZoom)
+- Close Rate: ${producerMetrics!.close_rate.toFixed(1)}%
 
 ## Scorecard Criteria (0-2 scale: 0=Missed, 1=Partial, 2=Strong)
 ${JSON.stringify(scorecardConfig, null, 2)}
@@ -351,8 +475,118 @@ The episode_markdown should follow this structure:
 
 IMPORTANT: Return ONLY the JSON object, no additional text or markdown code blocks.`
 
+    } else {
+      // === SERVICE MODE PROMPTS ===
+      const isAleeah = teamMember.display_name.toLowerCase().includes('aleeah')
+
+      systemPrompt = `You are a CSR coaching analyst for Coffey Agencies, an Allstate-exclusive insurance agency with locations in Centre, Alabama and Rome, Georgia. You analyze inbound service and claims call transcripts to help coach customer service representatives.
+
+IMPORTANT CONTEXT:
+- These are SERVICE calls, not sales calls. Do not evaluate CSRs on selling skills, closing techniques, or quote presentation.
+- CSRs are evaluated on: greeting/tone, empathy, problem identification, resolution, cross-sell IDENTIFICATION (not closing), referral asks, and retention language.
+- Cross-sell scoring means identifying opportunities and offering to connect the customer with a producer — not making the sale themselves.
+- Retention is only scored when a customer mentions cancelling, switching, or leaving.
+
+CSR Profile for ${teamMember.display_name}:
+- Role: ${teamMember.role || 'CSR'}
+- Known strengths: ${memberProfile?.strengths?.join(', ') || 'Not specified'}
+- Growth areas: ${memberProfile?.growth_areas?.join(', ') || 'Not specified'}
+${memberProfile?.coaching_notes ? `- Coaching notes: ${memberProfile.coaching_notes}` : ''}
+${isAleeah ? `
+SPECIAL: Aleeah has a dual role — CSR + Life Sales.
+On EVERY call, evaluate whether a life insurance opportunity existed.
+Life triggers: baby, pregnant, marriage, engaged, mortgage, new home, retirement, health mention, young family, beneficiary questions.
+Always flag life_insurance_opportunity as true/false with context.` : ''}
+
+SCORING SCALE:
+- 0 = Missed — Did not attempt or failed significantly
+- 1 = Partial — Attempted but incomplete
+- 2 = Strong — Executed well
+
+CONDITIONAL SCORING:
+- Step 7 (Retention): Only score if customer mentions cancelling, switching, or being unhappy. Otherwise mark as "N/A"
+- Referral Ask: If the call ended negatively (unresolved, upset customer), mark referral ask as N/A — asking would be inappropriate
+- Google Review Ask: Binary (true/false). Only appropriate after positive resolution with satisfied customer.
+
+CALL TYPE CLASSIFICATION:
+Classify each call as one of: service, claims, billing, endorsement
+- service: General policy questions, ID cards, proof of insurance, coverage questions
+- claims: Filing claims, claims status, claims questions
+- billing: Payments, past-due, payment plans, reinstatements
+- endorsement: Adding/removing vehicles, drivers, coverage changes`
+
+      userPrompt = `## Task
+Analyze the attached PDF call transcripts and generate a coaching episode for ${teamMember.display_name}.
+
+The PDF documents attached above are call recordings from Total Recall. Each PDF contains a transcript with timestamps, speaker labels (Agent/Customer), and the full conversation.
+
+## Transcript Files
+${transcriptContext}
+
+## This Week's Focus Theme
+${focusWeek?.theme || 'General Improvement'} (Week ${focusWeekNumber} of 6-week rotation)
+Focus question: "${focusWeek?.focus_question || 'How can we improve?'}"
+Challenge: "${focusWeek?.challenge || 'Apply one new technique this week'}"
+
+## Scorecard Criteria (0-2 scale: 0=Missed, 1=Partial, 2=Strong)
+${JSON.stringify(scorecardConfig, null, 2)}
+
+## Cross-Sell Triggers to Detect
+${JSON.stringify(crossSellConfig, null, 2)}
+
+## Required Output Format
+Return a JSON object with exactly this structure:
+{
+  "scores": [
+    {
+      "transcript_id": "<id from transcript>",
+      "call_type": "<service|claims|billing|endorsement>",
+      "step_1_greeting": <0-2>,
+      "step_2_listening_empathy": <0-2>,
+      "step_3_problem_id": <0-2>,
+      "step_4_resolution": <0-2>,
+      "step_5_cross_sell": <0-2>,
+      "step_6_referral_ask_csr": <0-2 or "N/A">,
+      "step_7_retention": <0-2 or "N/A">,
+      "google_review_ask": <true|false>,
+      "overall_score": <sum of scored steps>,
+      "max_possible_score": <max based on applicable steps>,
+      "call_outcome": "<resolved|escalated|callback_needed|transferred>",
+      "cross_sell_triggers_detected": [{"trigger": "...", "context": "...", "pursued": true/false}],
+      "life_insurance_opportunity": <true|false>,
+      "life_insurance_context": "<quote if applicable, null if no opportunity>",
+      "strengths": [{"category": "...", "quote": "..."}],
+      "improvement_areas": [{"category": "...", "quote": "...", "suggestion": "..."}]
+    }
+  ],
+  "episode_markdown": "<full coaching episode in markdown format, 1000-1200 words>",
+  "summary": "<2-3 sentence summary of key findings>"
+}
+
+The episode_markdown should follow this CSR-specific structure:
+1. Welcome (2 sentences, warm greeting for ${teamMember.display_name})
+2. Your Week (call volume, types, notable patterns - 4 sentences)
+3. What You Did Well (2+ specific wins with transcript quotes, 40% of content)
+4. Growth Opportunity (ONE specific area, 30% of content, with exact language to say instead)
+5. This Week's Focus (from 6-week rotation, with one clear behavior and exact language to use)
+6. Challenge (specific measurable goal tied to customer experience)
+7. Closing (3 sentences with encouragement)
+
+TONE GUIDELINES:
+- Sound like a supportive team lead talking to a valued team member
+- Use "you" and "your" throughout
+- Be specific with names, quotes, and situations from actual calls
+- Acknowledge that service work is emotionally demanding
+- Frame value: "When you handle that call well, that customer stays"
+- DO NOT compare this CSR to others
+- DO NOT use sales jargon (close rate, pipeline, conversion)
+- Focus on ONE growth area — don't pile on criticism
+
+IMPORTANT: Return ONLY the JSON object, no additional text or markdown code blocks.`
+    }
+
     // Call Claude API with PDF documents
-    console.log(`Sending ${documentBlocks.length} PDF documents to Claude API`)
+    console.log(`Sending ${documentBlocks.length} PDF documents to Claude API (${coachingType} mode)`)
 
     const claudeResponse = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
@@ -368,9 +602,7 @@ IMPORTANT: Return ONLY the JSON object, no additional text or markdown code bloc
           {
             role: 'user',
             content: [
-              // Send PDFs as document blocks first
               ...documentBlocks,
-              // Then the text prompt
               { type: 'text', text: userPrompt }
             ]
           }
@@ -390,7 +622,6 @@ IMPORTANT: Return ONLY the JSON object, no additional text or markdown code bloc
     // Parse Claude response
     let parsedResponse: ClaudeResponse
     try {
-      // Try to extract JSON from the response (in case it's wrapped in markdown)
       const jsonMatch = responseText.match(/\{[\s\S]*\}/)
       if (!jsonMatch) {
         throw new Error('No JSON found in response')
@@ -406,33 +637,73 @@ IMPORTANT: Return ONLY the JSON object, no additional text or markdown code bloc
     const tokensUsed = claudeData.usage?.input_tokens + claudeData.usage?.output_tokens || 0
 
     // Create or update the episode
-    const { data: existingEpisode } = await supabase
+    const episodeQuery = supabase
       .from('coaching_episodes')
       .select('id')
-      .eq('producer_id', producerId)
       .eq('week_start', weekStart)
-      .single()
+      .eq('coaching_type', coachingType)
 
-    const episodeData = {
-      producer_id: producerId,
-      metrics_id: metricsData.id,
+    if (coachingType === 'sales') {
+      episodeQuery.eq('producer_id', memberId)
+    } else {
+      episodeQuery.eq('csr_profile_id', memberId)
+    }
+
+    const { data: existingEpisode } = await episodeQuery.single()
+
+    // Build episode data based on coaching type
+    const baseEpisodeData = {
       week_start: weekStart,
       week_end: weekEnd,
-      episode_title: `${producer.display_name}'s Coaching - Week of ${weekStart}`,
+      coaching_type: coachingType,
+      episode_title: `${teamMember.display_name}'s Coaching - Week of ${weekStart}`,
       episode_content: parsedResponse.episode_markdown,
       episode_summary: parsedResponse.summary,
       focus_theme: focusWeek?.theme || 'General',
       focus_week_number: focusWeekNumber,
-      qhh: producerMetrics.qhh,
-      quotes: producerMetrics.quotes,
-      sales: producerMetrics.sales,
-      items: producerMetrics.items,
-      premium: producerMetrics.premium,
-      close_rate: producerMetrics.close_rate,
       model_used: 'claude-opus-4-20250514',
       tokens_used: tokensUsed,
       generation_duration_ms: generationDuration,
       status: 'published'
+    }
+
+    let episodeData: Record<string, unknown>
+
+    if (coachingType === 'sales') {
+      // Fetch metrics_id for sales mode
+      const { data: metricsData } = await supabase
+        .from('coaching_metrics')
+        .select('id')
+        .eq('week_start', weekStart)
+        .eq('coaching_type', 'sales')
+        .single()
+
+      episodeData = {
+        ...baseEpisodeData,
+        producer_id: memberId,
+        csr_profile_id: null,
+        metrics_id: metricsData?.id || null,
+        qhh: producerMetrics!.qhh,
+        quotes: producerMetrics!.quotes,
+        sales: producerMetrics!.sales,
+        items: producerMetrics!.items,
+        premium: producerMetrics!.premium,
+        close_rate: producerMetrics!.close_rate
+      }
+    } else {
+      // Service mode - no metrics
+      episodeData = {
+        ...baseEpisodeData,
+        producer_id: null,
+        csr_profile_id: memberId,
+        metrics_id: null,
+        qhh: null,
+        quotes: null,
+        sales: null,
+        items: null,
+        premium: null,
+        close_rate: null
+      }
     }
 
     let episodeId: string
@@ -457,32 +728,83 @@ IMPORTANT: Return ONLY the JSON object, no additional text or markdown code bloc
     }
 
     // Save scores for each transcript
-    for (const score of parsedResponse.scores) {
-      // Find the transcript by matching index (scores should be in order)
-      const transcriptIndex = parsedResponse.scores.indexOf(score)
-      const pdfDoc = pdfDocuments[transcriptIndex]
+    for (let i = 0; i < parsedResponse.scores.length; i++) {
+      const score = parsedResponse.scores[i]
+      const pdfDoc = pdfDocuments[i]
       const transcript = pdfDoc?.transcript
 
       if (transcript) {
-        const scoreData = {
-          transcript_id: transcript.id,
-          episode_id: episodeId,
-          step_1_opening: score.step_1_opening,
-          step_2_discovery: score.step_2_discovery,
-          step_3_quoting: score.step_3_quoting,
-          step_4_ask_for_sale: score.step_4_ask_for_sale,
-          step_5_closing: score.step_5_closing,
-          step_6_follow_up: score.step_6_follow_up,
-          step_7_multi_line: score.step_7_multi_line,
-          step_8_referral_ask: score.step_8_referral_ask,
-          overall_score: score.overall_score,
-          call_outcome: score.call_outcome,
-          cross_sell_triggers_detected: score.cross_sell_triggers_detected,
-          strengths: score.strengths,
-          improvement_areas: score.improvement_areas
+        let scoreData: Record<string, unknown>
+
+        if (coachingType === 'sales') {
+          const salesScore = score as SalesScoreResult
+          scoreData = {
+            transcript_id: transcript.id,
+            episode_id: episodeId,
+            coaching_type: 'sales',
+            // Sales-specific columns
+            step_1_opening: salesScore.step_1_opening,
+            step_2_discovery: salesScore.step_2_discovery,
+            step_3_quoting: salesScore.step_3_quoting,
+            step_4_ask_for_sale: salesScore.step_4_ask_for_sale,
+            step_5_closing: salesScore.step_5_closing,
+            step_6_follow_up: salesScore.step_6_follow_up,
+            step_7_multi_line: salesScore.step_7_multi_line,
+            step_8_referral_ask: salesScore.step_8_referral_ask,
+            overall_score: salesScore.overall_score,
+            call_outcome: salesScore.call_outcome,
+            cross_sell_triggers_detected: salesScore.cross_sell_triggers_detected,
+            strengths: salesScore.strengths,
+            improvement_areas: salesScore.improvement_areas,
+            // CSR columns set to null
+            step_1_greeting: null,
+            step_2_listening_empathy: null,
+            step_3_problem_id: null,
+            step_4_resolution: null,
+            step_5_cross_sell: null,
+            step_6_referral_ask_csr: null,
+            step_7_retention: null,
+            google_review_ask: null,
+            life_insurance_opportunity: null,
+            life_insurance_context: null,
+            call_type: null
+          }
+        } else {
+          const csrScore = score as CSRScoreResult
+          scoreData = {
+            transcript_id: transcript.id,
+            episode_id: episodeId,
+            coaching_type: 'service',
+            // CSR-specific columns
+            step_1_greeting: csrScore.step_1_greeting,
+            step_2_listening_empathy: csrScore.step_2_listening_empathy,
+            step_3_problem_id: csrScore.step_3_problem_id,
+            step_4_resolution: csrScore.step_4_resolution,
+            step_5_cross_sell: csrScore.step_5_cross_sell,
+            step_6_referral_ask_csr: csrScore.step_6_referral_ask_csr === 'N/A' ? null : csrScore.step_6_referral_ask_csr,
+            step_7_retention: csrScore.step_7_retention === 'N/A' ? null : csrScore.step_7_retention,
+            google_review_ask: csrScore.google_review_ask,
+            life_insurance_opportunity: csrScore.life_insurance_opportunity,
+            life_insurance_context: csrScore.life_insurance_context,
+            call_type: csrScore.call_type,
+            overall_score: csrScore.overall_score,
+            call_outcome: csrScore.call_outcome,
+            cross_sell_triggers_detected: csrScore.cross_sell_triggers_detected,
+            strengths: csrScore.strengths,
+            improvement_areas: csrScore.improvement_areas,
+            // Sales columns set to null
+            step_1_opening: null,
+            step_2_discovery: null,
+            step_3_quoting: null,
+            step_4_ask_for_sale: null,
+            step_5_closing: null,
+            step_6_follow_up: null,
+            step_7_multi_line: null,
+            step_8_referral_ask: null
+          }
         }
 
-        // Upsert score
+        // Upsert score using transcript_id + coaching_type
         const { error: scoreError } = await supabase
           .from('coaching_scores')
           .upsert(scoreData, { onConflict: 'transcript_id' })
@@ -500,7 +822,8 @@ IMPORTANT: Return ONLY the JSON object, no additional text or markdown code bloc
         summary: parsedResponse.summary,
         tokensUsed,
         generationDurationMs: generationDuration,
-        transcriptsProcessed: pdfDocuments.length
+        transcriptsProcessed: pdfDocuments.length,
+        coachingType
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )

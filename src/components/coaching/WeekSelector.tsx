@@ -3,14 +3,18 @@ import { Button } from '@/components/ui/button'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
+type CoachingType = 'sales' | 'service'
+
 interface WeekSelectorProps {
   selectedWeekStart: Date
   onWeekChange: (weekStart: Date) => void
+  coachingType?: CoachingType
 }
 
 export const WeekSelector: React.FC<WeekSelectorProps> = ({
   selectedWeekStart,
-  onWeekChange
+  onWeekChange,
+  coachingType = 'sales'
 }) => {
   const getMonday = (date: Date): Date => {
     const d = new Date(date)
@@ -56,17 +60,20 @@ export const WeekSelector: React.FC<WeekSelectorProps> = ({
     return `${monday.toLocaleDateString('en-US', options)} - ${sunday.toLocaleDateString('en-US', options)}`
   }
 
-  // Calculate focus week number (1-8 rotation starting 2026-01-06)
+  // Calculate focus week number based on coaching type
+  // Sales = 8-week rotation, Service = 6-week rotation
   const getFocusWeekNumber = (weekStart: Date): number => {
     const cycleStart = new Date('2026-01-06')
     const msPerWeek = 7 * 24 * 60 * 60 * 1000
     const weeksSinceStart = Math.floor((weekStart.getTime() - cycleStart.getTime()) / msPerWeek)
-    return ((weeksSinceStart % 8) + 8) % 8 + 1 // Handle negative numbers properly
+    const cycleLength = coachingType === 'service' ? 6 : 8
+    return ((weeksSinceStart % cycleLength) + cycleLength) % cycleLength + 1 // Handle negative numbers properly
   }
 
   const focusWeekNumber = getFocusWeekNumber(selectedWeekStart)
 
-  const focusThemes: Record<number, string> = {
+  // Sales coaching: 8-week focus rotation
+  const salesThemes: Record<number, string> = {
     1: 'Discovery & Needs Assessment',
     2: 'Bundling & Multi-Line',
     3: 'Asking for the Sale',
@@ -76,6 +83,19 @@ export const WeekSelector: React.FC<WeekSelectorProps> = ({
     7: 'Cross-Sell Triggers',
     8: 'Value Before Price'
   }
+
+  // Service coaching: 6-week focus rotation
+  const serviceThemes: Record<number, string> = {
+    1: 'Empathy & Active Listening',
+    2: 'Referral Asks on Service Calls',
+    3: 'Cross-Sell Opportunity Identification',
+    4: 'Retention & Save Language',
+    5: 'Google Review Asks',
+    6: 'Problem Resolution & Follow-Through'
+  }
+
+  const focusThemes = coachingType === 'service' ? serviceThemes : salesThemes
+  const cycleLength = coachingType === 'service' ? 6 : 8
 
   return (
     <div className="space-y-4">
@@ -117,7 +137,7 @@ export const WeekSelector: React.FC<WeekSelectorProps> = ({
       <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
         <div className="flex items-center space-x-2">
           <span className="text-sm text-muted-foreground">Focus Week:</span>
-          <span className="font-medium">Week {focusWeekNumber}</span>
+          <span className="font-medium">Week {focusWeekNumber} of {cycleLength}</span>
         </div>
         <div className="text-sm font-medium text-primary">
           {focusThemes[focusWeekNumber]}
