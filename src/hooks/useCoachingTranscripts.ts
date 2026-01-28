@@ -173,12 +173,22 @@ export function useCoachingTranscripts(weekStart: Date, coachingType: CoachingTy
     try {
       let fileToUpload = file
       const needsCompression = file.size > COMPRESSION_THRESHOLD
+      const isVeryLarge = file.size > 50 * 1024 * 1024 // 50MB+
+      const isLarge = file.size > 20 * 1024 * 1024 // 20MB+
 
       // Compress large files before upload
       if (needsCompression) {
+        // Show warning for very large files
+        const statusMessage = isVeryLarge
+          ? 'Large file - compression may take 2-5 minutes'
+          : isLarge
+          ? 'Compressing large file...'
+          : undefined
+
         updateFileStatus(memberId, localId, {
           status: 'uploading' as const,
-          progress: 5
+          progress: 5,
+          statusMessage
         })
 
         console.log(`[Compress] Starting: ${file.name} (${(file.size / 1024 / 1024).toFixed(1)} MB)`)
@@ -200,9 +210,11 @@ export function useCoachingTranscripts(weekStart: Date, coachingType: CoachingTy
 
       // Upload (compressed or original)
       // Start at 30% if we compressed, 10% if we didn't (so small files don't briefly show "Compressing...")
+      // Clear the status message since compression is done
       updateFileStatus(memberId, localId, {
         status: 'uploading' as const,
-        progress: needsCompression ? 30 : 10
+        progress: needsCompression ? 30 : 10,
+        statusMessage: undefined
       })
 
       const storagePath = `${coachingType}/${memberId}/${weekStartStr}/${file.name}`

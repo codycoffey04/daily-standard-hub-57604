@@ -499,3 +499,25 @@ When completing a session, add entry below:
 - **Always do a "fresh eyes" code review after completing a feature** — caught 3 bugs that would have hit production
 - **When planning database features, verify constraint requirements upfront** — ON CONFLICT, CHECK constraints, enum timing
 - **Use exact FK relationships for auto-tracking, never fuzzy string matching** — user feedback improved the design significantly
+
+### 2026-01-28 — PDF Compression Fix with @quicktoolsone/pdf-compress
+**What was done:**
+- Replaced broken custom pdfCompressor.ts with `@quicktoolsone/pdf-compress` npm package
+- Previous approach (pdfjs canvas rendering) produced 0-byte output for large (25-50MB) Total Recall PDFs
+- New library auto-adapts DPI based on file size and handles memory cleanup automatically
+
+**What was learned:**
+- **Browser canvas rendering hits memory limits on large image-heavy PDFs** — pdfjs renders blank canvases
+- **Don't reinvent the wheel** — @quicktoolsone/pdf-compress handles adaptive DPI, Web Workers, garbage collection
+- **Proven libraries beat custom implementations** — the library is designed for exactly this use case (large scanned PDFs)
+- Custom canvas rendering works for small PDFs but fails silently for large ones — validation catches the 0-byte output but can't fix it
+
+**Root cause of original failure:**
+- pdfjs `page.render()` succeeds but canvas pixels are blank (all zeros)
+- `canvas.toBlob()` returns near-zero bytes
+- Validation catches it but fallback to original still times out (file too large)
+
+**What to do differently:**
+- **Check LEARNINGS.md AND search npm before building custom solutions** — compression libraries already exist
+- **Test with actual large files during development** — small test files may work while production files fail
+- **Memory limits vary by device** — Mobile Safari and older browsers hit limits earlier
