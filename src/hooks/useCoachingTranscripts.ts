@@ -234,7 +234,7 @@ export function useCoachingTranscripts(weekStart: Date, coachingType: CoachingTy
         file_path: storagePath,
         file_size: fileToUpload.size, // Store compressed size
         extracted_text: null, // Claude reads PDFs natively
-        extraction_status: 'skipped',
+        extraction_status: 'completed', // No extraction needed - Claude reads PDFs natively
         uploaded_by: user?.id
       }
 
