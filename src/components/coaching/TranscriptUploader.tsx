@@ -49,7 +49,7 @@ export const TranscriptUploader: React.FC<TranscriptUploaderProps> = ({
     accept: {
       'application/pdf': ['.pdf']
     },
-    maxSize: 10 * 1024 * 1024, // 10MB
+    maxSize: 100 * 1024 * 1024, // 100MB - Total Recall PDFs are 25-50MB
     maxFiles: remainingSlots,
     disabled: disabled || remainingSlots <= 0
   })
@@ -118,7 +118,7 @@ export const TranscriptUploader: React.FC<TranscriptUploaderProps> = ({
               Drag & drop PDF transcripts here, or click to select
             </p>
             <p className="text-xs text-muted-foreground/70 mt-1">
-              {remainingSlots} of {maxFiles} slots remaining (max 10MB each)
+              {remainingSlots} of {maxFiles} slots remaining (max 100MB each)
             </p>
           </>
         )}
