@@ -403,6 +403,72 @@ When completing a session, add entry below:
 - When building gamification, balance extrinsic rewards with intrinsic motivation
 - For small teams (3 CSRs), emphasize personal progress over pure competition
 
+### 2026-01-28 — Coaching Dual-Mode (Sales + Service) & PDF Fix
+**What was done:**
+- Built dual-mode coaching system (Sales for producers, Service for CSRs)
+- Added `coaching_type` discriminator column to all coaching tables
+- Created CSR-specific scorecard (7 steps), focus rotation (6 weeks), episode template
+- Fixed PDF upload: Reverted text extraction approach back to native PDF support
+- Fixed sequential upload queue (parallel forEach → sequential for...of loop)
+
+**What was learned:**
+- **LEARNINGS.md is critical institutional memory** — the fix for PDF handling was already documented (commit `cf91dee`)
+- **Don't repeat mistakes**: Client-side pdfjs-dist extraction failed before due to Vite worker configuration issues
+- **Claude reads image-based PDFs natively** — Total Recall transcripts are screenshots, no OCR/text extraction needed
+- **Sequential file uploads prevent race conditions** — parallel forEach caused reliability issues with multi-file uploads
+- **Keep what works**: Retry logic with exponential backoff is valuable; sequential processing is valuable
+- **Edge Function type narrowing**: Discriminated unions need explicit typing when building mixed arrays
+
+**Database changes:**
+- `coaching_transcripts.csr_profile_id` column added
+- `coaching_episodes.csr_profile_id` column added
+- `coaching_scores.coaching_type` column added
+- New config types: `csr_scorecard`, `csr_cross_sell_triggers`, `csr_focus_rotation`, `csr_episode_template`, `csr_profiles`
+
+**What to do differently:**
+- **Always check LEARNINGS.md before implementing** — the PDF solution was documented 3 days ago
+- **Don't over-engineer** — native API support beats complex client-side processing
+- **Update LEARNINGS.md immediately after discovering solutions** — future sessions benefit from past learnings
+
+### 2026-01-28 — Browser-Based PDF Compression FAILED
+**What was attempted:**
+- Implemented client-side PDF compression using pdfjs-dist + pdf-lib
+- Goal: Compress large PDFs (25-50MB) before upload to prevent browser timeouts
+
+**What FAILED:**
+- **Canvas rendering produces 0-byte output** for Total Recall PDFs
+- Console shows: `[Compress] Complete: 49.1MB → 0.0MB (100% reduction)` — this is wrong
+- Result: Uploads "succeed" (0-byte file) but DB insert fails with CHECK constraint violation
+- Error code `23514`: "new row for relation 'coaching_transcripts' violates check constraint"
+- The `extraction_status` column has a CHECK constraint that rejects invalid values
+
+**Root cause analysis:**
+- pdfjs worker may not be loading correctly despite using Vite `import.meta.url` pattern
+- Canvas renders blank pages (no pixel data) for image-based PDFs
+- OR: pdfjs can't properly parse Total Recall's specific PDF format
+
+**What was learned:**
+- **Canvas rendering for image-based PDFs is unreliable** — pdfjs may not handle all PDF image formats
+- **Validation saved us**: Added checks for `compressedSize < 1000` and `reductionPercent > 95%` to catch failures
+- **The fallback works**: When compression throws, it uploads original (but original is too large → timeout)
+- **Fresh-eyes review is critical**: Found 4 additional bugs in the code after initial implementation
+
+**Current state (BROKEN):**
+- CSR coaching UI works (service mode toggle, 7-step scorecard, 6-week rotation)
+- Transcript upload is broken for large files
+- Sales coaching still works (smaller PDFs don't hit compression threshold)
+
+**Files involved:**
+- `src/utils/pdfCompressor.ts` — canvas rendering produces empty output
+- `src/hooks/useCoachingTranscripts.ts` — compression logic + fallback
+- `src/components/coaching/TranscriptUploader.tsx` — UI shows "Failed" correctly
+
+**What to try next:**
+1. Debug why pdfjs renders blank canvases (check worker loading, PDF format compatibility)
+2. Alternative: Server-side compression (Edge Function with different library)
+3. Alternative: Increase Supabase upload timeout or use chunked uploads
+4. Alternative: Ask user to compress PDFs before uploading (manual workaround)
+
 ### 2026-01-27 — CSR Dashboard Sprint 1 & 2 Implementation
 **What was done:**
 - Built complete CSR Dashboard with Sprint 1 (core UI) and Sprint 2 (activity logging)
