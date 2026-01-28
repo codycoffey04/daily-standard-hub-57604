@@ -1,14 +1,18 @@
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/integrations/supabase/client'
 import { useAuth } from '@/contexts/AuthContext'
 import { useToast } from '@/hooks/use-toast'
+import { extractTextFromPdf } from '@/utils/pdfExtractor'
 import type { UploadedFile } from '@/components/coaching/TranscriptUploader'
 import type { Database } from '@/integrations/supabase/types'
 
 type CoachingTranscript = Database['public']['Tables']['coaching_transcripts']['Row']
 type Producer = Database['public']['Tables']['producers']['Row']
 type CoachingType = 'sales' | 'service'
+
+const MAX_RETRIES = 3
+const RETRY_DELAY_MS = 1000 // Base delay, doubles each retry
 
 // Generic team member interface for both producers and CSRs
 interface TeamMember {
@@ -112,56 +116,91 @@ export function useCoachingTranscripts(weekStart: Date, coachingType: CoachingTy
     setFilesByMember({})
   }, [weekStartStr, coachingType])
 
-  // Upload file to storage and create transcript record
-  const uploadFile = useCallback(async (
+  // Helper to update file status
+  const updateFileStatus = useCallback((
     memberId: string,
-    file: File,
-    localId: string
-  ): Promise<void> => {
-    // Storage path includes coaching type to prevent collisions
-    const storagePath = `${coachingType}/${memberId}/${weekStartStr}/${file.name}`
-
-    // Update status to uploading
+    localId: string,
+    updates: Partial<UploadedFile>
+  ) => {
     setFilesByMember(prev => ({
       ...prev,
       [memberId]: (prev[memberId] || []).map(f =>
-        f.id === localId ? { ...f, status: 'uploading' as const, progress: 10 } : f
+        f.id === localId ? { ...f, ...updates } : f
       )
     }))
+  }, [])
 
+  // Upload with retry logic
+  const uploadWithRetry = async (
+    storagePath: string,
+    blob: Blob,
+    retries = MAX_RETRIES
+  ): Promise<void> => {
+    let lastError: Error | null = null
+
+    for (let attempt = 1; attempt <= retries; attempt++) {
+      try {
+        const { error } = await supabase.storage
+          .from('coaching-transcripts')
+          .upload(storagePath, blob, { upsert: true })
+
+        if (error) throw error
+        return // Success
+      } catch (error) {
+        lastError = error as Error
+        console.log(`[Upload] Attempt ${attempt}/${retries} failed:`, lastError.message)
+
+        if (attempt < retries) {
+          // Exponential backoff: 1s, 2s, 4s
+          const delay = RETRY_DELAY_MS * Math.pow(2, attempt - 1)
+          await new Promise(r => setTimeout(r, delay))
+        }
+      }
+    }
+
+    throw lastError
+  }
+
+  // Process a single file: extract text, upload, create record
+  const processFile = useCallback(async (
+    memberId: string,
+    file: File,
+    localId: string
+  ): Promise<boolean> => {
     try {
-      // Step 1: Upload to storage (no client-side extraction - Claude reads PDFs directly)
-      setFilesByMember(prev => ({
-        ...prev,
-        [memberId]: (prev[memberId] || []).map(f =>
-          f.id === localId ? { ...f, progress: 30 } : f
-        )
-      }))
+      // Step 1: Extract text from PDF (this is the heavy lifting)
+      updateFileStatus(memberId, localId, {
+        status: 'uploading' as const,
+        progress: 5,
+        extractionStatus: 'extracting' as const
+      })
 
-      const { error: uploadError } = await supabase.storage
-        .from('coaching-transcripts')
-        .upload(storagePath, file, { upsert: true })
+      console.log(`[Upload] Extracting text from: ${file.name}`)
+      const { text, pageCount, originalSize, extractedSize } = await extractTextFromPdf(file)
 
-      if (uploadError) throw uploadError
+      updateFileStatus(memberId, localId, { progress: 40 })
 
-      // Update progress
-      setFilesByMember(prev => ({
-        ...prev,
-        [memberId]: (prev[memberId] || []).map(f =>
-          f.id === localId ? { ...f, progress: 70 } : f
-        )
-      }))
+      // Step 2: Create text blob and upload (much smaller than original PDF)
+      const textBlob = new Blob([text], { type: 'text/plain' })
+      const textFileName = file.name.replace(/\.pdf$/i, '.txt')
+      const storagePath = `${coachingType}/${memberId}/${weekStartStr}/${textFileName}`
 
-      // Step 2: Create transcript record (extraction happens server-side via Claude)
-      // Set the appropriate ID field based on coaching type
+      console.log(`[Upload] Uploading extracted text: ${textFileName} (${(extractedSize / 1024).toFixed(1)} KB)`)
+      updateFileStatus(memberId, localId, { progress: 50 })
+
+      await uploadWithRetry(storagePath, textBlob)
+
+      updateFileStatus(memberId, localId, { progress: 80 })
+
+      // Step 3: Create transcript record
       const insertData: Record<string, any> = {
         week_start: weekStartStr,
         coaching_type: coachingType,
-        file_name: file.name,
+        file_name: file.name, // Keep original PDF name for display
         file_path: storagePath,
-        file_size: file.size,
-        extracted_text: null, // Not used - Claude reads PDFs directly
-        extraction_status: 'completed', // Mark as completed - Claude reads PDFs directly during generation
+        file_size: extractedSize, // Store extracted size, not original
+        extracted_text: text, // Store the extracted text
+        extraction_status: 'completed',
         uploaded_by: user?.id
       }
 
@@ -180,69 +219,90 @@ export function useCoachingTranscripts(weekStart: Date, coachingType: CoachingTy
         .single()
 
       if (insertError) {
-        console.error('[useCoachingTranscripts] Insert error:', insertError)
+        console.error('[Upload] DB insert error:', insertError)
         throw insertError
       }
 
-      console.log(`[useCoachingTranscripts] Upload successful, transcript id: ${transcript.id}`)
+      console.log(`[Upload] Success: ${file.name} → ${textFileName} (${(originalSize / 1024 / 1024).toFixed(1)} MB → ${(extractedSize / 1024).toFixed(1)} KB)`)
 
       // Update to completed
-      setFilesByMember(prev => ({
-        ...prev,
-        [memberId]: (prev[memberId] || []).map(f =>
-          f.id === localId
-            ? {
-                ...f,
-                id: transcript.id,
-                status: 'completed' as const,
-                progress: 100,
-                storagePath,
-                extractionStatus: 'completed' as const
-              }
-            : f
-        )
-      }))
+      updateFileStatus(memberId, localId, {
+        id: transcript.id,
+        status: 'completed' as const,
+        progress: 100,
+        storagePath,
+        extractionStatus: 'completed' as const,
+        storedFileSize: extractedSize
+      })
 
-      queryClient.invalidateQueries({ queryKey: ['coaching-transcripts', weekStartStr, coachingType] })
+      return true
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Upload failed'
+      console.error(`[Upload] Failed: ${file.name}`, error)
 
-      setFilesByMember(prev => ({
-        ...prev,
-        [memberId]: (prev[memberId] || []).map(f =>
-          f.id === localId
-            ? { ...f, status: 'error' as const, error: errorMessage }
-            : f
-        )
-      }))
+      updateFileStatus(memberId, localId, {
+        status: 'error' as const,
+        error: errorMessage,
+        extractionStatus: 'failed' as const
+      })
 
       toast({
         title: 'Upload failed',
-        description: errorMessage,
+        description: `${file.name}: ${errorMessage}`,
         variant: 'destructive'
       })
-    }
-  }, [weekStartStr, coachingType, user?.id, queryClient, toast])
 
-  // Handle files selected for a team member
-  const handleFilesSelected = useCallback((memberId: string, files: File[]) => {
+      return false
+    }
+  }, [weekStartStr, coachingType, user?.id, updateFileStatus, toast])
+
+  // Track if we're currently processing uploads for a member (prevent double-processing)
+  const processingRef = useRef<Set<string>>(new Set())
+
+  // Handle files selected for a team member - processes sequentially with retry
+  const handleFilesSelected = useCallback(async (memberId: string, files: File[]) => {
+    // Prevent double-processing if user drops files while upload is in progress
+    if (processingRef.current.has(memberId)) {
+      console.log(`[Upload] Already processing for ${memberId}, queuing files`)
+    }
+
     const newFiles: UploadedFile[] = files.map(file => ({
       id: generateId(),
       file,
       status: 'pending' as const,
-      progress: 0
+      progress: 0,
+      extractionStatus: 'pending' as const
     }))
 
+    // Add files to state immediately (shows pending UI)
     setFilesByMember(prev => ({
       ...prev,
       [memberId]: [...(prev[memberId] || []), ...newFiles]
     }))
 
-    // Start uploading each file
-    newFiles.forEach(f => {
-      uploadFile(memberId, f.file, f.id)
-    })
-  }, [uploadFile])
+    // Process files SEQUENTIALLY (not in parallel)
+    // This prevents network congestion and race conditions
+    processingRef.current.add(memberId)
+
+    try {
+      for (const f of newFiles) {
+        console.log(`[Upload] Processing file ${newFiles.indexOf(f) + 1}/${newFiles.length}: ${f.file.name}`)
+        await processFile(memberId, f.file, f.id)
+        // Small delay between files to let UI update
+        await new Promise(r => setTimeout(r, 100))
+      }
+
+      // Refresh transcript list after all uploads complete
+      queryClient.invalidateQueries({ queryKey: ['coaching-transcripts', weekStartStr, coachingType] })
+
+      toast({
+        title: 'Transcripts uploaded',
+        description: `${newFiles.length} transcript${newFiles.length > 1 ? 's' : ''} processed successfully`
+      })
+    } finally {
+      processingRef.current.delete(memberId)
+    }
+  }, [processFile, queryClient, weekStartStr, coachingType, toast])
 
   // Remove file (and delete from storage/DB if already uploaded)
   const handleRemoveFile = useCallback(async (memberId: string, fileId: string) => {

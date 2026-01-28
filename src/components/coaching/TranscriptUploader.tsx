@@ -13,7 +13,7 @@ export interface UploadedFile {
   progress: number
   error?: string
   storagePath?: string
-  extractionStatus?: 'pending' | 'processing' | 'completed' | 'failed' | 'skipped'
+  extractionStatus?: 'pending' | 'extracting' | 'processing' | 'completed' | 'failed' | 'skipped'
   storedFileSize?: number // For files loaded from DB where File object is a dummy
 }
 
@@ -71,15 +71,22 @@ export const TranscriptUploader: React.FC<TranscriptUploaderProps> = ({
     return <FileText className="h-4 w-4 text-muted-foreground" />
   }
 
-  const getStatusBadge = (status: UploadedFile['status']) => {
+  const getStatusBadge = (status: UploadedFile['status'], extractionStatus?: UploadedFile['extractionStatus'], progress?: number) => {
     if (status === 'completed') {
       return <Badge variant="secondary" className="text-xs bg-green-100 text-green-700">Uploaded</Badge>
     }
     if (status === 'uploading') {
+      // Show different text based on extraction progress
+      if (extractionStatus === 'extracting' || (progress && progress < 40)) {
+        return <Badge variant="secondary" className="text-xs bg-purple-100 text-purple-700">Extracting text...</Badge>
+      }
       return <Badge variant="secondary" className="text-xs bg-blue-100 text-blue-700">Uploading...</Badge>
     }
     if (status === 'error') {
       return <Badge variant="destructive" className="text-xs">Failed</Badge>
+    }
+    if (status === 'pending') {
+      return <Badge variant="secondary" className="text-xs">Pending</Badge>
     }
     return null
   }
@@ -142,7 +149,7 @@ export const TranscriptUploader: React.FC<TranscriptUploaderProps> = ({
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
                   <p className="text-sm font-medium truncate">{file.file.name}</p>
-                  {getStatusBadge(file.status)}
+                  {getStatusBadge(file.status, file.extractionStatus, file.progress)}
                 </div>
                 <p className="text-xs text-muted-foreground">
                   {formatFileSize(file.storedFileSize ?? file.file.size)}
