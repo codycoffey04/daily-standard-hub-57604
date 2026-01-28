@@ -152,13 +152,13 @@ WHERE EXTRACT(DOW FROM d) NOT IN (0, 6);
 
 ## AI Features
 
-### Coaching Episodes (claude-opus-4-20250514)
-- Uses Opus model for flagship quality analysis
+### Coaching Episodes (claude-opus-4-5-20251101)
+- Uses **Opus 4.5** model for flagship quality analysis
 - 3 transcripts per producer per week
 - Total Recall exports as image-PDFs — Claude reads natively, no OCR needed
 - ~25,000 tokens per episode
-- 8-step scorecard: 0-2 scale per step
-- Focus rotation is 8-week cycle starting Jan 6, 2026
+- 8-step scorecard: 0-2 scale per step (sales), 7-step for CSRs (service)
+- Focus rotation is 8-week cycle starting Jan 6, 2026 (sales), 6-week for CSRs
 - **Data sources**: QHH/Quotes from TDS, Sales/Items/Premium from AgencyZoom
 
 ### Email Generation (claude-opus-4-20250514)
@@ -521,3 +521,29 @@ When completing a session, add entry below:
 - **Check LEARNINGS.md AND search npm before building custom solutions** — compression libraries already exist
 - **Test with actual large files during development** — small test files may work while production files fail
 - **Memory limits vary by device** — Mobile Safari and older browsers hit limits earlier
+
+### 2026-01-28 — Opus 4.5 Upgrade & CSR Scores Fix
+**What was done:**
+- Upgraded coaching model from `claude-opus-4-20250514` to `claude-opus-4-5-20251101` (Opus 4.5)
+- Fixed CSR coaching scores showing 0 — database CHECK constraint only allowed sales outcomes
+- Added CSR call outcomes to CHECK constraint: 'resolved', 'escalated', 'callback_needed', 'transferred'
+
+**What was learned:**
+- **Claude model IDs follow specific patterns**: Opus 4 = `claude-opus-4-20250514`, Opus 4.5 = `claude-opus-4-5-20251101` (note the `-5-` in the middle)
+- **Wrong model ID gives cryptic errors** — tried `claude-opus-4-5-20250514` (doesn't exist), got generic 500 errors
+- **Database CHECK constraints silently reject inserts** — CSR episodes generated but scores weren't saving because call_outcome values were rejected
+- **Supabase Edge Function logs are essential for debugging** — the actual error ("credit balance too low") was only visible in Dashboard → Edge Functions → Logs
+- **API credits can run out silently** — no warning before calls start failing
+
+**SQL fix for CSR call outcomes:**
+```sql
+ALTER TABLE coaching_scores DROP CONSTRAINT coaching_scores_call_outcome_check;
+ALTER TABLE coaching_scores ADD CONSTRAINT coaching_scores_call_outcome_check
+CHECK (call_outcome = ANY (ARRAY['sale', 'quote', 'service', 'unknown', 'resolved', 'escalated', 'callback_needed', 'transferred']));
+```
+
+**What to do differently:**
+- **Always verify exact model IDs** from Anthropic docs — don't guess at naming patterns
+- **Check Supabase Edge Function logs** when getting generic 500 errors — actual error is often different
+- **Monitor API credit balance** — consider enabling auto-reload to avoid interruptions
+- **When adding new enum-like values, check existing CHECK constraints** — silent failures are hard to debug
