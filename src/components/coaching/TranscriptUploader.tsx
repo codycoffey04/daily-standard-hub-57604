@@ -32,7 +32,9 @@ export const TranscriptUploader: React.FC<TranscriptUploaderProps> = ({
   maxFiles = 3,
   disabled = false
 }) => {
-  const remainingSlots = maxFiles - uploadedFiles.length
+  // Only count completed or in-progress files against the limit (not failed ones)
+  const activeFiles = uploadedFiles.filter(f => f.status === 'completed' || f.status === 'uploading' || f.status === 'pending')
+  const remainingSlots = maxFiles - activeFiles.length
 
   const onDrop = useCallback((acceptedFiles: File[]) => {
     if (disabled) return

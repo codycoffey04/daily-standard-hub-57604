@@ -172,9 +172,10 @@ export function useCoachingTranscripts(weekStart: Date, coachingType: CoachingTy
   ): Promise<boolean> => {
     try {
       let fileToUpload = file
+      const needsCompression = file.size > COMPRESSION_THRESHOLD
 
       // Compress large files before upload
-      if (file.size > COMPRESSION_THRESHOLD) {
+      if (needsCompression) {
         updateFileStatus(memberId, localId, {
           status: 'uploading' as const,
           progress: 5
@@ -198,15 +199,16 @@ export function useCoachingTranscripts(weekStart: Date, coachingType: CoachingTy
       }
 
       // Upload (compressed or original)
+      // Start at 30% if we compressed, 10% if we didn't (so small files don't briefly show "Compressing...")
       updateFileStatus(memberId, localId, {
         status: 'uploading' as const,
-        progress: 30
+        progress: needsCompression ? 30 : 10
       })
 
       const storagePath = `${coachingType}/${memberId}/${weekStartStr}/${file.name}`
 
       console.log(`[Upload] Uploading PDF: ${file.name} (${(fileToUpload.size / 1024 / 1024).toFixed(1)} MB)`)
-      updateFileStatus(memberId, localId, { progress: 50 })
+      updateFileStatus(memberId, localId, { progress: needsCompression ? 50 : 40 })
 
       await uploadWithRetry(storagePath, fileToUpload)
 
@@ -251,7 +253,7 @@ export function useCoachingTranscripts(weekStart: Date, coachingType: CoachingTy
         status: 'completed' as const,
         progress: 100,
         storagePath,
-        storedFileSize: file.size
+        storedFileSize: fileToUpload.size // Store actual uploaded size (compressed if applicable)
       })
 
       return true
@@ -302,10 +304,18 @@ export function useCoachingTranscripts(weekStart: Date, coachingType: CoachingTy
     // This prevents network congestion and race conditions
     processingRef.current.add(memberId)
 
+    let successCount = 0
+    let failCount = 0
+
     try {
       for (const f of newFiles) {
         console.log(`[Upload] Processing file ${newFiles.indexOf(f) + 1}/${newFiles.length}: ${f.file.name}`)
-        await processFile(memberId, f.file, f.id)
+        const success = await processFile(memberId, f.file, f.id)
+        if (success) {
+          successCount++
+        } else {
+          failCount++
+        }
         // Small delay between files to let UI update
         await new Promise(r => setTimeout(r, 100))
       }
@@ -313,10 +323,13 @@ export function useCoachingTranscripts(weekStart: Date, coachingType: CoachingTy
       // Refresh transcript list after all uploads complete
       queryClient.invalidateQueries({ queryKey: ['coaching-transcripts', weekStartStr, coachingType] })
 
-      toast({
-        title: 'Transcripts uploaded',
-        description: `${newFiles.length} transcript${newFiles.length > 1 ? 's' : ''} processed successfully`
-      })
+      // Only show success toast if at least one succeeded
+      if (successCount > 0) {
+        toast({
+          title: 'Transcripts uploaded',
+          description: `${successCount} transcript${successCount > 1 ? 's' : ''} uploaded successfully${failCount > 0 ? ` (${failCount} failed)` : ''}`
+        })
+      }
     } finally {
       processingRef.current.delete(memberId)
     }
