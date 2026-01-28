@@ -597,7 +597,7 @@ IMPORTANT: Return ONLY the JSON object, no additional text or markdown code bloc
         'anthropic-version': '2023-06-01'
       },
       body: JSON.stringify({
-        model: 'claude-opus-4-20250514',
+        model: 'claude-opus-4-5-20251101',
         max_tokens: 8000,
         messages: [
           {
@@ -662,7 +662,7 @@ IMPORTANT: Return ONLY the JSON object, no additional text or markdown code bloc
       episode_summary: parsedResponse.summary,
       focus_theme: focusWeek?.theme || 'General',
       focus_week_number: focusWeekNumber,
-      model_used: 'claude-opus-4-20250514',
+      model_used: 'claude-opus-4-5-20251101',
       tokens_used: tokensUsed,
       generation_duration_ms: generationDuration,
       status: 'published'
