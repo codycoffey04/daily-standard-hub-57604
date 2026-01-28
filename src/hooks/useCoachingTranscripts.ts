@@ -3,6 +3,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/integrations/supabase/client'
 import { useAuth } from '@/contexts/AuthContext'
 import { useToast } from '@/hooks/use-toast'
+import { compressPdf } from '@/utils/pdfCompressor'
 import type { UploadedFile } from '@/components/coaching/TranscriptUploader'
 import type { Database } from '@/integrations/supabase/types'
 
@@ -160,26 +161,54 @@ export function useCoachingTranscripts(weekStart: Date, coachingType: CoachingTy
     throw lastError
   }
 
-  // Process a single file: upload original PDF (Claude reads PDFs natively)
+  // Compression threshold: only compress files larger than 5MB
+  const COMPRESSION_THRESHOLD = 5 * 1024 * 1024 // 5MB
+
+  // Process a single file: compress if large, then upload PDF (Claude reads PDFs natively)
   const processFile = useCallback(async (
     memberId: string,
     file: File,
     localId: string
   ): Promise<boolean> => {
     try {
-      // Upload original PDF directly - Claude reads PDFs natively
-      // (Total Recall PDFs are image-based, no text extraction needed)
+      let fileToUpload = file
+
+      // Compress large files before upload
+      if (file.size > COMPRESSION_THRESHOLD) {
+        updateFileStatus(memberId, localId, {
+          status: 'uploading' as const,
+          progress: 5
+        })
+
+        console.log(`[Compress] Starting: ${file.name} (${(file.size / 1024 / 1024).toFixed(1)} MB)`)
+
+        try {
+          const result = await compressPdf(file, 0.6, 0.65, (percent) => {
+            // Progress 5-30% during compression
+            updateFileStatus(memberId, localId, { progress: 5 + Math.round(percent * 0.25) })
+          })
+
+          fileToUpload = result.file
+          console.log(`[Compress] Done: ${(result.originalSize / 1024 / 1024).toFixed(1)}MB → ${(result.compressedSize / 1024 / 1024).toFixed(1)}MB (${result.reductionPercent}% reduction)`)
+        } catch (compressionError) {
+          // Fallback: upload original if compression fails
+          console.warn('[Compress] Failed, uploading original:', compressionError)
+          fileToUpload = file
+        }
+      }
+
+      // Upload (compressed or original)
       updateFileStatus(memberId, localId, {
         status: 'uploading' as const,
-        progress: 10
+        progress: 30
       })
 
       const storagePath = `${coachingType}/${memberId}/${weekStartStr}/${file.name}`
 
-      console.log(`[Upload] Uploading PDF: ${file.name} (${(file.size / 1024 / 1024).toFixed(1)} MB)`)
-      updateFileStatus(memberId, localId, { progress: 30 })
+      console.log(`[Upload] Uploading PDF: ${file.name} (${(fileToUpload.size / 1024 / 1024).toFixed(1)} MB)`)
+      updateFileStatus(memberId, localId, { progress: 50 })
 
-      await uploadWithRetry(storagePath, file)
+      await uploadWithRetry(storagePath, fileToUpload)
 
       updateFileStatus(memberId, localId, { progress: 80 })
 
@@ -189,7 +218,7 @@ export function useCoachingTranscripts(weekStart: Date, coachingType: CoachingTy
         coaching_type: coachingType,
         file_name: file.name,
         file_path: storagePath,
-        file_size: file.size,
+        file_size: fileToUpload.size, // Store compressed size
         extracted_text: null, // Claude reads PDFs natively
         extraction_status: 'skipped',
         uploaded_by: user?.id
