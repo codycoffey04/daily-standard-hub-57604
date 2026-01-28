@@ -71,15 +71,11 @@ export const TranscriptUploader: React.FC<TranscriptUploaderProps> = ({
     return <FileText className="h-4 w-4 text-muted-foreground" />
   }
 
-  const getStatusBadge = (status: UploadedFile['status'], extractionStatus?: UploadedFile['extractionStatus'], progress?: number) => {
+  const getStatusBadge = (status: UploadedFile['status']) => {
     if (status === 'completed') {
       return <Badge variant="secondary" className="text-xs bg-green-100 text-green-700">Uploaded</Badge>
     }
     if (status === 'uploading') {
-      // Show different text based on extraction progress
-      if (extractionStatus === 'extracting' || (progress && progress < 40)) {
-        return <Badge variant="secondary" className="text-xs bg-purple-100 text-purple-700">Extracting text...</Badge>
-      }
       return <Badge variant="secondary" className="text-xs bg-blue-100 text-blue-700">Uploading...</Badge>
     }
     if (status === 'error') {
@@ -149,7 +145,7 @@ export const TranscriptUploader: React.FC<TranscriptUploaderProps> = ({
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
                   <p className="text-sm font-medium truncate">{file.file.name}</p>
-                  {getStatusBadge(file.status, file.extractionStatus, file.progress)}
+                  {getStatusBadge(file.status)}
                 </div>
                 <p className="text-xs text-muted-foreground">
                   {formatFileSize(file.storedFileSize ?? file.file.size)}

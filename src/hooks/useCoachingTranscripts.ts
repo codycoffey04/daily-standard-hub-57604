@@ -3,7 +3,6 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/integrations/supabase/client'
 import { useAuth } from '@/contexts/AuthContext'
 import { useToast } from '@/hooks/use-toast'
-import { extractTextFromPdf } from '@/utils/pdfExtractor'
 import type { UploadedFile } from '@/components/coaching/TranscriptUploader'
 import type { Database } from '@/integrations/supabase/types'
 
@@ -161,46 +160,38 @@ export function useCoachingTranscripts(weekStart: Date, coachingType: CoachingTy
     throw lastError
   }
 
-  // Process a single file: extract text, upload, create record
+  // Process a single file: upload original PDF (Claude reads PDFs natively)
   const processFile = useCallback(async (
     memberId: string,
     file: File,
     localId: string
   ): Promise<boolean> => {
     try {
-      // Step 1: Extract text from PDF (this is the heavy lifting)
+      // Upload original PDF directly - Claude reads PDFs natively
+      // (Total Recall PDFs are image-based, no text extraction needed)
       updateFileStatus(memberId, localId, {
         status: 'uploading' as const,
-        progress: 5,
-        extractionStatus: 'extracting' as const
+        progress: 10
       })
 
-      console.log(`[Upload] Extracting text from: ${file.name}`)
-      const { text, pageCount, originalSize, extractedSize } = await extractTextFromPdf(file)
+      const storagePath = `${coachingType}/${memberId}/${weekStartStr}/${file.name}`
 
-      updateFileStatus(memberId, localId, { progress: 40 })
+      console.log(`[Upload] Uploading PDF: ${file.name} (${(file.size / 1024 / 1024).toFixed(1)} MB)`)
+      updateFileStatus(memberId, localId, { progress: 30 })
 
-      // Step 2: Create text blob and upload (much smaller than original PDF)
-      const textBlob = new Blob([text], { type: 'text/plain' })
-      const textFileName = file.name.replace(/\.pdf$/i, '.txt')
-      const storagePath = `${coachingType}/${memberId}/${weekStartStr}/${textFileName}`
-
-      console.log(`[Upload] Uploading extracted text: ${textFileName} (${(extractedSize / 1024).toFixed(1)} KB)`)
-      updateFileStatus(memberId, localId, { progress: 50 })
-
-      await uploadWithRetry(storagePath, textBlob)
+      await uploadWithRetry(storagePath, file)
 
       updateFileStatus(memberId, localId, { progress: 80 })
 
-      // Step 3: Create transcript record
+      // Create transcript record (no extracted_text - Claude reads PDFs natively)
       const insertData: Record<string, any> = {
         week_start: weekStartStr,
         coaching_type: coachingType,
-        file_name: file.name, // Keep original PDF name for display
+        file_name: file.name,
         file_path: storagePath,
-        file_size: extractedSize, // Store extracted size, not original
-        extracted_text: text, // Store the extracted text
-        extraction_status: 'completed',
+        file_size: file.size,
+        extracted_text: null, // Claude reads PDFs natively
+        extraction_status: 'skipped',
         uploaded_by: user?.id
       }
 
@@ -223,7 +214,7 @@ export function useCoachingTranscripts(weekStart: Date, coachingType: CoachingTy
         throw insertError
       }
 
-      console.log(`[Upload] Success: ${file.name} → ${textFileName} (${(originalSize / 1024 / 1024).toFixed(1)} MB → ${(extractedSize / 1024).toFixed(1)} KB)`)
+      console.log(`[Upload] Success: ${file.name} (${(file.size / 1024 / 1024).toFixed(1)} MB)`)
 
       // Update to completed
       updateFileStatus(memberId, localId, {
@@ -231,8 +222,7 @@ export function useCoachingTranscripts(weekStart: Date, coachingType: CoachingTy
         status: 'completed' as const,
         progress: 100,
         storagePath,
-        extractionStatus: 'completed' as const,
-        storedFileSize: extractedSize
+        storedFileSize: file.size
       })
 
       return true
@@ -242,8 +232,7 @@ export function useCoachingTranscripts(weekStart: Date, coachingType: CoachingTy
 
       updateFileStatus(memberId, localId, {
         status: 'error' as const,
-        error: errorMessage,
-        extractionStatus: 'failed' as const
+        error: errorMessage
       })
 
       toast({

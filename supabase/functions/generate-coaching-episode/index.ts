@@ -221,22 +221,13 @@ serve(async (req) => {
       throw new Error(`No transcripts found for this ${coachingType === 'sales' ? 'producer' : 'CSR'}/week`)
     }
 
-    // Process transcripts - prefer extracted_text, fall back to file download
+    // Process transcripts - download PDFs and convert to base64
+    // Claude reads PDFs natively (Total Recall PDFs are image-based)
     console.log(`Processing ${transcripts.length} transcripts for ${teamMember.display_name} (${coachingType} mode)`)
 
-    // Two arrays: text-based (new) and PDF-based (legacy)
-    const textDocuments: Array<{ transcript: TranscriptData; text: string }> = []
     const pdfDocuments: Array<{ transcript: TranscriptData; base64: string }> = []
 
     for (const transcript of transcripts as TranscriptData[]) {
-      // New approach: check if extracted_text is available (pre-extracted on upload)
-      if (transcript.extracted_text && transcript.extracted_text.length > 100) {
-        console.log(`Using pre-extracted text for ${transcript.file_name}: ${transcript.extracted_text.length} chars`)
-        textDocuments.push({ transcript, text: transcript.extracted_text })
-        continue
-      }
-
-      // Fall back to downloading file from storage
       console.log(`Downloading file: ${transcript.file_path}`)
 
       const { data: fileData, error: downloadError } = await supabase.storage
@@ -248,35 +239,24 @@ serve(async (req) => {
         continue
       }
 
-      // Check file type by extension
-      const isTextFile = transcript.file_path.endsWith('.txt')
-
-      if (isTextFile) {
-        // Text file - read directly
-        const text = await fileData.text()
-        console.log(`Read text file ${transcript.file_name}: ${text.length} chars`)
-        textDocuments.push({ transcript, text })
-      } else {
-        // PDF file (legacy) - convert to base64
-        const arrayBuffer = await fileData.arrayBuffer()
-        const uint8Array = new Uint8Array(arrayBuffer)
-        let binaryString = ''
-        for (let i = 0; i < uint8Array.length; i++) {
-          binaryString += String.fromCharCode(uint8Array[i])
-        }
-        const base64 = btoa(binaryString)
-
-        console.log(`Downloaded PDF ${transcript.file_name}: ${arrayBuffer.byteLength} bytes`)
-        pdfDocuments.push({ transcript, base64 })
+      // Convert PDF to base64 for Claude's native PDF support
+      const arrayBuffer = await fileData.arrayBuffer()
+      const uint8Array = new Uint8Array(arrayBuffer)
+      let binaryString = ''
+      for (let i = 0; i < uint8Array.length; i++) {
+        binaryString += String.fromCharCode(uint8Array[i])
       }
+      const base64 = btoa(binaryString)
+
+      console.log(`Downloaded PDF ${transcript.file_name}: ${arrayBuffer.byteLength} bytes`)
+      pdfDocuments.push({ transcript, base64 })
     }
 
-    const totalDocuments = textDocuments.length + pdfDocuments.length
-    if (totalDocuments === 0) {
+    if (pdfDocuments.length === 0) {
       throw new Error('No transcripts could be processed.')
     }
 
-    console.log(`Successfully processed ${totalDocuments}/${transcripts.length} transcripts (${textDocuments.length} text, ${pdfDocuments.length} PDF)`)
+    console.log(`Successfully processed ${pdfDocuments.length}/${transcripts.length} PDF transcripts`)
 
     // Metrics handling - only for sales mode
     let producerMetrics: ProducerMetrics | null = null
@@ -393,36 +373,18 @@ serve(async (req) => {
       }
     }
 
-    // Build content blocks for Claude
-    // Text documents are sent as text blocks, PDFs as document blocks
-    const allDocuments = [
-      ...textDocuments.map(doc => ({ type: 'text' as const, transcript: doc.transcript, content: doc.text })),
-      ...pdfDocuments.map(doc => ({ type: 'pdf' as const, transcript: doc.transcript, base64: doc.base64 }))
-    ]
-
-    // Build document content blocks for Claude
-    const documentBlocks = allDocuments.map((doc, i) => {
-      if (doc.type === 'text') {
-        // Text content - include directly in the message
-        return {
-          type: 'text' as const,
-          text: `\n--- TRANSCRIPT ${i + 1}: ${doc.transcript.file_name} ---\n${doc.content}\n--- END TRANSCRIPT ${i + 1} ---\n`
-        }
-      } else {
-        // PDF document - use native PDF support
-        return {
-          type: 'document' as const,
-          source: {
-            type: 'base64' as const,
-            media_type: 'application/pdf' as const,
-            data: doc.base64
-          }
-        }
+    // Build document content blocks for Claude's native PDF support
+    const documentBlocks = pdfDocuments.map(doc => ({
+      type: 'document' as const,
+      source: {
+        type: 'base64' as const,
+        media_type: 'application/pdf' as const,
+        data: doc.base64
       }
-    })
+    }))
 
     // Build text context for transcript metadata
-    const transcriptContext = allDocuments.map((doc, i) =>
+    const transcriptContext = pdfDocuments.map((doc, i) =>
       `Transcript ${i + 1}: ${doc.transcript.file_name} (Date: ${doc.transcript.call_date || 'Unknown'}, Duration: ${doc.transcript.call_duration_seconds ? Math.floor(doc.transcript.call_duration_seconds / 60) + ' min' : 'Unknown'})`
     ).join('\n')
 
@@ -769,7 +731,7 @@ IMPORTANT: Return ONLY the JSON object, no additional text or markdown code bloc
     // Save scores for each transcript
     for (let i = 0; i < parsedResponse.scores.length; i++) {
       const score = parsedResponse.scores[i]
-      const doc = allDocuments[i]
+      const doc = pdfDocuments[i]
       const transcript = doc?.transcript
 
       if (transcript) {
@@ -861,7 +823,7 @@ IMPORTANT: Return ONLY the JSON object, no additional text or markdown code bloc
         summary: parsedResponse.summary,
         tokensUsed,
         generationDurationMs: generationDuration,
-        transcriptsProcessed: allDocuments.length,
+        transcriptsProcessed: pdfDocuments.length,
         coachingType
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
