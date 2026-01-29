@@ -609,3 +609,36 @@ CRITICAL JSON FORMATTING RULES:
 - **Include explicit WRONG/RIGHT examples in prompts** — more effective than abstract rules
 - **Always handle N/A as a potential string value** when allowing conditional scoring
 - **Always commit and push before telling user to publish in Lovable** — user can't push changes they don't have
+- **Guard against undefined when switching tabs** — `selectedMemberId` may reference a member from the previous tab's list
+
+### 2026-01-29 — Aleeah Life Insurance Coaching & Tab Switch Fix
+**What was done:**
+- Enhanced CSR coaching episodes for Aleeah with dedicated Life Insurance Opportunities section
+- Added expanded life triggers (family changes, financial milestones, life stages, health mentions, coverage gaps)
+- Included soft-approach scripts for planting life insurance seeds
+- Fixed "Cannot read properties of undefined (reading 'display_name')" crash when switching coaching tabs
+
+**Aleeah's enhanced episode structure (8 sections vs 7 for other CSRs):**
+1. Welcome
+2. Your Week
+3. What You Did Well
+4. Growth Opportunity
+5. This Week's Focus
+6. **Life Insurance Opportunities** (Aleeah only) - triggers found, pursued/missed, specific coaching scripts
+7. Challenge (includes life-related goal for Aleeah)
+8. Closing
+
+**Tab switch bug root cause:**
+- `selectedMemberId` persisted when switching from Service to Sales tab
+- `episodeTeamMembers.find()` returned `undefined` because CSR ID wasn't in producers list
+- Fix: Added guard `episodeTeamMembers.find(m => m.id === selectedMemberId)` before rendering EpisodeViewer
+
+**What was learned:**
+- **Tab state doesn't automatically reset** — even with useEffect clearing state, timing can cause race conditions
+- **Always guard `.find()` results** — never assume the item exists, especially with cross-tab state
+- **Dual-role employees need special handling** — Aleeah's CSR+Life role required conditional prompt sections
+
+**What to do differently:**
+- When building tabbed interfaces, verify state is valid for the current tab before rendering
+- Use optional chaining or explicit guards for any `.find()` result used in rendering
+- Consider resetting related state in the same effect that handles tab changes
