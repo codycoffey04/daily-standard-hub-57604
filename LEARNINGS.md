@@ -608,3 +608,4 @@ CRITICAL JSON FORMATTING RULES:
 - **Test with BOTH sales and CSR data** when modifying shared code paths
 - **Include explicit WRONG/RIGHT examples in prompts** — more effective than abstract rules
 - **Always handle N/A as a potential string value** when allowing conditional scoring
+- **Always commit and push before telling user to publish in Lovable** — user can't push changes they don't have
