@@ -135,7 +135,7 @@ export const EpisodeGenerator: React.FC<EpisodeGeneratorProps> = ({
                     <p className="font-medium">{member.display_name}</p>
                     {existingEpisode && (
                       <p className="text-xs text-muted-foreground">
-                        Generated {new Date(existingEpisode.created_at).toLocaleString()}
+                        Generated {new Date(existingEpisode.updated_at || existingEpisode.created_at).toLocaleString()}
                         {existingEpisode.tokens_used && ` (${existingEpisode.tokens_used} tokens)`}
                       </p>
                     )}

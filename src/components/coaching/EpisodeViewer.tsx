@@ -265,7 +265,7 @@ export const EpisodeViewer: React.FC<EpisodeViewerProps> = ({
         {/* Generation Info */}
         <div className="flex items-center justify-between text-xs text-muted-foreground pt-4 border-t">
           <span>
-            Generated {new Date(episode.created_at).toLocaleString()}
+            Generated {new Date(episode.updated_at || episode.created_at).toLocaleString()}
             {episode.model_used && ` using ${episode.model_used}`}
           </span>
           <span>

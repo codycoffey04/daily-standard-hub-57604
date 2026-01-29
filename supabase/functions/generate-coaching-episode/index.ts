@@ -474,7 +474,14 @@ The episode_markdown should follow this structure:
 6. Challenge (specific measurable goal)
 7. Closing (3 sentences)
 
-IMPORTANT: Return ONLY the JSON object, no additional text or markdown code blocks.`
+CRITICAL JSON FORMATTING RULES:
+1. Return ONLY raw JSON - NO markdown code blocks, NO \`\`\`json, NO \`\`\`
+2. All string values must have quotes and backslashes escaped (use \\" and \\\\)
+3. In "quote" fields, include the ENTIRE quote as one string value - do NOT add annotations outside the quotes
+4. WRONG: "quote": "Great job." (at 5:30)
+5. RIGHT: "quote": "Great job. (at 5:30 during closing)"
+6. Use \\n for line breaks within strings
+7. Test: your output must be valid JSON that JSON.parse() can handle`
 
     } else {
       // === SERVICE MODE PROMPTS ===
@@ -583,7 +590,14 @@ TONE GUIDELINES:
 - DO NOT use sales jargon (close rate, pipeline, conversion)
 - Focus on ONE growth area — don't pile on criticism
 
-IMPORTANT: Return ONLY the JSON object, no additional text or markdown code blocks.`
+CRITICAL JSON FORMATTING RULES:
+1. Return ONLY raw JSON - NO markdown code blocks, NO \`\`\`json, NO \`\`\`
+2. All string values must have quotes and backslashes escaped (use \\" and \\\\)
+3. In "quote" fields, include the ENTIRE quote as one string value - do NOT add annotations outside the quotes
+4. WRONG: "quote": "I hear you." (at 8:16)
+5. RIGHT: "quote": "I hear you. (at 8:16 when customer expressed confusion)"
+6. Use \\n for line breaks within strings
+7. Test: your output must be valid JSON that JSON.parse() can handle`
     }
 
     // Call Claude API with PDF documents
@@ -623,13 +637,52 @@ IMPORTANT: Return ONLY the JSON object, no additional text or markdown code bloc
     // Parse Claude response
     let parsedResponse: ClaudeResponse
     try {
-      const jsonMatch = responseText.match(/\{[\s\S]*\}/)
+      // Log raw response for debugging (truncated to avoid log overflow)
+      console.log(`=== RAW CLAUDE RESPONSE (first 2000 chars) ===`)
+      console.log(responseText.substring(0, 2000))
+      console.log(`=== RAW RESPONSE LENGTH: ${responseText.length} chars ===`)
+
+      // Strip markdown code blocks if present (```json ... ```)
+      let cleanedResponse = responseText
+        .replace(/^```json\s*/i, '')
+        .replace(/^```\s*/i, '')
+        .replace(/\s*```$/i, '')
+        .trim()
+
+      const jsonMatch = cleanedResponse.match(/\{[\s\S]*\}/)
       if (!jsonMatch) {
         throw new Error('No JSON found in response')
       }
+
+      // Log the JSON we're about to parse
+      console.log(`=== JSON MATCH LENGTH: ${jsonMatch[0].length} chars ===`)
+
       parsedResponse = JSON.parse(jsonMatch[0])
     } catch (parseError) {
-      console.error('Failed to parse Claude response:', responseText)
+      // Enhanced error logging for JSON parse failures
+      console.error('=== JSON PARSE ERROR ===')
+      console.error(`Error: ${parseError}`)
+      console.error(`Response length: ${responseText.length}`)
+      console.error(`Coaching type: ${coachingType}`)
+      console.error(`Team member: ${teamMember.display_name}`)
+
+      // Log around the error position if it's a position-based error
+      const posMatch = String(parseError).match(/position (\d+)/)
+      if (posMatch) {
+        const pos = parseInt(posMatch[1])
+        const start = Math.max(0, pos - 100)
+        const end = Math.min(responseText.length, pos + 100)
+        console.error(`=== CONTEXT AROUND POSITION ${pos} ===`)
+        console.error(responseText.substring(start, end))
+        console.error(`=== END CONTEXT ===`)
+      }
+
+      // Log first and last 500 chars
+      console.error('=== FIRST 500 CHARS ===')
+      console.error(responseText.substring(0, 500))
+      console.error('=== LAST 500 CHARS ===')
+      console.error(responseText.substring(responseText.length - 500))
+
       throw new Error(`Failed to parse Claude response: ${parseError}`)
     }
 
@@ -665,7 +718,8 @@ IMPORTANT: Return ONLY the JSON object, no additional text or markdown code bloc
       model_used: 'claude-opus-4-5-20251101',
       tokens_used: tokensUsed,
       generation_duration_ms: generationDuration,
-      status: 'published'
+      status: 'published',
+      updated_at: new Date().toISOString()
     }
 
     let episodeData: Record<string, unknown>
@@ -772,18 +826,30 @@ IMPORTANT: Return ONLY the JSON object, no additional text or markdown code bloc
           }
         } else {
           const csrScore = score as CSRScoreResult
+
+          // Helper to convert "N/A" strings or non-numeric values to null for integer columns
+          const toIntOrNull = (val: number | string | null | undefined): number | null => {
+            if (val === null || val === undefined) return null
+            if (typeof val === 'string') {
+              if (val.toUpperCase() === 'N/A' || val.trim() === '') return null
+              const parsed = parseInt(val, 10)
+              return isNaN(parsed) ? null : parsed
+            }
+            return typeof val === 'number' ? val : null
+          }
+
           scoreData = {
             transcript_id: transcript.id,
             episode_id: episodeId,
             coaching_type: 'service',
             // CSR-specific columns
-            step_1_greeting: csrScore.step_1_greeting,
-            step_2_listening_empathy: csrScore.step_2_listening_empathy,
-            step_3_problem_id: csrScore.step_3_problem_id,
-            step_4_resolution: csrScore.step_4_resolution,
-            step_5_cross_sell: csrScore.step_5_cross_sell,
-            step_6_referral_ask_csr: csrScore.step_6_referral_ask_csr === 'N/A' ? null : csrScore.step_6_referral_ask_csr,
-            step_7_retention: csrScore.step_7_retention === 'N/A' ? null : csrScore.step_7_retention,
+            step_1_greeting: toIntOrNull(csrScore.step_1_greeting),
+            step_2_listening_empathy: toIntOrNull(csrScore.step_2_listening_empathy),
+            step_3_problem_id: toIntOrNull(csrScore.step_3_problem_id),
+            step_4_resolution: toIntOrNull(csrScore.step_4_resolution),
+            step_5_cross_sell: toIntOrNull(csrScore.step_5_cross_sell),
+            step_6_referral_ask_csr: toIntOrNull(csrScore.step_6_referral_ask_csr),
+            step_7_retention: toIntOrNull(csrScore.step_7_retention),
             google_review_ask: csrScore.google_review_ask,
             life_insurance_opportunity: csrScore.life_insurance_opportunity,
             life_insurance_context: csrScore.life_insurance_context,
