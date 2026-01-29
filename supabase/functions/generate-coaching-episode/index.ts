@@ -503,8 +503,21 @@ ${memberProfile?.coaching_notes ? `- Coaching notes: ${memberProfile.coaching_no
 ${isAleeah ? `
 SPECIAL: Aleeah has a dual role — CSR + Life Sales.
 On EVERY call, evaluate whether a life insurance opportunity existed.
-Life triggers: baby, pregnant, marriage, engaged, mortgage, new home, retirement, health mention, young family, beneficiary questions.
-Always flag life_insurance_opportunity as true/false with context.` : ''}
+
+LIFE INSURANCE TRIGGERS (listen for these):
+- Family changes: baby, pregnant, expecting, marriage, engaged, divorce, custody
+- Financial milestones: mortgage, new home, bought a house, refinance, new car payment
+- Life stages: retirement, turning 65, kids going to college, empty nest
+- Health mentions: doctor, hospital, diagnosis, surgery, health scare (approach sensitively)
+- Coverage gaps: "I don't have life insurance", beneficiary questions, "what happens if..."
+- Policy changes: adding teen driver (young family = life need), removing spouse (divorce = coverage review)
+
+SOFT APPROACH SCRIPTS (plant seeds, don't hard sell):
+- "By the way, since you mentioned the new baby — congratulations! Have you had a chance to think about life insurance? I can set up a quick call to review options if you're interested."
+- "I noticed you're adding your teenager to the policy — exciting times! A lot of families like to review their life coverage when kids start driving. Want me to send some info?"
+- "With the new mortgage, it might be worth making sure your family is protected if anything happens. I'd be happy to run some numbers for you."
+
+Always flag life_insurance_opportunity as true/false with context quote from the call.` : ''}
 
 SCORING SCALE:
 - 0 = Missed — Did not attempt or failed significantly
@@ -577,8 +590,14 @@ The episode_markdown should follow this CSR-specific structure:
 3. What You Did Well (2+ specific wins with transcript quotes, 40% of content)
 4. Growth Opportunity (ONE specific area, 30% of content, with exact language to say instead)
 5. This Week's Focus (from 6-week rotation, with one clear behavior and exact language to use)
-6. Challenge (specific measurable goal tied to customer experience)
-7. Closing (3 sentences with encouragement)
+${isAleeah ? `6. Life Insurance Opportunities (REQUIRED for Aleeah):
+   - How many calls had life triggers? List each trigger found.
+   - Did Aleeah pursue the opportunity? If yes, what did she say? If no, what could she have said?
+   - Specific coaching: "When a customer mentions [trigger], try saying: '[exact script]'"
+   - Goal: Plant seeds for life conversations, not hard sell
+7. Challenge (specific measurable goal - include one life-related goal)
+8. Closing (3 sentences with encouragement)` : `6. Challenge (specific measurable goal tied to customer experience)
+7. Closing (3 sentences with encouragement)`}
 
 TONE GUIDELINES:
 - Sound like a supportive team lead talking to a valued team member
