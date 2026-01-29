@@ -108,6 +108,8 @@ interface CSRProfile {
 }
 
 serve(async (req) => {
+  console.log('=== COACHING EPISODE GENERATION STARTED ===')
+
   // Handle CORS preflight
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders })
@@ -115,9 +117,11 @@ serve(async (req) => {
 
   try {
     const startTime = Date.now()
+    console.log(`[${Date.now() - startTime}ms] Parsing request body...`)
 
     // Get request body
     const body: RequestBody = await req.json()
+    console.log(`[${Date.now() - startTime}ms] Request: coachingType=${body.coachingType}, weekStart=${body.weekStart}`)
     const { producerId, csrProfileId, weekStart, coachingType = 'sales' } = body
 
     // Validate: must have either producerId or csrProfileId based on coachingType

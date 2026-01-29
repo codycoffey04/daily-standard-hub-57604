@@ -441,7 +441,7 @@ const CoachingPage: React.FC = () => {
           )}
 
           {/* Episode Viewer */}
-          {selectedMemberId && (
+          {selectedMemberId && episodeTeamMembers.find(m => m.id === selectedMemberId) && (
             <EpisodeViewer
               producer={episodeTeamMembers.find(m => m.id === selectedMemberId)!}
               episode={getEpisodeForMember(selectedMemberId)}
