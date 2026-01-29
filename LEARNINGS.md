@@ -547,3 +547,64 @@ CHECK (call_outcome = ANY (ARRAY['sale', 'quote', 'service', 'unknown', 'resolve
 - **Check Supabase Edge Function logs** when getting generic 500 errors — actual error is often different
 - **Monitor API credit balance** — consider enabling auto-reload to avoid interruptions
 - **When adding new enum-like values, check existing CHECK constraints** — silent failures are hard to debug
+
+### 2026-01-29 — CSR Coaching Episode JSON Parse Fixes
+**What was done:**
+- Fixed CSR coaching episode generation failing with JSON parse errors
+- Sales episodes worked fine with same code; CSR episodes failed consistently
+- Root cause: Multiple JSON formatting issues specific to Claude's CSR response patterns
+
+**Bugs found and fixed:**
+1. **Markdown code blocks in response** — Claude wrapped JSON in ` ```json ... ``` ` despite instructions not to
+   - Fix: Added regex stripping before JSON extraction
+   ```typescript
+   cleanedResponse = responseText
+     .replace(/^```json\s*/i, '')
+     .replace(/^```\s*/i, '')
+     .replace(/\s*```$/i, '')
+     .trim()
+   ```
+
+2. **Quote annotations outside JSON strings** — Claude output `"quote": "I hear you." (at 8:16...)` instead of `"quote": "I hear you. (at 8:16...)"`
+   - Fix: Added explicit prompt examples showing WRONG vs RIGHT formatting
+   - JSON strings must contain ALL content including annotations
+
+3. **"N/A" strings in integer columns** — CSR scorecard allows N/A for conditional steps (retention, referral ask)
+   - Database columns are integers; "N/A" string caused: `invalid input syntax for type integer: "N/A"`
+   - Fix: Added `toIntOrNull()` helper that converts "N/A"/empty strings to null
+
+4. **Timestamp not updating on regeneration** — UI showed `created_at` instead of `updated_at`
+   - Fix: Added `updated_at: new Date().toISOString()` to episode data
+   - Fix: Updated EpisodeGenerator.tsx and EpisodeViewer.tsx to use `updated_at || created_at`
+
+**What was learned:**
+- **Same code, different inputs = different failures** — Sales and CSR use same edge function but CSR prompts produce different JSON patterns
+- **Claude doesn't always follow "no markdown" instructions** — must strip code blocks defensively
+- **Position-based JSON errors point to the exact character** — logging context around position reveals the actual malformed content
+- **Debug logging is essential for AI-generated content** — you can't predict what the model will return
+
+**Debug logging pattern (keep for future issues):**
+```typescript
+// Log around error position
+const posMatch = String(parseError).match(/position (\d+)/)
+if (posMatch) {
+  const pos = parseInt(posMatch[1])
+  console.error(responseText.substring(pos - 100, pos + 100))
+}
+```
+
+**Prompt additions that fixed formatting:**
+```
+CRITICAL JSON FORMATTING RULES:
+1. Return ONLY raw JSON - NO markdown code blocks, NO ```json, NO ```
+2. All string values must have quotes and backslashes escaped
+3. In "quote" fields, include the ENTIRE quote as one string value - do NOT add annotations outside the quotes
+4. WRONG: "quote": "I hear you." (at 8:16)
+5. RIGHT: "quote": "I hear you. (at 8:16 when customer expressed confusion)"
+```
+
+**What to do differently:**
+- **Add defensive JSON cleanup for all AI responses** — never trust model to follow format exactly
+- **Test with BOTH sales and CSR data** when modifying shared code paths
+- **Include explicit WRONG/RIGHT examples in prompts** — more effective than abstract rules
+- **Always handle N/A as a potential string value** when allowing conditional scoring
