@@ -75,11 +75,16 @@ const EmailUpdatesPage: React.FC = () => {
   // Combined metrics for summary card
   const summaryMetrics = useMemo(() => {
     return {
+      // MTD values
       teamSales: metrics?.team_sales || 0,
       teamItems: metrics?.team_items || 0,
       teamPremium: Number(metrics?.team_premium) || 0,
       teamQhh: metrics?.team_qhh || 0,
-      teamQuotes: metrics?.team_quotes || 0
+      teamQuotes: metrics?.team_quotes || 0,
+      // Weekly values
+      weeklyTeamSales: metrics?.weekly_team_sales || 0,
+      weeklyTeamItems: metrics?.weekly_team_items || 0,
+      weeklyTeamPremium: Number(metrics?.weekly_team_premium) || 0
     }
   }, [metrics])
 
@@ -157,6 +162,9 @@ const EmailUpdatesPage: React.FC = () => {
           teamPremium={summaryMetrics.teamPremium}
           teamQhh={summaryMetrics.teamQhh}
           teamQuotes={summaryMetrics.teamQuotes}
+          weeklyTeamSales={summaryMetrics.weeklyTeamSales}
+          weeklyTeamItems={summaryMetrics.weeklyTeamItems}
+          weeklyTeamPremium={summaryMetrics.weeklyTeamPremium}
           deltas={deltas}
           periodType={periodType}
         />

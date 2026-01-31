@@ -10,11 +10,16 @@ interface DeltaInfo {
 }
 
 interface MetricsSummaryCardProps {
+  // MTD values
   teamSales: number
   teamItems: number
   teamPremium: number
   teamQhh: number
   teamQuotes: number
+  // Weekly values (for "This Week" display)
+  weeklyTeamSales: number
+  weeklyTeamItems: number
+  weeklyTeamPremium: number
   deltas: {
     team_items: DeltaInfo
     team_premium: DeltaInfo
@@ -73,10 +78,13 @@ export const MetricsSummaryCard: React.FC<MetricsSummaryCardProps> = ({
   teamPremium,
   teamQhh,
   teamQuotes,
+  weeklyTeamSales,
+  weeklyTeamItems,
+  weeklyTeamPremium,
   deltas,
   periodType
 }) => {
-  // Calculate close rate
+  // Calculate close rate from MTD values
   const closeRate = teamQhh > 0 ? (teamSales / teamQhh) * 100 : 0
 
   return (
@@ -84,43 +92,65 @@ export const MetricsSummaryCard: React.FC<MetricsSummaryCardProps> = ({
       <CardHeader className="pb-2">
         <CardTitle className="text-sm font-medium">
           {periodType === 'weekly' ? 'Weekly' : 'Monthly'} Summary
-          {deltas && (
-            <span className="text-xs font-normal text-muted-foreground ml-2">
-              vs {periodType === 'weekly' ? 'last week' : 'last month'}
-            </span>
-          )}
         </CardTitle>
       </CardHeader>
-      <CardContent>
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-          <StatItem
-            label="Sales"
-            value={teamSales}
-            delta={deltas?.team_sales}
-          />
-          <StatItem
-            label="Items"
-            value={teamItems}
-            delta={deltas?.team_items}
-          />
-          <StatItem
-            label="Premium"
-            value={formatPremium(teamPremium)}
-            delta={deltas?.team_premium}
-          />
-          <StatItem
-            label="QHH (TDS)"
-            value={teamQhh}
-            delta={deltas?.team_qhh}
-          />
-          <StatItem
-            label="Quotes"
-            value={teamQuotes}
-          />
-          <StatItem
-            label="Close Rate"
-            value={`${closeRate.toFixed(1)}%`}
-          />
+      <CardContent className="space-y-4">
+        {/* This Week section - shows weekly production values with WoW deltas */}
+        <div>
+          <div className="text-xs font-medium text-muted-foreground mb-2">
+            This Week
+            {deltas && (
+              <span className="font-normal ml-1">
+                (vs last week)
+              </span>
+            )}
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+            <StatItem
+              label="Sales"
+              value={weeklyTeamSales}
+              delta={deltas?.team_sales}
+            />
+            <StatItem
+              label="Items"
+              value={weeklyTeamItems}
+              delta={deltas?.team_items}
+            />
+            <StatItem
+              label="Premium"
+              value={formatPremium(weeklyTeamPremium)}
+              delta={deltas?.team_premium}
+            />
+          </div>
+        </div>
+
+        {/* MTD section - shows MTD totals without deltas */}
+        <div className="pt-2 border-t">
+          <div className="text-xs font-medium text-muted-foreground mb-2">
+            MTD Totals
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+            <StatItem
+              label="Sales"
+              value={teamSales}
+            />
+            <StatItem
+              label="Items"
+              value={teamItems}
+            />
+            <StatItem
+              label="Premium"
+              value={formatPremium(teamPremium)}
+            />
+            <StatItem
+              label="QHH (TDS)"
+              value={teamQhh}
+            />
+            <StatItem
+              label="Close Rate"
+              value={`${closeRate.toFixed(1)}%`}
+            />
+          </div>
         </div>
       </CardContent>
     </Card>
