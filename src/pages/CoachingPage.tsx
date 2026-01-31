@@ -41,8 +41,7 @@ const CoachingPage: React.FC = () => {
   // Fetch TDS activity data (QHH, Quotes from quoted_households table) - only for sales mode
   const { data: tdsData, isLoading: isLoadingTDS } = useWeeklyProducerSummary(
     weekStartStr,
-    weekEndStr,
-    { enabled: coachingMode === 'sales' }
+    weekEndStr
   )
 
   const {

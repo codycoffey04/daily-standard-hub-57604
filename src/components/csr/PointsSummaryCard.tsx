@@ -23,56 +23,56 @@ const activityTypes = [
     key: 'referral_closed_pts',
     label: 'Referral Closed',
     icon: Phone,
-    color: 'text-green-600',
-    bgColor: 'bg-green-50',
+    color: 'text-green-600 dark:text-green-400',
+    bgColor: 'bg-green-50 dark:bg-green-950/50',
     pointValue: 15
   },
   {
     key: 'referral_quoted_pts',
     label: 'Referral Quoted',
     icon: FileText,
-    color: 'text-blue-600',
-    bgColor: 'bg-blue-50',
+    color: 'text-blue-600 dark:text-blue-400',
+    bgColor: 'bg-blue-50 dark:bg-blue-950/50',
     pointValue: 5
   },
   {
     key: 'google_review_pts',
     label: 'Google Review',
     icon: Star,
-    color: 'text-yellow-600',
-    bgColor: 'bg-yellow-50',
+    color: 'text-yellow-600 dark:text-yellow-400',
+    bgColor: 'bg-yellow-50 dark:bg-yellow-950/50',
     pointValue: 10
   },
   {
     key: 'retention_save_pts',
     label: 'Retention Save',
     icon: Shield,
-    color: 'text-purple-600',
-    bgColor: 'bg-purple-50',
+    color: 'text-purple-600 dark:text-purple-400',
+    bgColor: 'bg-purple-50 dark:bg-purple-950/50',
     pointValue: 10
   },
   {
     key: 'new_customer_referral_pts',
     label: 'New Customer Referral',
     icon: Users,
-    color: 'text-orange-600',
-    bgColor: 'bg-orange-50',
+    color: 'text-orange-600 dark:text-orange-400',
+    bgColor: 'bg-orange-50 dark:bg-orange-950/50',
     pointValue: 10
   },
   {
     key: 'winback_closed_pts',
     label: 'Winback Closed',
     icon: RefreshCw,
-    color: 'text-teal-600',
-    bgColor: 'bg-teal-50',
+    color: 'text-teal-600 dark:text-teal-400',
+    bgColor: 'bg-teal-50 dark:bg-teal-950/50',
     pointValue: 10
   },
   {
     key: 'winback_quoted_pts',
     label: 'Winback Quoted',
     icon: RefreshCw,
-    color: 'text-cyan-600',
-    bgColor: 'bg-cyan-50',
+    color: 'text-cyan-600 dark:text-cyan-400',
+    bgColor: 'bg-cyan-50 dark:bg-cyan-950/50',
     pointValue: 3
   }
 ];

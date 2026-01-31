@@ -91,7 +91,7 @@ export function useCoachingDashboardCard(
       // RPC returns null if no current week episode exists
       if (!data) return null
 
-      return data as CoachingDashboardData
+      return data as unknown as CoachingDashboardData
     },
     enabled: !!memberId,
     staleTime: 5 * 60 * 1000, // 5 minutes

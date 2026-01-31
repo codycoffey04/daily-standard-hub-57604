@@ -44,7 +44,7 @@ export const GoalProgressBar = ({ currentPoints, period, goals }: GoalProgressBa
               {currentPoints} / {target} pts
             </span>
             {isGoalMet ? (
-              <span className="text-green-600 font-medium">Goal Met!</span>
+              <span className="text-green-600 dark:text-green-400 font-medium">Goal Met!</span>
             ) : (
               <span className="text-muted-foreground">
                 {pointsToGo} pts to go
