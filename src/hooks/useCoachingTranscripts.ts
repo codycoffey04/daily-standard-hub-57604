@@ -248,7 +248,7 @@ export function useCoachingTranscripts(weekStart: Date, coachingType: CoachingTy
 
       const { data: transcript, error: insertError } = await supabase
         .from('coaching_transcripts')
-        .insert(insertData)
+        .insert(insertData as any)
         .select()
         .single()
 

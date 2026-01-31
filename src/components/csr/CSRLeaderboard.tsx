@@ -34,11 +34,11 @@ const getRankIcon = (rank: number) => {
 const getRankBgColor = (rank: number) => {
   switch (rank) {
     case 1:
-      return 'bg-yellow-50 border-yellow-200';
+      return 'bg-yellow-50 dark:bg-yellow-950/50 border-yellow-200 dark:border-yellow-800';
     case 2:
-      return 'bg-gray-50 border-gray-200';
+      return 'bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700';
     case 3:
-      return 'bg-amber-50 border-amber-200';
+      return 'bg-amber-50 dark:bg-amber-950/50 border-amber-200 dark:border-amber-800';
     default:
       return 'bg-background';
   }
