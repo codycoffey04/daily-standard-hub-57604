@@ -120,29 +120,29 @@ export const CoachingDashboardCard: React.FC<CoachingDashboardCardProps> = ({
 
         {/* Strongest & Weakest */}
         <div className="grid grid-cols-2 gap-2">
-          <div className="flex items-center gap-2 p-2 rounded-lg bg-green-100 dark:bg-green-900/50 border border-green-200 dark:border-green-800">
-            <TrendingUp className="h-4 w-4 text-green-600 dark:text-green-400" />
+          <div className="flex items-center gap-2 p-2 rounded-lg bg-muted border-l-4 border-l-green-500">
+            <TrendingUp className="h-4 w-4 text-green-500" />
             <div>
               <p className="text-xs text-muted-foreground">Strongest</p>
               <p className="text-sm font-medium">{stepNames[strongest.step] || '-'}</p>
-              <p className="text-xs text-green-600 dark:text-green-400">{strongest.score.toFixed(1)}</p>
+              <p className="text-xs text-green-500">{strongest.score.toFixed(1)}</p>
             </div>
           </div>
-          <div className="flex items-center gap-2 p-2 rounded-lg bg-red-100 dark:bg-red-900/50 border border-red-200 dark:border-red-800">
-            <TrendingDown className="h-4 w-4 text-red-500 dark:text-red-400" />
+          <div className="flex items-center gap-2 p-2 rounded-lg bg-muted border-l-4 border-l-red-500">
+            <TrendingDown className="h-4 w-4 text-red-500" />
             <div>
               <p className="text-xs text-muted-foreground">Needs Work</p>
               <p className="text-sm font-medium">{stepNames[weakest.step] || '-'}</p>
-              <p className="text-xs text-red-500 dark:text-red-400">{weakest.score.toFixed(1)}</p>
+              <p className="text-xs text-red-500">{weakest.score.toFixed(1)}</p>
             </div>
           </div>
         </div>
 
         {/* Google Review Rate (Service only) */}
         {coachingType === 'service' && current_week.google_review_ask_rate !== undefined && (
-          <div className="flex items-center justify-between p-2 rounded-lg bg-yellow-100 dark:bg-yellow-900/50 border border-yellow-200 dark:border-yellow-800">
+          <div className="flex items-center justify-between p-2 rounded-lg bg-muted border-l-4 border-l-yellow-500">
             <div className="flex items-center gap-2">
-              <Star className="h-4 w-4 text-yellow-600 dark:text-yellow-400" />
+              <Star className="h-4 w-4 text-yellow-500" />
               <span className="text-sm font-medium">Review Ask Rate</span>
             </div>
             <span className="text-lg font-bold">{current_week.google_review_ask_rate}%</span>
@@ -173,9 +173,9 @@ export const CoachingDashboardCard: React.FC<CoachingDashboardCardProps> = ({
 
         {/* Focus Challenge */}
         {current_week.focus_challenge && (
-          <div className="p-3 rounded-lg border border-blue-200 bg-blue-100 dark:bg-blue-900/50 dark:border-blue-700">
-            <p className="text-xs font-medium text-blue-700 dark:text-blue-300 mb-1">Focus This Week</p>
-            <p className="text-sm text-blue-900 dark:text-blue-100">{current_week.focus_challenge}</p>
+          <div className="p-3 rounded-lg bg-muted border-l-4 border-l-blue-500">
+            <p className="text-xs font-medium text-blue-500 mb-1">Focus This Week</p>
+            <p className="text-sm">{current_week.focus_challenge}</p>
           </div>
         )}
 
