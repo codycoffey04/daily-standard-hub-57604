@@ -187,7 +187,7 @@ const HomePage: React.FC = () => {
             </Card>
 
             {/* Producer Dashboard */}
-            <ProducerDashboard producerId={profile?.producer_id} />
+            <ProducerDashboard producerId={profile?.producer_id} producerName={profile?.display_name} />
           </div>
         </div>
       </div>

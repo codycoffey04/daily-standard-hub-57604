@@ -738,6 +738,7 @@ CRITICAL JSON FORMATTING RULES:
       episode_summary: parsedResponse.summary,
       focus_theme: focusWeek?.theme || 'General',
       focus_week_number: focusWeekNumber,
+      focus_challenge: focusWeek?.challenge || null,
       model_used: 'claude-opus-4-5-20251101',
       tokens_used: tokensUsed,
       generation_duration_ms: generationDuration,

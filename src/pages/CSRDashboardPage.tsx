@@ -13,6 +13,7 @@ import {
   ActivityLogForm,
   ActivityHistoryTable
 } from '@/components/csr';
+import { CoachingDashboardCard } from '@/components/coaching/CoachingDashboardCard';
 
 const CSRDashboardPage = () => {
   const [period, setPeriod] = useState<CSRPeriod>('ytd');
@@ -89,6 +90,16 @@ const CSRDashboardPage = () => {
           {/* Activity Log Form - Only show if user has a CSR profile */}
           {currentProfile?.csr_profile_id && (
             <ActivityLogForm csrProfileId={currentProfile.csr_profile_id} />
+          )}
+
+          {/* Coaching Scorecard - Only renders if current week episode exists */}
+          {currentProfile?.csr_profile_id && (
+            <CoachingDashboardCard
+              memberId={currentProfile.csr_profile_id}
+              memberName={currentProfile.display_name}
+              coachingType="service"
+              isCsr={true}
+            />
           )}
 
           <GoalProgressBar

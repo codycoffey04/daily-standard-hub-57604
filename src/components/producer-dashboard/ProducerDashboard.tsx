@@ -5,12 +5,14 @@ import { TeamStandingsCard } from './TeamStandingsCard'
 import { PaceCard } from './PaceCard'
 import { StreakCard } from './StreakCard'
 import { AlertsCard } from '@/components/patterns/AlertsCard'
+import { CoachingDashboardCard } from '@/components/coaching/CoachingDashboardCard'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Card, CardContent } from '@/components/ui/card'
 import { AlertCircle } from 'lucide-react'
 
 interface ProducerDashboardProps {
   producerId: string | null | undefined
+  producerName?: string
 }
 
 const DashboardSkeleton: React.FC = () => (
@@ -49,7 +51,7 @@ const DashboardSkeleton: React.FC = () => (
   </div>
 )
 
-export const ProducerDashboard: React.FC<ProducerDashboardProps> = ({ producerId }) => {
+export const ProducerDashboard: React.FC<ProducerDashboardProps> = ({ producerId, producerName }) => {
   const { data, isLoading, error, refetch } = useProducerDashboard(producerId)
 
   // Expose refetch for parent components
@@ -111,6 +113,16 @@ export const ProducerDashboard: React.FC<ProducerDashboardProps> = ({ producerId
 
       {/* Pattern Alerts - only renders if patterns exist */}
       <AlertsCard producerId={producerId} />
+
+      {/* Coaching Scorecard - only renders if current week episode exists */}
+      {producerId && producerName && (
+        <CoachingDashboardCard
+          memberId={producerId}
+          memberName={producerName}
+          coachingType="sales"
+          isCsr={false}
+        />
+      )}
 
       {/* Scorecard */}
       <ScorecardCard scorecard={data.scorecard} />

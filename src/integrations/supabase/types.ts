@@ -10,7 +10,7 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "13.0.4"
+    PostgrestVersion: "14.1"
   }
   public: {
     Tables: {
@@ -107,12 +107,15 @@ export type Database = {
       coaching_episodes: {
         Row: {
           close_rate: number | null
+          coaching_type: string
           created_at: string
           created_by: string | null
+          csr_profile_id: string | null
           episode_content: string
           episode_summary: string | null
           episode_title: string
           error_message: string | null
+          focus_challenge: string | null
           focus_theme: string
           focus_week_number: number | null
           generation_duration_ms: number | null
@@ -122,7 +125,7 @@ export type Database = {
           model_used: string | null
           override_reason: string | null
           premium: number | null
-          producer_id: string
+          producer_id: string | null
           published_at: string | null
           qhh: number | null
           quotes: number | null
@@ -135,12 +138,15 @@ export type Database = {
         }
         Insert: {
           close_rate?: number | null
+          coaching_type?: string
           created_at?: string
           created_by?: string | null
+          csr_profile_id?: string | null
           episode_content: string
           episode_summary?: string | null
           episode_title: string
           error_message?: string | null
+          focus_challenge?: string | null
           focus_theme: string
           focus_week_number?: number | null
           generation_duration_ms?: number | null
@@ -150,7 +156,7 @@ export type Database = {
           model_used?: string | null
           override_reason?: string | null
           premium?: number | null
-          producer_id: string
+          producer_id?: string | null
           published_at?: string | null
           qhh?: number | null
           quotes?: number | null
@@ -163,12 +169,15 @@ export type Database = {
         }
         Update: {
           close_rate?: number | null
+          coaching_type?: string
           created_at?: string
           created_by?: string | null
+          csr_profile_id?: string | null
           episode_content?: string
           episode_summary?: string | null
           episode_title?: string
           error_message?: string | null
+          focus_challenge?: string | null
           focus_theme?: string
           focus_week_number?: number | null
           generation_duration_ms?: number | null
@@ -178,7 +187,7 @@ export type Database = {
           model_used?: string | null
           override_reason?: string | null
           premium?: number | null
-          producer_id?: string
+          producer_id?: string | null
           published_at?: string | null
           qhh?: number | null
           quotes?: number | null
@@ -195,6 +204,13 @@ export type Database = {
             columns: ["created_by"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coaching_episodes_csr_profile_id_fkey"
+            columns: ["csr_profile_id"]
+            isOneToOne: false
+            referencedRelation: "csr_profiles"
             referencedColumns: ["id"]
           },
           {
@@ -256,6 +272,7 @@ export type Database = {
       }
       coaching_metrics: {
         Row: {
+          coaching_type: string
           created_at: string
           created_by: string | null
           id: string
@@ -271,6 +288,7 @@ export type Database = {
           week_start: string
         }
         Insert: {
+          coaching_type?: string
           created_at?: string
           created_by?: string | null
           id?: string
@@ -286,6 +304,7 @@ export type Database = {
           week_start: string
         }
         Update: {
+          coaching_type?: string
           created_at?: string
           created_by?: string | null
           id?: string
@@ -313,65 +332,111 @@ export type Database = {
       coaching_scores: {
         Row: {
           call_outcome: string | null
+          call_type: string | null
+          coaching_type: string
           cross_sell_triggers_detected: Json | null
+          csr_profile_id: string | null
           episode_id: string | null
+          google_review_ask: boolean | null
           id: string
           improvement_areas: Json | null
+          life_insurance_context: string | null
+          life_insurance_opportunity: boolean | null
           overall_score: number | null
           scored_at: string
           specific_feedback: string | null
+          step_1_greeting: number | null
           step_1_opening: number | null
           step_2_discovery: number | null
+          step_2_listening_empathy: number | null
+          step_3_problem_id: number | null
           step_3_quoting: number | null
           step_4_ask_for_sale: number | null
+          step_4_resolution: number | null
           step_5_closing: number | null
+          step_5_cross_sell: number | null
           step_6_follow_up: number | null
+          step_6_referral_ask_csr: number | null
           step_7_multi_line: number | null
+          step_7_retention: number | null
           step_8_referral_ask: number | null
           strengths: Json | null
           transcript_id: string
         }
         Insert: {
           call_outcome?: string | null
+          call_type?: string | null
+          coaching_type?: string
           cross_sell_triggers_detected?: Json | null
+          csr_profile_id?: string | null
           episode_id?: string | null
+          google_review_ask?: boolean | null
           id?: string
           improvement_areas?: Json | null
+          life_insurance_context?: string | null
+          life_insurance_opportunity?: boolean | null
           overall_score?: number | null
           scored_at?: string
           specific_feedback?: string | null
+          step_1_greeting?: number | null
           step_1_opening?: number | null
           step_2_discovery?: number | null
+          step_2_listening_empathy?: number | null
+          step_3_problem_id?: number | null
           step_3_quoting?: number | null
           step_4_ask_for_sale?: number | null
+          step_4_resolution?: number | null
           step_5_closing?: number | null
+          step_5_cross_sell?: number | null
           step_6_follow_up?: number | null
+          step_6_referral_ask_csr?: number | null
           step_7_multi_line?: number | null
+          step_7_retention?: number | null
           step_8_referral_ask?: number | null
           strengths?: Json | null
           transcript_id: string
         }
         Update: {
           call_outcome?: string | null
+          call_type?: string | null
+          coaching_type?: string
           cross_sell_triggers_detected?: Json | null
+          csr_profile_id?: string | null
           episode_id?: string | null
+          google_review_ask?: boolean | null
           id?: string
           improvement_areas?: Json | null
+          life_insurance_context?: string | null
+          life_insurance_opportunity?: boolean | null
           overall_score?: number | null
           scored_at?: string
           specific_feedback?: string | null
+          step_1_greeting?: number | null
           step_1_opening?: number | null
           step_2_discovery?: number | null
+          step_2_listening_empathy?: number | null
+          step_3_problem_id?: number | null
           step_3_quoting?: number | null
           step_4_ask_for_sale?: number | null
+          step_4_resolution?: number | null
           step_5_closing?: number | null
+          step_5_cross_sell?: number | null
           step_6_follow_up?: number | null
+          step_6_referral_ask_csr?: number | null
           step_7_multi_line?: number | null
+          step_7_retention?: number | null
           step_8_referral_ask?: number | null
           strengths?: Json | null
           transcript_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "coaching_scores_csr_profile_id_fkey"
+            columns: ["csr_profile_id"]
+            isOneToOne: false
+            referencedRelation: "csr_profiles"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "coaching_scores_episode_id_fkey"
             columns: ["episode_id"]
@@ -393,7 +458,9 @@ export type Database = {
           call_date: string | null
           call_direction: string | null
           call_duration_seconds: number | null
+          coaching_type: string
           created_at: string
+          csr_profile_id: string | null
           customer_phone: string | null
           episode_id: string | null
           extracted_text: string | null
@@ -403,7 +470,7 @@ export type Database = {
           file_path: string
           file_size: number
           id: string
-          producer_id: string
+          producer_id: string | null
           uploaded_by: string | null
           week_start: string
         }
@@ -411,7 +478,9 @@ export type Database = {
           call_date?: string | null
           call_direction?: string | null
           call_duration_seconds?: number | null
+          coaching_type?: string
           created_at?: string
+          csr_profile_id?: string | null
           customer_phone?: string | null
           episode_id?: string | null
           extracted_text?: string | null
@@ -421,7 +490,7 @@ export type Database = {
           file_path: string
           file_size: number
           id?: string
-          producer_id: string
+          producer_id?: string | null
           uploaded_by?: string | null
           week_start: string
         }
@@ -429,7 +498,9 @@ export type Database = {
           call_date?: string | null
           call_direction?: string | null
           call_duration_seconds?: number | null
+          coaching_type?: string
           created_at?: string
+          csr_profile_id?: string | null
           customer_phone?: string | null
           episode_id?: string | null
           extracted_text?: string | null
@@ -439,11 +510,18 @@ export type Database = {
           file_path?: string
           file_size?: number
           id?: string
-          producer_id?: string
+          producer_id?: string | null
           uploaded_by?: string | null
           week_start?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "coaching_transcripts_csr_profile_id_fkey"
+            columns: ["csr_profile_id"]
+            isOneToOne: false
+            referencedRelation: "csr_profiles"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "coaching_transcripts_episode_id_fkey"
             columns: ["episode_id"]
@@ -474,10 +552,10 @@ export type Database = {
           created_at: string | null
           created_by: string | null
           csr_profile_id: string
-          verification_id: string | null
           id: string
           notes: string | null
           points: number
+          verification_id: string | null
         }
         Insert: {
           activity_date: string
@@ -485,10 +563,10 @@ export type Database = {
           created_at?: string | null
           created_by?: string | null
           csr_profile_id: string
-          verification_id?: string | null
           id?: string
           notes?: string | null
           points: number
+          verification_id?: string | null
         }
         Update: {
           activity_date?: string
@@ -496,10 +574,10 @@ export type Database = {
           created_at?: string | null
           created_by?: string | null
           csr_profile_id?: string
-          verification_id?: string | null
           id?: string
           notes?: string | null
           points?: number
+          verification_id?: string | null
         }
         Relationships: [
           {
@@ -1209,51 +1287,6 @@ export type Database = {
           },
         ]
       }
-      quoted_households_backup_20251013: {
-        Row: {
-          created_at: string | null
-          created_by: string | null
-          daily_entry_id: string | null
-          full_name: string | null
-          id: string | null
-          items_sold: number | null
-          lead_source_id: string | null
-          notes: string | null
-          opted_into_hearsay: boolean | null
-          phone_number: string | null
-          policies_quoted: number | null
-          quick_action_status: string | null
-        }
-        Insert: {
-          created_at?: string | null
-          created_by?: string | null
-          daily_entry_id?: string | null
-          full_name?: string | null
-          id?: string | null
-          items_sold?: number | null
-          lead_source_id?: string | null
-          notes?: string | null
-          opted_into_hearsay?: boolean | null
-          phone_number?: string | null
-          policies_quoted?: number | null
-          quick_action_status?: string | null
-        }
-        Update: {
-          created_at?: string | null
-          created_by?: string | null
-          daily_entry_id?: string | null
-          full_name?: string | null
-          id?: string | null
-          items_sold?: number | null
-          lead_source_id?: string | null
-          notes?: string | null
-          opted_into_hearsay?: boolean | null
-          phone_number?: string | null
-          policies_quoted?: number | null
-          quick_action_status?: string | null
-        }
-        Relationships: []
-      }
       reviews: {
         Row: {
           attachments: Json
@@ -1690,6 +1723,14 @@ export type Database = {
         Args: { p_days_back?: number }
         Returns: Json
       }
+      get_coaching_score_comparison: {
+        Args: {
+          p_coaching_type: string
+          p_is_csr?: boolean
+          p_member_id: string
+        }
+        Returns: Json
+      }
       get_common_weak_points: {
         Args: { from_date: string; producer_filter?: string; to_date: string }
         Returns: {
@@ -1745,6 +1786,8 @@ export type Database = {
           referral_quoted_pts: number
           retention_save_pts: number
           total_points: number
+          winback_closed_pts: number
+          winback_quoted_pts: number
         }[]
       }
       get_current_csr_profile: {
@@ -1753,7 +1796,6 @@ export type Database = {
           csr_profile_id: string
           display_name: string
           email: string
-          source_id: string
         }[]
       }
       get_execution_benchmarks_by_source: {
@@ -1835,10 +1877,19 @@ export type Database = {
           zip_code: string
         }[]
       }
-      get_focus_week_number: {
-        Args: { cycle_start_date?: string; target_date: string }
-        Returns: number
-      }
+      get_focus_week_number:
+        | {
+            Args: { cycle_start_date?: string; target_date: string }
+            Returns: number
+          }
+        | {
+            Args: {
+              cycle_length?: number
+              cycle_start_date?: string
+              target_date: string
+            }
+            Returns: number
+          }
       get_gap_analysis: { Args: { p_days_back?: number }; Returns: Json }
       get_items_by_source: {
         Args: { from_date: string; to_date: string }
